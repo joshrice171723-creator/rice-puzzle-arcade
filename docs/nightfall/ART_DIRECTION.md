@@ -1,6 +1,6 @@
 # Nightfall Art Direction Review
 
-October 18, 2026. Concept exploration only. Visual direction is awaiting Joshua's selection; no game code, assets in a runtime, or layouts have been implemented in this pass.
+October 18, 2026. Joshua selected Direction B (Beaconbound): "i like B lets go with that style." Concept exploration only; no game code, assets in a runtime, or layouts have been implemented in this pass.
 
 ## Main design
 
@@ -25,14 +25,50 @@ Detailed sculpted fantasy treatment, weathered materials, taller hero proportion
 
 ## Direction B — Beaconbound
 
-Chunkier illustrated/cel-shaded treatment, broader shapes, cleaner item silhouettes, larger boots and hands, stronger contours, and a more compact home diorama. Recommended starting direction for small-screen readability, subject to user preference and later device testing.
+Selected visual direction. Chunkier illustrated/cel-shaded treatment, broader shapes, cleaner item silhouettes, larger boots and hands, stronger contours, and a more compact home diorama. Small-screen readability and performance still require actual device testing.
 
 ![Direction B: Beaconbound character, equipment, Haven, and combat concepts](art-concepts/nightfall-b-beaconbound.png)
 
 ## Review status
 
-Neither direction is approved. A and B are working style labels, not competing game titles. The next design decision is the preferred character proportions, rendering style, and home/combat presentation. Any selected style still needs consistent standalone character, enemy, equipment, terrain, animation, and UI asset specifications before implementation.
+Direction B is approved as the visual style; A is retained as an unselected exploration. A and B are working style labels, not competing game titles. The expanded class, enemy, boss, map, and inventory concepts below are awaiting review of their individual designs. Character identities and cosmetic details are proposals, not new gameplay requirements. Standalone assets, animation, runtime UI, collisions, and camera behavior are not implemented.
+
+## Classes
+
+Engineer with repair drones, Warden with Aegis, and Arcanist with Rift Pulse. Front/rear views and ability vignettes explore consistent silhouettes beside the existing Scavenger. The Warden's shield is an ability effect, not a seventh equipment slot.
+
+![Engineer, Warden, and Arcanist concepts](art-concepts/nightfall-b-classes.png)
+
+## Enemies
+
+Drifter, Skitter, Gnawer, Spitter, Bulwark, and Hexcaller. Larger silhouettes show role differences; miniature top-down views explore readability. Fine surface details will need simplification at real gameplay scale.
+
+![Six Hollow enemy concepts](art-concepts/nightfall-b-enemies.png)
+
+## Bosses
+
+The Breaker (Zone 1), The Forge Warden (Zone 5), The Pale Howler (Zone 8), and The Night Sovereign (Zone 20), with illustrative attack-warning vignettes. These do not establish final hitboxes or encounter balance.
+
+![Four campaign boss concepts](art-concepts/nightfall-b-bosses.png)
+
+## Blackout Outskirts arena
+
+Full arena overview and a proposed portrait gameplay camera view. An open central courtyard and connecting paths provide space for movement, collection detours, and optional building. The boss entrance leads into the same arena; there is no separate boss-room objective or extraction exit. Labels and build circles are design annotations, not required final UI.
+
+The full-map overview is for review; the phone follows the player at a closer scale. Scrolling the camera through the world is distinct from scrolling a webpage to reach controls. The HUD and controls remain within the phone viewport. Collision clearance, enemy navigation, roof occlusion, and safe dodge distances remain to be validated in a future authorized prototype.
+
+![Blackout Outskirts map and phone camera concept](art-concepts/nightfall-b-blackout-map.png)
+
+## Equipment and inventory
+
+Six equipped slots, a paged inventory, item details, and twelve catalog objects. The final board corrects the initial generated preview: a level upgrade increases Power but not the critical-chance affix, uses Credits and Parts rather than Gems, and uses amber instead of green for the improvement indicator. The medkit uses a heart emblem.
+
+Sample numbers and inventory contents illustrate the layout, not a saved player state. Power 58.3 for a level-8 Rare pistol and next-level 60.5 match the proposed primary-stat formula to one decimal. The page has not been built or tested at a phone viewport. The catalog panel is an art sheet, not an extra in-game screen column.
+
+![Equipment, inventory, item details, and item catalog](art-concepts/nightfall-b-inventory.png)
 
 ## Provenance
 
 Both boards were generated with the built-in image_gen tool. Exact generation prompts are preserved in [PROMPTS.md](art-concepts/PROMPTS.md). Originals remain in the Codex generated-images directory; workspace copies are versioned with this plan.
+
+The five additional Beaconbound boards were generated with the built-in image_gen tool using the selected B board as their style reference. Their exact prompts and the inventory correction prompt are preserved in [BEACONBOUND_PROMPTS.md](art-concepts/BEACONBOUND_PROMPTS.md).

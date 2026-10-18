@@ -4,6 +4,8 @@ Saved October 18, 2026. Canonical planning baseline approved for preservation by
 
 ## Decision precedence
 
+Art decision, October 18, 2026: Joshua selected Direction B (Beaconbound). Use the chunky illustrated/cel-shaded style shown in [the art review](ART_DIRECTION.md) for continued concept exploration. Individual new designs remain subject to review. This selection does not authorize game implementation or change the campaign rules below.
+
 The campaign rule is: survive timed waves, then kill the boss. No second timer and no survival-only clear. Extra rewards come from performance and collection. This plan supersedes the earlier extraction/objective campaign and the Nightfall prototype brief in ../expansion-brief/GAME_DESIGNS.md. Existing code is not evidence that this plan has been implemented.
 
 The complete approved conversation plan is preserved below without abridgment. Earlier detailed proposals are preserved separately in [the historical design archive](archive/2026-10-18-earlier-objective-design.md); its campaign and extraction requirements are superseded. Read [the art concept brief](ART_DIRECTION.md) for the pending visual review.
