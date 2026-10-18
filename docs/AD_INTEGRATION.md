@@ -55,3 +55,11 @@ Live AdMob on October 18 shows the publisher account approved and payment profil
 The SDK integration was checked against these official package documents and installed 17.3.0 declarations. Native acceptance must use the exact built APK/AAB and account configuration intended for release.
 
 Ad initialization now retries on foreground/resume and when starting a run; the optional-boost dialog also offers a retry after a native load failure. Browser previews explicitly explain that video rewards require the Android app. A regression test covers recovery after a temporary consent-network failure (22 AdsService tests; 98 total). Consent failure still blocks requests; retries do not grant rewards or permission. Google's demo units are used for internal builds: https://developers.google.com/admob/android/test-ads . UMP/sample-app configuration and actual SDK display still need an Android device check.
+
+## AppLovin partnership progress - October 18
+
+Both Google secure signal sharing terms and the separate AdMob bidding agreement were accepted with explicit owner approvals. The AdMob bidding-source page confirms AppLovin **Active partnership**. This is not serving verification: Grid Foundry, Merge Drift and Color Cascade each show **0 mappings**. All six rewarded/interstitial mappings need the AppLovin account SDK key; no value has been invented or embedded.
+
+AppLovin MAX currently shows a login/signup page in the browser. New signup requests an application store URL and owner-created password, plus its own terms. Account credentials and publisher SDK key have not been obtained. The AppLovin SDK/adapter is not yet installed, mediation groups have not been configured, and no AppLovin ad or revenue has been verified.
+
+Google's current integration guide recommends `com.google.ads.mediation:applovin:13.6.4.2` with Google Mobile Ads `25.5.0` (matching the installed React Native package's Google SDK). Integrate through an Expo config plugin so prebuild preserves it. Before enabling the partner, configure UMP partner consent, age handling and the AppLovin do-not-sell signal, add the account-specific app-ads.txt entries, and validate partner test mode through Ad Inspector. Reference: https://developers.google.com/admob/android/mediation/applovin .
