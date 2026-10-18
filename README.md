@@ -41,3 +41,9 @@ Development/internal builds use official Google sample IDs. An optional earned r
 Production configuration is deliberately blocked until real owner IDs and audience/privacy review are supplied. No store release, paid serving, publisher approval or earnings are represented as verified. See `STATUS.md` and `docs/BLOCKERS.md`.
 
 No signing credentials belong in Git. Android native directories are generated from the reviewed app configurations; package IDs and target API are verified during prebuild/CI.
+
+## Action-game expansion
+
+[Nightfall Arena](apps/nightfall-arena/README.md) is the first playable action-game slice: a five-minute courtyard survival run with a joystick, automatic fire, moving healing shelters, three upgrade choices, and one scrap-powered defense. Start it with `powershell -ExecutionPolicy Bypass -File scripts/preview.ps1 -App nightfall-arena` at port 8084. It has an independent package/save namespace and does not request ads. The original three puzzle games retain their own implementation and build targets.
+
+See the [expansion audit](docs/EXPANSION_AUDIT.md) and [rendering decision](docs/ADR_001_ARENA_RENDERING.md). Arcane Run, Bullet Rush Arena, and Last Stand Workshop are later milestones after review of this slice.

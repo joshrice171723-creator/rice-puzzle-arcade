@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('all', 'grid-foundry', 'merge-drift', 'color-cascade')]
+    [ValidateSet('all', 'grid-foundry', 'merge-drift', 'color-cascade', 'nightfall-arena')]
     [string]$App = 'all',
-    [ValidateSet('arm64-v8a', 'arm64-v8a,x86_64')]
+    [ValidateSet('arm64-v8a', 'x86_64', 'arm64-v8a,x86_64')]
     [string]$Architectures = 'arm64-v8a,x86_64',
     [switch]$RegenerateNative
 )
@@ -71,9 +71,16 @@ try {
                 if ($env:OS -ne 'Windows_NT') { Invoke-Checked 'chmod' @('+x', './gradlew') }
                 $gradleArguments = @(':app:assembleRelease', ':app:bundleRelease', '--no-daemon', '--max-workers=2', '--stacktrace', '-Pandroid.enableMinifyInReleaseBuilds=false', '-Pandroid.enableShrinkResourcesInReleaseBuilds=false', "-PreactNativeArchitectures=$Architectures")
                 if ($env:OS -eq 'Windows_NT') { $gradleArguments += @('--init-script', (Join-Path $repository 'scripts/windows-cmake.gradle'), '-Pkotlin.incremental=false', "-ParcadePhysicalRoot=$repository") }
-                & $wrapper @gradleArguments 2>&1 |
-                    Tee-Object -FilePath (Join-Path $artifactDirectory 'gradle.log')
-                if ($LASTEXITCODE -ne 0) { throw "Gradle failed with exit code $LASTEXITCODE; see artifacts/android/$game/gradle.log" }
+                # Windows PowerShell wraps even harmless javac stderr notes as errors.
+                # Preserve the log and use Gradle's exit code to determine success.
+                $previousErrorAction = $ErrorActionPreference
+                try {
+                    $ErrorActionPreference = 'Continue'
+                    & $wrapper @gradleArguments 2>&1 |
+                        Tee-Object -FilePath (Join-Path $artifactDirectory 'gradle.log')
+                    $gradleExit = $LASTEXITCODE
+                } finally { $ErrorActionPreference = $previousErrorAction }
+                if ($gradleExit -ne 0) { throw "Gradle failed with exit code $gradleExit; see artifacts/android/$game/gradle.log" }
             } finally { Pop-Location }
             $apk = Join-Path $artifactDirectory "$game-internal-test.apk"
             $aab = Join-Path $artifactDirectory "$game-internal-test.aab"

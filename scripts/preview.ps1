@@ -1,6 +1,6 @@
-param([ValidateSet('grid-foundry','merge-drift','color-cascade')][string]$App = 'grid-foundry')
+param([ValidateSet('grid-foundry','merge-drift','color-cascade','nightfall-arena')][string]$App = 'grid-foundry')
 $ErrorActionPreference = 'Stop'
-$ports = @{ 'grid-foundry' = 8081; 'merge-drift' = 8082; 'color-cascade' = 8083 }
+$ports = @{ 'grid-foundry' = 8081; 'merge-drift' = 8082; 'color-cascade' = 8083; 'nightfall-arena' = 8084 }
 $repoPath = Split-Path $PSScriptRoot -Parent
 # Preview does not need the separately downloaded React Native debugger desktop app.
 $env:EXPO_UNSTABLE_HEADLESS = '1'
