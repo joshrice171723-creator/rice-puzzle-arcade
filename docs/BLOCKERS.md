@@ -16,3 +16,6 @@ October 17, 2026. Owner's current priority: finish games first; defer account se
 | Native artifacts / capture | Do not infer from docs; see actual owning-agent evidence | Produce APK/AAB, hashes, install/smoke receipts and real screenshots when toolchain/signing allow |
 
 No earning/revenue claim is permitted until Google account/app eligibility and actual paid reporting are verified. No fabricated testers or elapsed-time shortcut can satisfy the closed-test gate.
+
+## Hosted build blocker verified during preview recovery
+GitHub Actions run 39096452044 did not start its test job. GitHub reports an account billing/spending-limit block; no CI compilation or test result was produced. Local TypeScript and all 86 tests passed. No billing settings were changed. Native artifacts remain pending local disk capacity or owner resolution of the existing GitHub account gate.
