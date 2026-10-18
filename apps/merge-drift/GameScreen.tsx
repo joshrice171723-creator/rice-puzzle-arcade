@@ -17,7 +17,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   const [frame, setFrame] = useState({ width: 300, height: 600 });
   const width = Math.max(100, Math.min(frame.width, frame.height - 210, 420));
   const [movement, setMovement] = useState<Movement[] | null>(null);
-  const [milestone, setMilestone] = useState('Swipe to combine equal tiles. Keep some space.');
+  const [milestone, setMilestone] = useState(goal?.hint ?? 'Swipe to combine equal tiles. Keep some space.');
   const progress = useRef(new Animated.Value(1)).current;
   const current = useRef(state);
   const busy = useRef(false);

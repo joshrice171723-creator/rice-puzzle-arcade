@@ -3,6 +3,18 @@ import { journey, levelGoal } from './challenges';
 import { emptySave, parseSave, Run, updateRun } from './storage';
 
 describe('level journeys', () => {
+  it('gives every level a short strategy matched to its objective', () => {
+    for (const slug of ['grid-foundry', 'merge-drift', 'color-cascade']) {
+      journey(slug).targets.forEach((_, index) => {
+        const hint = levelGoal(slug, index + 1).hint!;
+        expect(hint.length).toBeGreaterThan(20);
+        expect(hint.length).toBeLessThan(65);
+      });
+    }
+    expect(levelGoal('grid-foundry', 3).hint).toContain('shared empty square');
+    expect(levelGoal('merge-drift', 8).hint).toContain('corner');
+    expect(levelGoal('color-cascade', 3).hint).toContain('groups of three');
+  });
   it('sets increasing goals that use each game’s actual metric', () => {
     for (const slug of ['grid-foundry', 'merge-drift', 'color-cascade']) {
       const targets = journey(slug).targets;

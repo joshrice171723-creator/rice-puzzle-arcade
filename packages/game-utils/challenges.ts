@@ -1,10 +1,10 @@
-export type Goal = { label: string; value: number; target: number; fraction: number; complete: boolean };
+export type Goal = { label: string; value: number; target: number; fraction: number; complete: boolean; hint?: string };
 
 type Metric = 'score' | 'highestTile' | 'linesCleared' | 'multiClears' | 'largestGroup' | 'groupsCleared';
 const journeys: Record<string, { name: string; targets: number[]; metrics: Metric[] }> = {
   'grid-foundry': { name: 'Workshop trail', targets: [400, 4, 1, 1400, 12, 2, 3000, 24, 3, 5500, 40, 10000], metrics: ['score', 'linesCleared', 'multiClears', 'score', 'linesCleared', 'multiClears', 'score', 'linesCleared', 'multiClears', 'score', 'linesCleared', 'score'] },
   'merge-drift': { name: 'Ocean expedition', targets: [16, 32, 64, 128, 256, 512, 1024, 2048], metrics: Array<Metric>(8).fill('highestTile') },
-  'color-cascade': { name: 'Garden trail', targets: [1200, 5, 12, 3300, 6, 22, 6400, 7, 35, 11200, 8, 15500], metrics: ['score', 'largestGroup', 'groupsCleared', 'score', 'largestGroup', 'groupsCleared', 'score', 'largestGroup', 'groupsCleared', 'score', 'largestGroup', 'score'] },
+  'color-cascade': { name: 'Garden trail', targets: [1200, 5, 12, 3300, 6, 22, 6400, 7, 35, 11200, 8, 13000], metrics: ['score', 'largestGroup', 'groupsCleared', 'score', 'largestGroup', 'groupsCleared', 'score', 'largestGroup', 'groupsCleared', 'score', 'largestGroup', 'score'] },
 };
 
 export function journey(slug: string) {
@@ -19,5 +19,13 @@ export function levelGoal(slug: string, level: number, saved?: unknown): Goal {
   const candidate = saved && typeof saved === 'object' ? (saved as Record<string, unknown>)[metric] : 0;
   const value = typeof candidate === 'number' && Number.isFinite(candidate) ? Math.max(0, candidate) : 0;
   const labels: Record<Metric, string> = { score: `Earn ${target.toLocaleString()} points`, highestTile: `Make a ${target.toLocaleString()} tile`, linesCleared: `Clear ${target} lines`, multiClears: target === 1 ? 'Clear 2+ lines together' : `Make ${target} multi-line clears`, largestGroup: `Match a group of ${target}`, groupsCleared: `Clear ${target} groups` };
-  return { label: labels[metric], value, target, fraction: Math.min(1, value / target), complete: value >= target };
+  const hints: Record<Metric, string> = {
+    score: slug === 'color-cascade' ? 'Grow bigger groups: clear beneath matching colors.' : 'Plan all three pieces before filling a gap.',
+    highestTile: target <= 64 ? 'Merge small pairs. Keep a row open for new tiles.' : 'Keep your largest tile in a corner. Build toward it.',
+    linesCleared: 'Leave room for long pieces. Finish nearly full lines.',
+    multiClears: 'Build a row and column with one shared empty square.',
+    largestGroup: 'Clear below matching colors to bring them together.',
+    groupsCleared: 'Find easy groups of three. Keep your taps moving.',
+  };
+  return { label: labels[metric], value, target, fraction: Math.min(1, value / target), complete: value >= target, hint: hints[metric] };
 }

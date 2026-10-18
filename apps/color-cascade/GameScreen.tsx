@@ -32,7 +32,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   const styles = makeStyles(theme, softTiles);
   const [state, setState] = useState(() => restoreGame(saved) ?? createGame(seed));
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
-  const [feedback, setFeedback] = useState(goal?.label.startsWith('Match a group') ? 'Clear below matching colors to grow a bigger group.' : 'Find a matching group of 3 or more');
+  const [feedback, setFeedback] = useState(goal?.hint ?? 'Find a matching group of 3 or more');
   const [reducedMotion, setReducedMotion] = useState(false);
   const [stride, setStride] = useState(42);
   const [frame, setFrame] = useState({ width: 300, height: 600 });

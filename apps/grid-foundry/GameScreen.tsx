@@ -33,7 +33,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   const rootBounds = useRef({ x: 0, y: 0 });
   const [preview, setPreview] = useState<Preview | null>(null);
   const [clearCells, setClearCells] = useState<string[]>([]);
-  const [notice, setNotice] = useState(levelGoal?.label.includes('together') || levelGoal?.label.includes('multi-line') ? 'Build two nearly full lines. Finish them together.' : 'Choose a shape. Give it a home.');
+  const [notice, setNotice] = useState(levelGoal?.hint ?? 'Choose a shape. Give it a home.');
   const [reducedMotion, setReducedMotion] = useState(false);
   const clearOpacity = useRef(new Animated.Value(0)).current;
   const boardRef = useRef<ViewInstance>(null);
