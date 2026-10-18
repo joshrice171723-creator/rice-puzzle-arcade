@@ -1,3 +1,4 @@
+import { boostAvailable } from '../../packages/game-utils/boost';
 export type Direction = 'left' | 'right' | 'up' | 'down';
 export type MergeState = {
   version: 1;
@@ -86,8 +87,8 @@ export function move(state: MergeState, direction: Direction): { state: MergeSta
 }
 
 /** Called only after the shell confirms an earned SDK reward. */
-export function rescue(state: MergeState): MergeState {
-  if (!state.ended || state.rescueUsed) return state;
+export function rescue(state: MergeState, allowBoost = false): MergeState {
+  if ((!state.ended && !(allowBoost && boostAvailable('merge-drift', state))) || state.rescueUsed) return state;
   const smallest = state.board.map((value, index) => ({ value, index }))
     .filter(tile => tile.value > 0).sort((a, b) => a.value - b.value || a.index - b.index).slice(0, 2);
   const board = [...state.board];

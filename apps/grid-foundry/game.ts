@@ -1,3 +1,4 @@
+import { boostAvailable } from '../../packages/game-utils/boost';
 export const SIZE = 8;
 export const SHAPES = {
   spark: [[0, 0]], bar2: [[0, 0], [0, 1]], bar3: [[0, 0], [0, 1], [0, 2]],
@@ -12,6 +13,7 @@ export type Board = number[][];
 export type GameState = {
   version: 1; board: Board; tray: (Shape | null)[]; score: number;
   rng: number; moves: number; ended: boolean; revived: boolean;
+  linesCleared?: number; multiClears?: number;
 };
 export const emptyBoard = (): Board => Array.from({ length: SIZE }, () => Array<number>(SIZE).fill(0));
 const names = Object.keys(SHAPES) as Shape[];
@@ -48,7 +50,7 @@ function drawTray(board: Board, rng: number): { tray: Shape[]; rng: number } {
 }
 export function newGame(seed: number): GameState {
   const board = emptyBoard();
-  return { version: 1, board, ...drawTray(board, seed >>> 0 || 1), score: 0, moves: 0, ended: false, revived: false };
+  return { version: 1, board, ...drawTray(board, seed >>> 0 || 1), score: 0, moves: 0, ended: false, revived: false, linesCleared: 0, multiClears: 0 };
 }
 export type Placement = { state: GameState; cleared: [number, number][]; lines: number; points: number };
 export function place(state: GameState, index: number, row: number, col: number): Placement {
@@ -68,10 +70,10 @@ export function place(state: GameState, index: number, row: number, col: number)
   let tray = state.tray.map((piece, i) => i === index ? null : piece);
   let rng = state.rng;
   if (tray.every(piece => piece === null)) ({ tray, rng } = drawTray(board, rng));
-  return { state: { ...state, board, tray, rng, score: state.score + points, moves: state.moves + 1, ended: !hasMove(board, tray) }, cleared, lines, points };
+  return { state: { ...state, board, tray, rng, score: state.score + points, moves: state.moves + 1, linesCleared: (state.linesCleared ?? 0) + lines, multiClears: (state.multiClears ?? 0) + Number(lines > 1), ended: !hasMove(board, tray) }, cleared, lines, points };
 }
-export function revive(state: GameState): GameState {
-  if (!state.ended || state.revived) return state;
+export function revive(state: GameState, allowBoost = false): GameState {
+  if ((!state.ended && !(allowBoost && boostAvailable('grid-foundry', state))) || state.revived) return state;
   const occupied = state.board.map((line, row) => ({ row, count: line.filter(Boolean).length }))
     .sort((a, b) => b.count - a.count || a.row - b.row).slice(0, 2).map(item => item.row);
   const board = state.board.map((line, row) => occupied.includes(row) ? Array<number>(SIZE).fill(0) : [...line]);
@@ -86,7 +88,8 @@ export function restoreGame(value: unknown): GameState | null {
     !s.tray.every(shape => shape === null || typeof shape === 'string' && names.includes(shape as Shape)) ||
     !Number.isSafeInteger(s.score) || s.score! < 0 || !Number.isSafeInteger(s.moves) || s.moves! < 0 ||
     !Number.isInteger(s.rng) || s.rng! <= 0 || s.rng! > 0xffffffff ||
-    typeof s.ended !== 'boolean' || typeof s.revived !== 'boolean') return null;
+    typeof s.ended !== 'boolean' || typeof s.revived !== 'boolean' ||
+    [s.linesCleared, s.multiClears].some(value => value !== undefined && (!Number.isSafeInteger(value) || value < 0))) return null;
   const state = s as GameState;
   return { ...state, board: state.board.map(row => [...row]), tray: [...state.tray], ended: !hasMove(state.board, state.tray) };
 }

@@ -59,6 +59,8 @@ describe('Grid Foundry engine', () => {
     board[3][3] = 0; board[0][0] = 1;
     const result = place(stateWith({ board, tray: ['spark', 'square', 'bar2'] }), 0, 3, 3);
     expect(result.lines).toBe(2);
+    expect(result.state.linesCleared).toBe(2);
+    expect(result.state.multiClears).toBe(1);
     expect(result.cleared).toHaveLength(15);
     expect(result.points).toBe(260); // 10 placement + (2 * 100 * 1.25) line combo.
     expect(result.state.board[0][0]).toBe(1);
@@ -71,6 +73,8 @@ describe('Grid Foundry engine', () => {
     for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) board[r][c] = 0;
     const result = place(stateWith({ board, tray: ['square', 'spark', 'bar2'] }), 0, 0, 0);
     expect(result.lines).toBe(4);
+    expect(result.state.linesCleared).toBe(4);
+    expect(result.state.multiClears).toBe(1);
     expect(result.points).toBe(740);
     expect(result.state.board).toEqual(emptyBoard());
   });

@@ -1,4 +1,6 @@
 import { scoreGoal } from './progress';
+import { Goal } from '../../packages/game-utils/challenges';
+import { GoalMeter } from '../../packages/ui/GoalMeter';
 import { dragTarget } from './placement';
 import { PieceArt } from '../../packages/ui/PieceArt';
 import { Theme, useGameTheme } from '../../packages/ui/themes';
@@ -9,19 +11,20 @@ import { canPlace, GameState, newGame, place, restoreGame, revive, Shape, SHAPES
 
 type Props = {
   seed: number; paused: boolean; saved?: unknown; onSave: (state: unknown) => void;
-  onEnd: () => void; rewardToken: number; haptics: boolean; bestScore?: number;
+  onEnd: () => void; rewardToken: number; haptics: boolean; bestScore?: number; goal?: Goal;
 };
 type Preview = { row: number; col: number; index: number };
 
 
-export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics, bestScore = 0 }: Props) {
+export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics, bestScore = 0, goal: levelGoal }: Props) {
   const { theme, softTiles } = useGameTheme();
   const styles = makeStyles(theme, softTiles);
   const [state, setState] = useState<GameState>(() => restoreGame(saved) ?? newGame(seed));
   const startingBest = useRef(bestScore).current;
   const scorePulse = useRef(new Animated.Value(1)).current;
   const [frame, setFrame] = useState({ width: 340, height: 600 });
-  const landscape = useWindowDimensions().width > useWindowDimensions().height;
+  const viewport = useWindowDimensions();
+  const landscape = viewport.width > viewport.height && viewport.height < 500;
   const [hoveredPiece, setHoveredPiece] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [drag, setDrag] = useState<{ index: number; x: number; y: number } | null>(null);
@@ -30,7 +33,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   const rootBounds = useRef({ x: 0, y: 0 });
   const [preview, setPreview] = useState<Preview | null>(null);
   const [clearCells, setClearCells] = useState<string[]>([]);
-  const [notice, setNotice] = useState('Choose a shape. Give it a home.');
+  const [notice, setNotice] = useState(levelGoal?.label.includes('together') || levelGoal?.label.includes('multi-line') ? 'Build two nearly full lines. Finish them together.' : 'Choose a shape. Give it a home.');
   const [reducedMotion, setReducedMotion] = useState(false);
   const clearOpacity = useRef(new Animated.Value(0)).current;
   const boardRef = useRef<ViewInstance>(null);
@@ -42,7 +45,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   const lastReward = useRef(rewardToken);
   const boardSize = Math.max(80, Math.min(landscape ? frame.width * .53 : frame.width, landscape ? frame.height - 8 : frame.height - 248, 420));
   const panelWidth = landscape ? Math.max(130, frame.width - boardSize - 16) : boardSize;
-  const goal = scoreGoal(state.score, startingBest);
+  const goal = levelGoal ?? { ...scoreGoal(state.score, startingBest), value: state.score };
   const cellSize = (boardSize - 8) / SIZE;
 
   useEffect(() => {
@@ -57,8 +60,8 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
     if (!state.ended) endedReported.current = false;
   }, [state]);
   useEffect(() => {
-    if (rewardToken > lastReward.current && stateRef.current.ended && !stateRef.current.revived) {
-      setState(current => revive(current));
+    if (rewardToken > lastReward.current && !stateRef.current.revived) {
+      setState(current => revive(current, true));
       setNotice('Two busiest rows cleared. Back to the workshop.');
       setSelected(null); setPreview(null);
     }
@@ -141,7 +144,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
       <View><Text style={styles.eyebrow}>WORKSHOP SCORE</Text><Animated.Text accessibilityLabel={'Score ' + state.score} style={[styles.score, { transform: [{ scale: scorePulse }] }]}>{state.score.toLocaleString()}</Animated.Text></View>
       <View style={styles.moveBadge}><Text style={styles.moveNumber}>{String(state.moves).padStart(2, '0')}</Text><Text style={styles.eyebrow}>DROPS</Text></View>
     </View>
-    <Text style={styles.notice} accessibilityLiveRegion="polite">{state.ended ? 'The workshop is full. A new run awaits.' : paused ? 'Workshop paused' : preview ? legalPreview ? (drag ? 'Release to place · Fits here' : 'Fits here · Click to place') : 'Needs more room · Try another spot' : notice}</Text><View style={{ width: panelWidth, gap: 4 }}><View style={styles.goalLabels}><Text style={styles.trayHint}>{goal.label}</Text><Text style={styles.trayHint}>{state.score.toLocaleString()} / {goal.target.toLocaleString()}</Text></View><View style={styles.goalTrack}><View style={[styles.goalFill, { width: (goal.fraction * 100) + '%' }]} /></View></View></>;
+    <Text style={styles.notice} accessibilityLiveRegion="polite">{state.ended ? 'The workshop is full. A new run awaits.' : paused ? 'Workshop paused' : preview ? legalPreview ? (drag ? 'Release to place · Fits here' : 'Fits here · Click to place') : 'Needs more room · Try another spot' : notice}</Text><View style={{ width: panelWidth }}><GoalMeter {...goal} /></View></>;
   const board = (<View ref={boardRef} onLayout={() => boardRef.current?.measureInWindow((x, y) => { bounds.current = pagePosition(x, y); })}
       style={[styles.board, { width: boardSize, height: boardSize }, paused && styles.paused]} accessibilityLabel="Foundry board, 8 rows and 8 columns">
       {state.board.map((row, r) => <View key={r} style={styles.row}>{row.map((occupied, c) => {

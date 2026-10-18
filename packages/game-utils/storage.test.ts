@@ -16,7 +16,7 @@ describe('arcade persistence', () => {
     expect(parseSave(JSON.stringify(save))).toEqual(save);
     expect(save.runs.normal?.seed).toBe(42);
     expect(save.runs.daily?.seed).toBe(12);
-    expect(save.stats).toEqual({ best: 80, highestTile: 16, games: 0, dailyBest: 80, dailyDate: '2026-10-17' });
+    expect(save.stats).toEqual({ best: 80, highestTile: 16, games: 0, dailyBest: 80, dailyDate: '2026-10-17', unlockedLevel: 1 });
   });
   it('restores older saves and persists visual preferences without changing a run', () => {
     const save = updateRun(emptySave(), run());

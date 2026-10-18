@@ -1,3 +1,4 @@
+import { boostAvailable } from '../../packages/game-utils/boost';
 export const SIZE = 7;
 export const COLORS = 5;
 export const ROUND_MS = 90_000;
@@ -13,6 +14,7 @@ export type CascadeState = {
   shuffleCount: number;
   groupsCleared: number;
   lastGroupSize: number;
+  largestGroup?: number;
 };
 
 function random(seed: number): [number, number] {
@@ -101,7 +103,7 @@ export function createGame(seed: number): CascadeState {
     return Math.floor(value * COLORS);
   }));
   const playable = hasMove(board) ? { board, rng } : shuffleBoard(board, rng);
-  return { version: 1, ...playable, score: 0, remainingMs: ROUND_MS, reviveUsed: false, shuffleCount: hasMove(board) ? 0 : 1, groupsCleared: 0, lastGroupSize: 0 };
+  return { version: 1, ...playable, score: 0, remainingMs: ROUND_MS, reviveUsed: false, shuffleCount: hasMove(board) ? 0 : 1, groupsCleared: 0, lastGroupSize: 0, largestGroup: 0 };
 }
 
 export function tapGroup(state: CascadeState, row: number, col: number): CascadeState {
@@ -111,7 +113,7 @@ export function tapGroup(state: CascadeState, row: number, col: number): Cascade
   const result = collapseAndRefill(state.board, group, state.rng);
   const shuffled = !hasMove(result.board);
   const playable = shuffled ? shuffleBoard(result.board, result.rng) : result;
-  return { ...state, ...playable, score: state.score + 10 * group.length ** 2, groupsCleared: state.groupsCleared + 1, lastGroupSize: group.length, shuffleCount: state.shuffleCount + Number(shuffled) };
+  return { ...state, ...playable, score: state.score + 10 * group.length ** 2, groupsCleared: state.groupsCleared + 1, lastGroupSize: group.length, largestGroup: Math.max(state.largestGroup ?? state.lastGroupSize, group.length), shuffleCount: state.shuffleCount + Number(shuffled) };
 }
 
 export function advanceTimer(state: CascadeState, elapsedMs: number, foreground = true): CascadeState {
@@ -119,9 +121,9 @@ export function advanceTimer(state: CascadeState, elapsedMs: number, foreground 
   return { ...state, remainingMs: Math.max(0, state.remainingMs - elapsedMs) };
 }
 
-export function extendTime(state: CascadeState): CascadeState {
-  if (state.remainingMs > 0 || state.reviveUsed) return state;
-  return { ...state, remainingMs: 20_000, reviveUsed: true };
+export function extendTime(state: CascadeState, allowBoost = false): CascadeState {
+  if ((state.remainingMs > 0 && !(allowBoost && boostAvailable('color-cascade', state))) || state.reviveUsed) return state;
+  return { ...state, remainingMs: state.remainingMs + 20_000, reviveUsed: true };
 }
 
 export function restoreGame(value: unknown): CascadeState | undefined {
@@ -130,6 +132,7 @@ export function restoreGame(value: unknown): CascadeState | undefined {
   const count = (number: unknown) => typeof number === 'number' && Number.isSafeInteger(number) && number >= 0;
   if (state.version !== 1 || !Array.isArray(state.board) || state.board.length !== SIZE || !state.board.every(row => Array.isArray(row) && row.length === SIZE && row.every(color => count(color) && color < COLORS))) return undefined;
   if (!count(state.rng) || state.rng > 0xffffffff || !count(state.score) || !count(state.shuffleCount) || !count(state.groupsCleared) || !count(state.lastGroupSize) || state.lastGroupSize > SIZE * SIZE || typeof state.reviveUsed !== 'boolean' || !Number.isFinite(state.remainingMs) || state.remainingMs < 0 || state.remainingMs > ROUND_MS) return undefined;
+  if (state.largestGroup !== undefined && (!count(state.largestGroup) || state.largestGroup > SIZE * SIZE)) return undefined;
   if (!hasMove(state.board)) return { ...state, ...shuffleBoard(state.board, state.rng), shuffleCount: state.shuffleCount + 1 };
   return { ...state, board: state.board.map(row => [...row]) };
 }

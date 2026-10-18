@@ -1,6 +1,6 @@
 # Account and expense ledger
 
-As of October 17, 2026. Owner directed the team to focus on games first and defer account/deployment work. “Not verified” does not mean the account does not exist.
+Updated October 18, 2026. Owner resumed AdMob setup and explicitly authorized using `joshrice171723@gmail.com`. The prior personal publisher choice remains the owner's intent. “Not verified” does not mean the account does not exist.
 
 | Service | Already existed? | Account owner | Fee / approval gate | Current status | Non-sensitive evidence | Next step |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -12,6 +12,10 @@ As of October 17, 2026. Owner directed the team to focus on games first and defe
 | Public support tracker | Not verified | Proposed GitHub owner above | Public visibility must be intentional | Planned URL only; **not verified usable** | `https://github.com/joshrice171723-creator/rice-puzzle-arcade-site/issues` | Create/verify or replace before public release |
 
 No purchase, fee payment, identity submission, terms acceptance, bank/tax entry, real ad-unit creation, production submission, approval or earnings is represented as completed by this ledger. Public support email awaits owner confirmation. The handoff's proposed email is not consent to publish it.
+
+## Latest AdMob attempt
+
+Opened the official AdMob home page and followed Sign in. The account page at `apps.admob.com` returned `DNS_PROBE_FINISHED_NXDOMAIN`. DNS resolution returned DNSFilter's SOA instead of a destination address. No account inventory or creation could be completed, and no security/network settings were changed. Local screenshot: `artifacts/themes/admob-dns-block.png`. The hostname must be allowed by the network owner before this sign-in path can resume. Reuse any existing publisher account before creating a new one. Google test-ad integration does not establish a revenue account.
 
 ## AdMob IDs to obtain when setup resumes
 

@@ -53,6 +53,19 @@ describe('consent and loading', () => {
     service.dispose();
   });
 
+  it('recovers initialization after a temporary consent network failure', async () => {
+    const { service, adapter } = setup();
+    adapter.gatherConsent = vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue({ canRequestAds: true, privacyOptionsRequired: false });
+    expect((await service.initializeAfterConsent()).code).toBe('failed');
+    expect(adapter.initialize).not.toHaveBeenCalled();
+    expect((await service.initializeAfterConsent()).code).toBe('ready');
+    expect(service.isReady('rewarded')).toBe(true);
+    expect(adapter.initialize).toHaveBeenCalledOnce();
+    service.dispose();
+  });
+
   it('unknown or declined permission permits gameplay but no SDK requests', async () => {
     const { service, adapter } = setup({ allowed: false });
     expect((await service.initializeAfterConsent()).code).toBe('consent_required');

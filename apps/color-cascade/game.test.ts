@@ -41,6 +41,7 @@ describe('Color Cascade groups and scoring', () => {
     expect(size).toBe(3);
     expect(next.score).toBe(90);
     expect(next.lastGroupSize).toBe(3);
+    expect(next.largestGroup).toBe(3);
     expect(next.groupsCleared).toBe(1);
     expect(next.remainingMs).toBe(90_000);
     expect(JSON.stringify(state)).toBe(before);
@@ -52,6 +53,10 @@ describe('Color Cascade groups and scoring', () => {
     const next = tapGroup(state, 6, 6);
     expect(next.score).toBe(24_010);
     expect(next.lastGroupSize).toBe(49);
+    expect(next.largestGroup).toBe(49);
+    const smaller = playable();
+    smaller.largestGroup = 49;
+    expect(tapGroup(smaller, 0, 0).largestGroup).toBe(49);
     expect(hasMove(next.board)).toBe(true);
   });
 });

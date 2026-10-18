@@ -1,11 +1,11 @@
 # External gates and pending verification
 
-October 17, 2026. Owner's current priority: finish games first; defer account setup and website deployment. Software work continues independently. Actual build/test evidence belongs in `TEST_RESULTS.md` and `STATUS.md`; this document never upgrades a source configuration into a tested artifact.
+Updated October 18, 2026. Owner requested continued game improvements and resumed AdMob account setup. Software work continues independently. Actual build/test evidence belongs in `TEST_RESULTS.md` and `STATUS.md`; this document never upgrades a source configuration into a tested artifact.
 
 | Gate | Current evidence | Required next action |
 | --- | --- | --- |
 | Play registration/access | Signup screen observed; personal-account intent confirmed; not registered/approved by this evidence | Resume inventory; owner personally handles fee, terms, identity and device steps |
-| AdMob access | Sign-in path DNS error on `apps.admob.com`; publisher/app/ad units unverified | Retry official entry when resumed; reuse any existing account |
+| AdMob access | October 18: official Sign in still returns DNS error; DNSFilter blocks `apps.admob.com`; publisher/app/ad units unverified | Network owner must allow the account hostname; then inventory and reuse any existing account |
 | Publisher identity / payout | No verified country, legal registration, tax or bank completion | Owner acts inside Google, never in chat or repository |
 | Live ads | Real publisher record and app/ad-unit IDs unavailable | Obtain real IDs, review consent message, complete linking/readiness; verify eligible serving separately |
 | Website/support | Source prepared; planned domain and public issue tracker not published/verified | Establish verified owner-domain root and public support channel; confirm support email |

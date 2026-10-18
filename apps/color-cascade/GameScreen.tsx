@@ -1,4 +1,6 @@
 import { PieceArt } from '../../packages/ui/PieceArt';
+import { Goal } from '../../packages/game-utils/challenges';
+import { GoalMeter } from '../../packages/ui/GoalMeter';
 import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -21,16 +23,21 @@ type Props = {
   onEnd: () => void;
   rewardToken: number;
   haptics: boolean;
+  goal?: Goal;
+  bestScore?: number;
 };
 
-export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics }: Props) {
+export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics, goal, bestScore = 0 }: Props) {
   const { theme, softTiles } = useGameTheme();
   const styles = makeStyles(theme, softTiles);
   const [state, setState] = useState(() => restoreGame(saved) ?? createGame(seed));
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
-  const [feedback, setFeedback] = useState('Find a matching group of 3 or more');
+  const [feedback, setFeedback] = useState(goal?.label.startsWith('Match a group') ? 'Clear below matching colors to grow a bigger group.' : 'Find a matching group of 3 or more');
   const [reducedMotion, setReducedMotion] = useState(false);
   const [stride, setStride] = useState(42);
+  const [frame, setFrame] = useState({ width: 300, height: 600 });
+  const boardSize = Math.max(100, Math.min(frame.width, frame.height - 210, 420));
+  const startingBest = useRef(bestScore).current;
   const [drops, setDrops] = useState(() => Array.from({ length: 7 }, () => Array<number>(7).fill(0)));
   const entrance = useRef(new Animated.Value(1)).current;
   const ended = useRef(false);
@@ -79,7 +86,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
     const incremented = rewardToken > rewardSeen.current;
     rewardSeen.current = rewardToken;
     if (!incremented) return;
-    setState(current => extendTime(current));
+    setState(current => extendTime(current, true));
     setFeedback('20 extra seconds. Keep the colors flowing!');
   }, [rewardToken]);
 
@@ -109,7 +116,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   }
 
   return (
-    <View style={styles.game}>
+    <View onLayout={event => setFrame({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} style={styles.game}>
       <View style={styles.stats}>
         <View><Text style={styles.eyebrow}>YOUR SCORE</Text><Text style={styles.score}>{state.score.toLocaleString()}</Text></View>
         <View style={[styles.clock, seconds <= 15 && styles.urgent]} accessibilityLabel={`${seconds} seconds remaining`}>
@@ -117,8 +124,9 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
         </View>
       </View>
       <View style={styles.track}><View style={[styles.progress, { width: `${state.remainingMs / 90_000 * 100}%`, backgroundColor: seconds <= 15 ? '#ff8c91' : theme.accent }]} /></View>
+      <GoalMeter {...(goal ?? { label: state.score <= startingBest && startingBest > 0 ? 'Beat your best' : 'Next milestone', value: state.score, target: state.score <= startingBest && startingBest > 0 ? startingBest + 10 : (Math.floor(state.score / 1000) + 1) * 1000 })} />
       <Text style={styles.feedback} accessibilityLiveRegion="polite">{state.shuffleCount > 0 && state.groupsCleared === 0 ? 'Free shuffle! A fresh match is ready.' : feedback}</Text>
-      <View onLayout={event => setStride((event.nativeEvent.layout.width - 11) / 7)} style={styles.board} accessibilityLabel="Color Cascade symbol board">
+      <View onLayout={event => setStride((event.nativeEvent.layout.width - 11) / 7)} style={[styles.board, { width: boardSize }]} accessibilityLabel="Color Cascade symbol board">
         {state.board.map((row, r) => (
           <View key={r} style={styles.row}>
             {row.map((color, c) => (
@@ -131,35 +139,32 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
           </View>
         ))}
       </View>
-      <View style={styles.legend}>{symbols.map(symbol => <Text key={symbol.name} style={[styles.legendSymbol, { color: symbol.color }]}>{symbol.glyph}</Text>)}</View>
-      <Text style={styles.hint}>Tap a connected group of 3+. Bigger groups, bigger scores.</Text>
-      <Text style={styles.detail}>{state.groupsCleared} groups cleared · {state.shuffleCount} free shuffles</Text>
-      {state.remainingMs === 0 && <Text style={styles.finished} accessibilityLiveRegion="polite">Time’s up! You scored {state.score.toLocaleString()}.</Text>}
+      <Text style={styles.hint}>{state.remainingMs === 0 ? `Time’s up! ${state.score.toLocaleString()} points.` : `${state.groupsCleared} groups cleared · Bigger groups, bigger scores.`}</Text>
     </View>
   );
 }
 
 const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
-  game: { width: '100%', maxWidth: 490, alignSelf: 'center', paddingHorizontal: 12, paddingBottom: 18 },
+  game: { flex: 1, minHeight: 0, width: '100%', alignSelf: 'center', justifyContent: 'center', gap: 8 },
   stats: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
   eyebrow: { color: theme.muted, fontSize: 11, fontWeight: '700', letterSpacing: 2 },
-  score: { color: theme.ink, fontSize: 42, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  score: { color: theme.ink, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'] },
   clock: { alignItems: 'center', backgroundColor: theme.empty, borderRadius: 18, paddingHorizontal: 20, paddingVertical: 9 },
   clockLabel: { color: theme.muted, fontSize: 9, letterSpacing: 1.5, fontWeight: '700' },
   time: { fontSize: 26, color: theme.accent, fontWeight: '800', fontVariant: ['tabular-nums'] },
   urgent: { backgroundColor: '#fbe5df' },
   urgentText: { color: '#a93532' },
-  track: { height: 5, backgroundColor: theme.empty, borderRadius: 4, marginTop: 14, overflow: 'hidden' },
+  track: { height: 5, backgroundColor: theme.empty, borderRadius: 4, overflow: 'hidden' },
   progress: { height: '100%', borderRadius: 4 },
-  feedback: { minHeight: 48, textAlign: 'center', color: theme.ink, fontSize: 13, fontWeight: '600', paddingVertical: 14 },
-  board: { padding: 7, borderRadius: 22, backgroundColor: theme.board, borderWidth: 1, borderColor: theme.edge, gap: 5, overflow: 'hidden' },
+  feedback: { minHeight: 30, lineHeight: 15, textAlign: 'center', color: theme.ink, fontSize: 12, fontWeight: '600' },
+  board: { alignSelf: 'center', padding: 7, borderRadius: 22, backgroundColor: theme.board, borderWidth: 1, borderColor: theme.edge, gap: 5, overflow: 'hidden' },
   row: { flexDirection: 'row', gap: 5 },
   tileSlot: { flex: 1, aspectRatio: 1 },
   tile: { flex: 1, borderRadius: softTiles ? 15 : 3, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff30' },
   pressed: { opacity: 0.65, transform: [{ scale: 0.9 }] },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 },
   legendSymbol: { fontSize: 19 },
-  hint: { color: theme.muted, textAlign: 'center', fontSize: 12, lineHeight: 19, marginTop: 6 },
+  hint: { color: theme.muted, textAlign: 'center', fontSize: 12, lineHeight: 19 },
   detail: { color: theme.muted, fontSize: 11, textAlign: 'center', marginTop: 7 },
   finished: { textAlign: 'center', fontSize: 18, fontWeight: '700', color: theme.accent, padding: 18 },
 });

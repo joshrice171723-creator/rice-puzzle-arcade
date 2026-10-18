@@ -19,7 +19,9 @@ pnpm test
 ./scripts/build-android.ps1 -App all
 ```
 
-Use `-App grid-foundry`, `-App merge-drift` or `-App color-cascade` to build one app. PowerShell 7 works on Windows, Linux and macOS. The script generates the native Android folder through Expo Prebuild, validates API targeting and Google's test App ID, then builds a standalone APK and AAB with the Gradle wrapper. Native folders are generated and ignored by Git; keep lasting native configuration in Expo config plugins.
+Use `-App grid-foundry`, `-App merge-drift` or `-App color-cascade` to build one app. Add `-Architectures arm64-v8a` for a smaller phone-only build. PowerShell 7 works on Windows, Linux and macOS. The script generates the native Android folder through Expo Prebuild, validates API targeting and Google's test App ID, then builds a standalone APK and AAB with the Gradle wrapper. Native folders are generated and ignored by Git; keep lasting native configuration in Expo config plugins.
+
+On Windows, the script can discover Android Studio's bundled JDK and the default local Android SDK if environment variables are unset. It temporarily maps a free drive letter to this repository and applies `scripts/windows-cmake.gradle`. That limits native object paths to 240 characters using [CMake's path hashing](https://cmake.org/cmake/help/latest/variable/CMAKE_OBJECT_PATH_MAX.html), avoiding the Windows Ninja 260-character failure. The mapping and process environment are restored on exit. It does not change the registry or replace SDK tools. Existing dependencies must resolve through the hoisted root `node_modules`; stale per-app dependency links from an earlier isolated installation can defeat the shorter path.
 
 Outputs for each game:
 
@@ -56,3 +58,6 @@ Each app includes an EAS production profile for an owner-controlled release. The
 A Play release additionally needs the owner's stable upload signing key, version management, Play App Signing setup, approved disclosures and publishing access. Keep credentials and signing keys outside Git. Native debug signing and the internal build script are insufficient for production. Do not claim a signed Play release, accepted store build or paid ad serving until each has its own evidence.
 
 Current build/test outcomes and hardware limitations belong in `docs/TEST_RESULTS.md` and `STATUS.md`; this document describes the reproducible procedure.
+
+
+Existing native projects are reused by default. After changing Expo app configuration or native plugins, pass `-RegenerateNative` to regenerate them. Avoid package installation while Gradle is running: replacing a dependency can remove its generated classes mid-build. Windows library codegen tasks use the physical repository path; the app uses the short mapped drive for CMake.

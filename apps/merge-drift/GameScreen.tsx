@@ -1,20 +1,23 @@
 import { PieceArt } from '../../packages/ui/PieceArt';
+import { Goal } from '../../packages/game-utils/challenges';
+import { GoalMeter } from '../../packages/ui/GoalMeter';
 import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { createGame, Direction, MergeState, Movement, move, rescue, restoreGame } from './game';
 
-type Props = { seed: number; paused: boolean; saved?: unknown; onSave: (state: unknown) => void; onEnd: () => void; rewardToken: number; haptics: boolean };
+type Props = { seed: number; paused: boolean; saved?: unknown; onSave: (state: unknown) => void; onEnd: () => void; rewardToken: number; haptics: boolean; goal?: Goal };
 
 
-export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics }: Props) {
+export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics, goal }: Props) {
   const { theme, softTiles } = useGameTheme();
   const styles = makeStyles(theme, softTiles);
   const [state, setState] = useState<MergeState>(() => restoreGame(saved) ?? createGame(seed));
-  const [width, setWidth] = useState(300);
+  const [frame, setFrame] = useState({ width: 300, height: 600 });
+  const width = Math.max(100, Math.min(frame.width, frame.height - 210, 420));
   const [movement, setMovement] = useState<Movement[] | null>(null);
-  const [milestone, setMilestone] = useState('Slide. Combine. Find your flow.');
+  const [milestone, setMilestone] = useState('Swipe to combine equal tiles. Keep some space.');
   const progress = useRef(new Animated.Value(1)).current;
   const current = useRef(state);
   const busy = useRef(false);
@@ -40,7 +43,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   }, [state.ended, onEnd]);
   useEffect(() => {
     if (rewardToken > previousReward.current) {
-      setState(value => rescue(value));
+      setState(value => rescue(value, true));
       setMilestone('A little room to drift. Keep going.');
     }
     previousReward.current = rewardToken;
@@ -89,34 +92,33 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
       <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.number, { fontSize: cell * (value >= 10000 ? 0.27 : 0.38), color: '#063a50' }]}>{value}</Text>
     </Animated.View>;
   };
-  return <View style={styles.container}>
+  return <View onLayout={event => setFrame({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} style={styles.container}>
     <View style={styles.stats}>
       <View><Text style={styles.label}>CURRENT FLOW</Text><Text style={styles.score}>{state.score.toLocaleString()}</Text></View>
       <View style={styles.best}><Text style={styles.label}>HIGHEST TILE</Text><Text style={styles.highest}>{state.highestTile.toLocaleString()}</Text></View>
     </View>
-    <Text accessibilityLiveRegion="polite" style={styles.milestone}>{milestone}</Text>
-    <View testID="merge-board" onLayout={event => setWidth(event.nativeEvent.layout.width)} {...responder.panHandlers} style={[styles.board, { aspectRatio: 1 }]}>
+    <GoalMeter {...(goal ?? { label: 'Next tile', value: state.highestTile, target: state.highestTile * 2 })} />
+    <Text accessibilityLiveRegion="polite" style={styles.milestone}>{state.ended ? 'No moves remain. Your next flow awaits.' : milestone}</Text>
+    <View testID="merge-board" {...responder.panHandlers} style={[styles.board, { width, height: width }]}>
       {Array.from({ length: 16 }, (_, index) => <View key={index} style={[styles.empty, { width: cell, height: cell, left: 6 + index % 4 * stride, top: 6 + Math.floor(index / 4) * stride }]} />)}
       {movement ? movement.map((item, index) => tile(item.value, `move-${index}`, item.from, item)) : state.board.map((value, index) => value > 0 && tile(value, `${index}-${value}`, index))}
       {paused && <View style={styles.cover}><Text style={styles.coverTitle}>Flow paused</Text></View>}
     </View>
-    <Text style={styles.hint}>{state.ended ? 'No moves remain. Your next flow awaits.' : 'Swipe anywhere on the board to combine equal numbers.'}</Text>
     <View style={styles.controls}>
       {(['left', 'up', 'down', 'right'] as Direction[]).map((direction, index) => <Pressable key={direction} accessibilityRole="button" accessibilityLabel={`Move ${direction}`} disabled={paused || state.ended} onPress={() => swipe.current(direction)} style={({ pressed }) => [styles.control, pressed && styles.pressed, (paused || state.ended) && styles.disabled]}><Text style={styles.arrow}>{['←', '↑', '↓', '→'][index]}</Text></Pressable>)}
     </View>
-    <Text style={styles.footer}>{state.moves} MOVES · ONE SWIPE AT A TIME</Text>
   </View>;
 }
 
 const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
-  container: { width: '100%', maxWidth: 470, alignSelf: 'center', gap: 14 },
+  container: { flex: 1, minHeight: 0, width: '100%', alignSelf: 'center', justifyContent: 'center', gap: 8 },
   stats: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   label: { color: theme.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1.4 },
-  score: { color: theme.ink, fontSize: 38, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  score: { color: theme.ink, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'] },
   best: { alignItems: 'flex-end' },
   highest: { color: theme.accent, fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  milestone: { color: theme.muted, fontSize: 13, minHeight: 20 },
-  board: { width: '100%', backgroundColor: theme.board, borderRadius: 18, borderWidth: 1, borderColor: theme.edge, overflow: 'hidden' },
+  milestone: { color: theme.muted, fontSize: 12, minHeight: 30, lineHeight: 15, textAlign: 'center' },
+  board: { alignSelf: 'center', backgroundColor: theme.board, borderRadius: 18, borderWidth: 1, borderColor: theme.edge, overflow: 'hidden' },
   empty: { position: 'absolute', backgroundColor: theme.empty, borderRadius: softTiles ? 18 : 3 },
   tile: { position: 'absolute', justifyContent: 'center', alignItems: 'center', borderRadius: softTiles ? 18 : 3, borderWidth: 0 },
   number: { fontWeight: '800', fontVariant: ['tabular-nums'], paddingHorizontal: 3 },

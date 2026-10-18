@@ -1,0 +1,31 @@
+// Android CMake otherwise permits object paths longer than Windows Ninja supports.
+// Together with the build script's short drive mapping, 240 leaves room to hash
+// generated source paths without changing the user's registry or SDK tools.
+allprojects {
+    afterEvaluate { project ->
+        def physicalRoot = project.findProperty('arcadePhysicalRoot')
+        def react = project.extensions.findByName('react')
+        if (physicalRoot && react && project.plugins.hasPlugin('com.android.library')) {
+            react.codegenDir.set(new File(physicalRoot, 'node_modules/@react-native/codegen'))
+            react.reactNativeDir.set(new File(physicalRoot, 'node_modules/react-native'))
+        }
+        if (project.plugins.hasPlugin('com.android.application') || project.plugins.hasPlugin('com.android.library')) {
+            project.android.defaultConfig.externalNativeBuild.cmake.arguments '-DCMAKE_OBJECT_PATH_MAX=240'
+        }
+    }
+}
+
+// Codegen tasks capture their directories before the library extension is finalized.
+gradle.projectsEvaluated {
+    allprojects { project ->
+        def physicalRoot = project.findProperty('arcadePhysicalRoot')
+        if (physicalRoot && project.plugins.hasPlugin('com.android.library')) {
+            project.tasks.matching { it.name == 'generateCodegenSchemaFromJavaScript' }.configureEach {
+                codegenDir.set(new File(physicalRoot, 'node_modules/@react-native/codegen'))
+            }
+            project.tasks.matching { it.name == 'generateCodegenArtifactsFromSchema' }.configureEach {
+                reactNativeDir.set(new File(physicalRoot, 'node_modules/react-native'))
+            }
+        }
+    }
+}
