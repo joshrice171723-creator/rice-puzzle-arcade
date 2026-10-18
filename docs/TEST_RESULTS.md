@@ -31,3 +31,10 @@ Disk-full failure recovery: restored truncated Grid screen from retained source,
 - Browser verified all three saved boards with new graphics and settings without appearance choices. Color Cascade inspected at 390px viewport; override reset afterward.
 - TypeScript and all 87 tests pass. Android device rendering remains unverified.
 
+
+## Grid Foundry drag and hover - October 18, 2026
+- Added board-sized floating pieces, tray hover lift, legal/blocked cell previews, and safe outside-board cancellation. Tap/keyboard selection remains available; native touch drags lift the piece above the finger.
+- Fixed browser page-versus-window coordinate mismatch after scrolling. Preview and drop share the same placement calculation.
+- Browser: selected-piece hover; held drag with floating artwork; valid drop to the previewed four cells (+40); occupied-cell rejection and outside-board cancellation preserved score and tray. Verification used the daily run, preserving the normal run.
+- Added two placement geometry tests. TypeScript passed. Native Android touch behavior still requires device verification.
+
