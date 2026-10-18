@@ -4,6 +4,8 @@ Saved October 18, 2026. Canonical planning baseline approved for preservation by
 
 ## Decision precedence
 
+The [Nightfall engineering and delivery plan](BUILD_PLAN.md) defines the proposed toolchain, first playable milestone, production order, and acceptance gates. It is planning only; its Godot evaluation is a proposed architecture revision, not an implemented migration.
+
 Later working design discussion and visual concepts for proximity-charged shrines, temporary Relics, level-up choices, mission previews, and rescue screens are preserved in [Shrines and run interface concepts](SHRINES_AND_RUN_UI.md). They extend the plan for review; numerical tuning and individual screen designs are not implemented or playtested.
 
 Art decision, October 18, 2026: Joshua selected Direction B (Beaconbound). Use the chunky illustrated/cel-shaded style shown in [the art review](ART_DIRECTION.md) for continued concept exploration. Individual new designs remain subject to review. This selection does not authorize game implementation or change the campaign rules below.
