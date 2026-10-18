@@ -7,11 +7,11 @@ The three Android apps share `packages/ads/AdsService.ts`, a pure TypeScript con
 | Build | SDK app ID | Rewarded / interstitial units |
 | --- | --- | --- |
 | Development / internal QA | Official Google sample application ID from app config | SDK `TestIds.REWARDED` / `TestIds.INTERSTITIAL` |
-| Production | Owner's app-specific real application ID from AdMob | `EXPO_PUBLIC_ADMOB_REWARDED_ID` / `EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID` |
+| Production | Owner's app-specific real application ID from AdMob | Per-game `packages/ads/publisher.json` rewarded/interstitial IDs |
 
 Real ad units are selected only when all three conditions hold: a release JavaScript build (`!__DEV__`), `EXPO_PUBLIC_ADS_MODE=production`, and `EXPO_PUBLIC_BUILD_PROFILE=production`. Internal/dev profiles always use official sample units even if real unit environment variables exist. Real app IDs contain `~`; ad-unit IDs contain `/`. These identifiers are public configuration, not passwords. Never commit signing keys, account credentials, payment details, or identity documents.
 
-Production profiles require the app-specific real values. Build validation must reject missing values or Google's demo publisher IDs before publication. The native adapter also refuses malformed/demo production ad units at request time. No real publisher IDs have been supplied or represented as configured.
+Production profiles select the app-specific IDs in packages/ads/publisher.json. Build validation rejects unknown apps, mismatched legacy environment overrides and demo IDs. PUBLISHER_RELEASE_APPROVED=true remains required after owner audience/disclosure review. These IDs came from the owner-supplied Dot handoff; production traffic has not been tested.
 
 ## Consent and privacy
 
@@ -39,9 +39,9 @@ No gameplay engine receives consent choices, inventory, bid values, revenue, ad 
 
 October 18: the full suite includes four boost tests covering thresholds, unchanged scores, additive time, and one benefit shared by boost and continue. Browser verification covered the pressure offer, paused timer, unavailable inventory, declining the offer, and free retry after failure. Web previews intentionally have no SDK and cannot prove ad rendering.
 
-The adapter compiles against the installed SDK type declarations. These tests use a mocked native adapter and prove controller behavior; **native SDK ad rendering, the TEST AD label, actual UMP dialogs on a device, offline device behavior, SDK revenue callbacks, real ad requests, paid impressions, and revenue have not yet been device verified**. Verify those separately in a native development/internal APK, with UMP debug geography restricted to registered test devices and with developer devices excluded from live traffic. Google's [sample app and ad unit IDs](https://codelabs.developers.google.com/codelabs/admob-inline-ads-in-flutter) support integration testing without creating monetized app records. Publisher setup and actual UMP configuration remain separate gates.
+The adapter compiles against the installed SDK type declarations. These tests use a mocked native adapter and prove controller behavior; **production requests, paid impressions, revenue, actual UMP dialogs and offline device behavior remain unverified**. Native Google test videos and earned boosts were verified in all three games on October 18; see REWARDED_VIDEO_VALIDATION_2026-10-18.md. Verify those separately in a native development/internal APK, with UMP debug geography restricted to registered test devices and with developer devices excluded from live traffic. Google's [sample app and ad unit IDs](https://codelabs.developers.google.com/codelabs/admob-inline-ads-in-flutter) support integration testing without creating monetized app records. Publisher setup and actual UMP configuration remain separate gates.
 
-No AdMob account approval, individual app readiness approval, store linking, publisher verification, payment eligibility, or live monetization is claimed by this code. Owner-created AdMob app records, real app/ad-unit IDs, UMP message configuration, verified root `app-ads.txt`, supported-store links, and account/app reviews remain external gates.
+Live AdMob on October 18 shows the publisher account approved and payment profile complete. Store linking and individual app reviews remain pending. The root app-ads.txt is publicly served at https://aimetaclinic.com/app-ads.txt; Google crawler verification and store developer-domain linkage are separate. UMP messages, release audience, third-party bidding agreements and partner setup remain external gates. No paid impressions or earnings are claimed.
 
 ## Official references checked
 

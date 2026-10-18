@@ -1,5 +1,13 @@
 # Account and expense ledger
 
+## Current verification - October 18, 2026
+
+Earlier entries below are historical. AdMob now opens at https://admob.google.com/v2/home in the owner account and displays **Your account is approved** and **Your payment profile is complete**. Apps still require store linking and review. Three App IDs and six unit IDs from Dot are configured per app in packages/ads/publisher.json; internal builds remain test-only. https://aimetaclinic.com/app-ads.txt returns HTTP 200 with the owner publisher record, but crawler verification is not claimed.
+
+Mediation currently has only the AdMob default group and automatically enabled buyers. AppLovin setup awaits Google Ads Data Processing Terms / secure signal sharing, followed by a bidding agreement. No third-party agreement accepted or partner SDK added. Owner audience selection and public privacy/consent release review remain pending. No earnings verified.
+
+## Historical ledger
+
 Updated October 18, 2026. Owner resumed AdMob setup and explicitly authorized using `joshrice171723@gmail.com`. The prior personal publisher choice remains the owner's intent. “Not verified” does not mean the account does not exist.
 
 | Service | Already existed? | Account owner | Fee / approval gate | Current status | Non-sensitive evidence | Next step |

@@ -9,6 +9,7 @@ import mobileAds, {
   TestIds,
 } from 'react-native-google-mobile-ads';
 import { AdsService, type AdHandle, type AdsAdapter, type AdEvent, type ConsentInfo } from './AdsService';
+import publishers from './publisher.json';
 export * from './AdsService';
 
 async function consentInfo(): Promise<ConsentInfo> {
@@ -19,12 +20,13 @@ async function consentInfo(): Promise<ConsentInfo> {
   };
 }
 
-export function createAdsService(_appKey: string): AdsService {
+export function createAdsService(appKey: string): AdsService {
   const live = !__DEV__ && process.env.EXPO_PUBLIC_ADS_MODE === 'production' &&
     process.env.EXPO_PUBLIC_BUILD_PROFILE === 'production';
+  const publisher = publishers[appKey as keyof typeof publishers];
   const ids = {
-    rewarded: live ? process.env.EXPO_PUBLIC_ADMOB_REWARDED_ID : TestIds.REWARDED,
-    interstitial: live ? process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID : TestIds.INTERSTITIAL,
+    rewarded: live ? publisher?.rewarded : TestIds.REWARDED,
+    interstitial: live ? publisher?.interstitial : TestIds.INTERSTITIAL,
   };
   const adapter: AdsAdapter = {
     supported: true,

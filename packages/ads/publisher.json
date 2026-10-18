@@ -1,0 +1,17 @@
+{
+  "grid-foundry": {
+    "appId": "ca-app-pub-8089701632338419~4663947891",
+    "rewarded": "ca-app-pub-8089701632338419/6032869882",
+    "interstitial": "ca-app-pub-8089701632338419/8613047170"
+  },
+  "merge-drift": {
+    "appId": "ca-app-pub-8089701632338419~3574227508",
+    "rewarded": "ca-app-pub-8089701632338419/1964887506",
+    "interstitial": "ca-app-pub-8089701632338419/7762999931"
+  },
+  "color-cascade": {
+    "appId": "ca-app-pub-8089701632338419~6888901961",
+    "rewarded": "ca-app-pub-8089701632338419/6449918267",
+    "interstitial": "ca-app-pub-8089701632338419/3549431914"
+  }
+}

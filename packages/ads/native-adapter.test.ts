@@ -45,6 +45,15 @@ it.each(['grid-foundry', 'merge-drift', 'color-cascade'])('%s requests sample un
   expect(sdk.requests).toEqual(['test-rewarded', 'test-interstitial']);
 });
 
+it('keeps debug builds on test units even with production flags', () => {
+  vi.stubGlobal('__DEV__', true);
+  vi.stubEnv('EXPO_PUBLIC_ADS_MODE', 'production');
+  vi.stubEnv('EXPO_PUBLIC_BUILD_PROFILE', 'production');
+  createAdsService('grid-foundry');
+  sdk.adapter!.create('rewarded'); sdk.adapter!.create('interstitial');
+  expect(sdk.requests).toEqual(['test-rewarded', 'test-interstitial']);
+});
+
 it('maps reward loading and earning to the SDK-specific events, never dismissal', () => {
   createAdsService('grid-foundry');
   const ad = sdk.adapter!.create('rewarded');
@@ -67,11 +76,22 @@ it('preserves denied consent when the consent form request fails', async () => {
   expect(sdk.initialize).not.toHaveBeenCalled();
 });
 
-it('refuses missing production units', () => {
+it('refuses unknown production games', () => {
   vi.stubEnv('EXPO_PUBLIC_ADS_MODE', 'production');
   vi.stubEnv('EXPO_PUBLIC_BUILD_PROFILE', 'production');
-  vi.stubEnv('EXPO_PUBLIC_ADMOB_REWARDED_ID', '');
-  createAdsService('grid-foundry');
+  createAdsService('unknown');
   expect(() => sdk.adapter!.create('rewarded')).toThrow('Production ad-unit configuration');
   expect(sdk.requests).toEqual([]);
+});
+
+it.each([
+  ['grid-foundry', '6032869882', '8613047170'],
+  ['merge-drift', '1964887506', '7762999931'],
+  ['color-cascade', '6449918267', '3549431914'],
+])('%s uses its own production units', (slug, rewarded, interstitial) => {
+  vi.stubEnv('EXPO_PUBLIC_ADS_MODE', 'production');
+  vi.stubEnv('EXPO_PUBLIC_BUILD_PROFILE', 'production');
+  createAdsService(slug);
+  sdk.adapter!.create('rewarded'); sdk.adapter!.create('interstitial');
+  expect(sdk.requests).toEqual([rewarded, interstitial].map(id => 'ca-app-pub-8089701632338419/' + id));
 });
