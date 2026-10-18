@@ -1,6 +1,8 @@
 # Rice Puzzle Arcade
 
-Three separate offline Android puzzle games built with React Native and Expo 58:
+Three small Android puzzle games built with React Native and Expo 58. Joshua Rice is building them to explore advertising-supported income: make games people can try, learn what makes them worth playing, and work toward a store release. There is no verified revenue yet.
+
+The core gameplay runs offline. Advertising and rewarded-video features need a network connection and a native Android build.
 
 | App | Play | Android package (provisional until Play registration) |
 | --- | --- | --- |
