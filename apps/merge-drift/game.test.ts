@@ -7,6 +7,20 @@ function state(board: number[], extra: Partial<MergeState> = {}): MergeState {
 const blocked = [2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2];
 
 describe('Merge Drift engine', () => {
+  it('recovers older saves whose highest tile omitted a spawned 4', () => {
+    const saved = state([2, 4, ...Array(14).fill(0)], { highestTile: 2, score: 0, moves: 1 });
+    expect(restoreGame(saved)).toEqual({ ...saved, highestTile: 4 });
+    expect(saved.highestTile).toBe(2);
+  });
+  it('keeps every early swipe resumable when a new 4 is spawned', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const initial = state([0, 2, 0, 0, 0, 2, ...Array(10).fill(0)], { rng: seed });
+      const next = move(initial, 'left').state;
+      expect(next.highestTile).toBe(Math.max(...next.board));
+      expect(restoreGame(JSON.parse(JSON.stringify(next)))).toEqual(next);
+    }
+  });
+
   it('starts with exactly two seeded tiles and deterministic independent boards', () => {
     const game = createGame(45);
     expect(game.board.filter(Boolean)).toHaveLength(2);

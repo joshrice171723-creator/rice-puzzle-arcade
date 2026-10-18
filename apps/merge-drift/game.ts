@@ -82,7 +82,7 @@ export function move(state: MergeState, direction: Direction): { state: MergeSta
   return {
     changed: true,
     movements,
-    state: { ...state, ...spawned, score: state.score + gained, highestTile: Math.max(state.highestTile, ...board), moves: state.moves + 1, ended: isGameOver(spawned.board) },
+    state: { ...state, ...spawned, score: state.score + gained, highestTile: Math.max(state.highestTile, ...spawned.board), moves: state.moves + 1, ended: isGameOver(spawned.board) },
   };
 }
 
@@ -103,8 +103,8 @@ export function restoreGame(saved: unknown): MergeState | null {
     (tile === 0 || (tile >= 2 && Number.isInteger(Math.log2(tile))));
   if (value.version !== 1 || !Array.isArray(value.board) || value.board.length !== 16 || !value.board.every(validTile) ||
     !Number.isSafeInteger(value.score) || value.score! < 0 || !validTile(value.highestTile) || value.highestTile < 2 ||
-    value.highestTile < Math.max(...value.board) || !Number.isInteger(value.rng) || value.rng! < 0 || value.rng! > 0xffffffff ||
+    !Number.isInteger(value.rng) || value.rng! < 0 || value.rng! > 0xffffffff ||
     !Number.isSafeInteger(value.moves) || value.moves! < 0 || typeof value.rescueUsed !== 'boolean' ||
     typeof value.ended !== 'boolean' || value.ended !== isGameOver(value.board) || value.board.filter(tile => tile > 0).length < 2) return null;
-  return { version: 1, board: [...value.board], score: value.score!, highestTile: value.highestTile, rng: value.rng!, moves: value.moves!, rescueUsed: value.rescueUsed, ended: value.ended };
+  return { version: 1, board: [...value.board], score: value.score!, highestTile: Math.max(value.highestTile, ...value.board), rng: value.rng!, moves: value.moves!, rescueUsed: value.rescueUsed, ended: value.ended };
 }
