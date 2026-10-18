@@ -63,3 +63,23 @@ Current build/test outcomes and hardware limitations belong in `docs/TEST_RESULT
 Existing native projects are reused by default. After changing Expo app configuration or native plugins, pass `-RegenerateNative` to regenerate them. Avoid package installation while Gradle is running: replacing a dependency can remove its generated classes mid-build. Windows library codegen tasks use the physical repository path; the app uses the short mapped drive for CMake.
 
 The Windows build explicitly tracks shared `packages/` sources as inputs to the app's JavaScript bundle, so shared UI/ad fixes invalidate cached bundles. Internal test artifacts disable code/resource shrinking to shorten iteration; this does not change the separate production configuration.
+
+## Local virtual phone (October 18 setup)
+
+The Windows host now has the official Google APIs Android 11 / API 30 x86_64 image and an AVD named `Arcade_QA_API30` (Pixel 2 profile). WHPX hardware acceleration passed its check. No cellular service is needed; network requests still use the host connection and its filtering.
+
+Start the AVD with Android Studio Device Manager, or run:
+
+```powershell
+& "$env:LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" -avd Arcade_QA_API30 -no-snapshot -memory 1536
+```
+
+Build with both architectures for phone and emulator compatibility:
+
+```powershell
+./scripts/build-android.ps1 -App all -Architectures 'arm64-v8a,x86_64'
+```
+
+Wait for `adb shell getprop sys.boot_completed` to return `1` before installing. An emulator can appear in `adb devices` before Android's package manager is ready. First boot may take longer while native builds are running.
+
+Command-line tools are under `%LOCALAPPDATA%/Android/Sdk/cmdline-tools/latest`. This version's sdkmanager wrapper delegates to Android CLI; use the direct CLI when installing semicolon-delimited image package IDs. All downloaded components came from Google's official SDK repository. An installed or booted emulator is not proof that ad requests or reward callbacks succeeded.

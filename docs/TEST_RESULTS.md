@@ -81,3 +81,24 @@ Native receipt: Grid APK and AAB completed successfully (651 Gradle tasks, 7m18s
 - At 320x568 all three inspected gameplay states had document dimensions 320x568 and no buttons outside the viewport (Cascade's pause dialog included). Device overrides were cleared afterward. Screenshot: artifacts/themes/merge-resume-qa.png.
 - Native blocker confirmed: artifacts/all-games-native-final.log contains disk-full D8 errors. About 1.9 GB remains free; adb devices is empty. No new native build or actual-device acceptance is claimed.
 - Dot's user-supplied handoff reports account-side AdMob records now exist. Ads configuration remains with Dot; this pass changed gameplay reliability and verification only.
+
+## Native adapter and level readiness — October 18, 2026
+
+- 123 tests in 13 files pass; TypeScript passes. Seven new native-adapter contract tests verify all three app keys use sample units during QA, rewarded-specific loaded/earned event mapping, no interstitial reward handler, denied consent preservation after form failure, cleanup, and missing-production-ID rejection. These mock the SDK boundary and do not prove live ad delivery.
+- Every level now starts with a short strategy matched to its goal. The goal label can wrap without pushing numeric progress outside the phone width.
+- All 12 Cascade seeded levels have a scripted completion path without boosts, choosing the largest available group once per second. The old final target of 15,500 exceeded this baseline's 13,920; it is now 13,000, still above the previous 11,200-point score goal. This is a reachability check, not proof of human enjoyment or universal solvability for arbitrary play.
+- Browser play completed Cascade level 3 at 2,450 points / 12 groups with 69 seconds remaining. The next-level action and result dialog fit at 320x568. All three level-three gameplay states had matching document/viewport dimensions at 320x568 and 390x844, with no offscreen buttons at the smaller size. Screenshots: artifacts/themes/{grid,merge}-strategy-phone.png and cascade-level3-phone.png. Temporary viewport overrides were removed.
+- The formerly disk-blocked ARM build completed APK and AAB for all three games (artifacts/native-readiness-followup.log). A subsequent dual-ABI build includes the committed strategy/balance changes (e0dcdab). See the final receipt below for its outcome.
+- Android Emulator was already installed; the official command-line tools and Google APIs Android 11/API 30 x86_64 image were installed from dl.google.com. Arcade_QA_API30 uses the Pixel 2 profile and WHPX acceleration. The emulator boots successfully. Grid's dual-ABI APK installed and reported a successful cold start; its process logged ReactNativeJS Running main and its activity became foreground. This is startup evidence, not visual or ad acceptance.
+- No physical phone is connected, per the owner's decision. The emulator still shares the host network. Actual rewarded-video display, earned/dismissed reward journeys, interstitial display and consent-message behavior remain unverified. Windows Computer Use was attempted through the documented @oai/sky entry point, but node_repl failed before initialization with "failed to write kernel assets: The system cannot find the path specified. (os error 3)". Resetting the kernel and retrying returned the same error. Native interactive acceptance needs that runtime repaired or owner interaction.
+
+### Final emulator artifact receipt
+
+All three dual-ABI APK/AAB builds succeeded from gameplay commit e0dcdab (arm64-v8a and x86_64). All three APKs installed successfully on emulator-5554, Android 11/API 30 x86_64, and `am start -W` reported Status: ok / LaunchState: COLD. Cascade's cold start took 3,796 ms. Build log: artifacts/native-emulator-build.log; each artifacts/android/<app>/ directory contains APK, AAB, Gradle log and SHA256SUMS.
+
+APK SHA-256:
+- Grid: fcbb15e29f18c543de433d039c9aa75a2389356d0d56e0c60eb0ded092a367d9
+- Merge: 3d0edee385c291f49549558016d47ad34a0118396fb33c86714dc5518c09840b
+- Cascade: ec10a2c53f9831e3d0dea7016fd403a2863de3c2507f9491857930f6d43d57ed
+
+These are internal Google test-ad builds. Successful installation and startup do not establish that an ad loaded, displayed, or awarded its benefit. No production serving or mediation acceptance is claimed. Gameplay generation does not receive best score or ad availability, and no near-high-score forced-loss mechanic was added.
