@@ -4,6 +4,8 @@ Saved October 18, 2026. Canonical planning baseline approved for preservation by
 
 ## Decision precedence
 
+Later working design discussion and visual concepts for proximity-charged shrines, temporary Relics, level-up choices, mission previews, and rescue screens are preserved in [Shrines and run interface concepts](SHRINES_AND_RUN_UI.md). They extend the plan for review; numerical tuning and individual screen designs are not implemented or playtested.
+
 Art decision, October 18, 2026: Joshua selected Direction B (Beaconbound). Use the chunky illustrated/cel-shaded style shown in [the art review](ART_DIRECTION.md) for continued concept exploration. Individual new designs remain subject to review. This selection does not authorize game implementation or change the campaign rules below.
 
 The campaign rule is: survive timed waves, then kill the boss. No second timer and no survival-only clear. Extra rewards come from performance and collection. This plan supersedes the earlier extraction/objective campaign and the Nightfall prototype brief in ../expansion-brief/GAME_DESIGNS.md. Existing code is not evidence that this plan has been implemented.

@@ -67,8 +67,22 @@ Sample numbers and inventory contents illustrate the layout, not a saved player 
 
 ![Equipment, inventory, item details, and item catalog](art-concepts/nightfall-b-inventory.png)
 
-## Provenance
+## Shrines and run interface concepts
+
+The latest visual set covers proximity charging for the fast shop and slow Relic shrine, their choice screens, new abilities versus upgrades, mission rewards, and rescue choices. See [Shrines and run interface concepts](SHRINES_AND_RUN_UI.md) for all four images and the working rules. These are proposed designs, not functional UI. The three-Relic limit is shared across both buff shrines; shop purchases can repeat within funds, ranks, and caps.
+
+![Two shrine types and their charging rings](art-concepts/nightfall-b-shrine-charging.png)
+
+![Shop traits and two-choice Relics](art-concepts/nightfall-b-shrine-choices.png)
+
+![New abilities and upgrades](art-concepts/nightfall-b-level-up-choices.png)
+
+![Mission preview and rescue](art-concepts/nightfall-b-mission-rescue.png)
+
+## Generation provenance
 
 Both boards were generated with the built-in image_gen tool. Exact generation prompts are preserved in [PROMPTS.md](art-concepts/PROMPTS.md). Originals remain in the Codex generated-images directory; workspace copies are versioned with this plan.
 
 The five additional Beaconbound boards were generated with the built-in image_gen tool using the selected B board as their style reference. Their exact prompts and the inventory correction prompt are preserved in [BEACONBOUND_PROMPTS.md](art-concepts/BEACONBOUND_PROMPTS.md).
+
+The four shrine and run-interface boards use the same built-in tool and selected B references. Their exact prompts and level-up label correction are preserved in [SHRINE_UI_PROMPTS.md](art-concepts/SHRINE_UI_PROMPTS.md).
