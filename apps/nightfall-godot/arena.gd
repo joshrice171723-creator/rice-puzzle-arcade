@@ -3,6 +3,8 @@ extends Node2D
 const Run = preload("res://run.gd")
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
+const SHADOW = preload("res://assets/shadow.svg")
+const EXPERIENCE = preload("res://assets/experience.svg")
 const INK := Color("101a32")
 const GOLD := Color("ffd27c")
 const VIOLET := Color("ba92ff")
@@ -303,7 +305,7 @@ func _process(delta: float) -> void:
 	update_modal()
 	queue_redraw()
 	benchmark_elapsed += delta
-	if benchmark_elapsed > 3.0:
+	if benchmark_seconds > 0.0 and benchmark_elapsed > 3.0:
 		measured_frames.append(delta * 1000.0)
 	if not screenshot_path.is_empty() and benchmark_elapsed >= 4.0:
 		var destination := screenshot_path
@@ -335,9 +337,6 @@ func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: floa
 	var source := Rect2(frame * width, 535 if enemy else 20, width, 315 if enemy else 480)
 	var size := Vector2(72, 52 if enemy else 80) * scale_value
 	var at := pos + world_offset
-	draw_set_transform(at, 0, Vector2(1, 0.38))
-	draw_circle(Vector2.ZERO, 17.0 * scale_value, Color(0.02, 0.02, 0.04, 0.5))
-	draw_set_transform(Vector2.ZERO)
 	var rect := Rect2(at - Vector2(size.x / 2.0, size.y * 0.93), size)
 	if face < 0:
 		rect.position.x += rect.size.x
@@ -348,8 +347,7 @@ func _draw() -> void:
 	draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
 	for pickup in run.pickups:
 		var at: Vector2 = pickup + world_offset
-		draw_circle(at, 6, Color(0.6, 0.4, 1, 0.2))
-		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -4), at + Vector2(3, 0), at + Vector2(0, 4), at + Vector2(-3, 0)]), VIOLET)
+		draw_texture_rect(EXPERIENCE, Rect2(at - Vector2(6, 6), Vector2(12, 12)), false)
 	for enemy in run.enemies:
 		if enemy.tell > 0:
 			var at: Vector2 = enemy.target + world_offset
@@ -360,15 +358,21 @@ func _draw() -> void:
 		actors.append(enemy)
 	actors.append({"pos": run.player, "player": true})
 	actors.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.pos.y < b.pos.y)
+	# Consecutive shared textures batch; per-actor polygons/transforms do not.
+	for item in actors:
+		var scale_value := 1.0 if item.has("player") else (1.7 if item.boss else 0.8)
+		var size := Vector2(34, 12.92) * scale_value
+		draw_texture_rect(SHADOW, Rect2(item.pos + world_offset - size / 2, size), false)
 	for item in actors:
 		if item.has("player"):
 			actor(run.player, false, int(anim_time * 8) % 4 if moving else 1, 1.0, -1.0 if run.facing.x < 0 else 1.0)
 		else:
 			actor(item.pos, true, (int(anim_time * 7) + item.id) % 4, 1.7 if item.boss else 0.8, item.face)
-			if item.hp < item.max_hp or item.boss:
-				var at: Vector2 = item.pos + world_offset - Vector2(20, 57 if item.boss else 38)
-				draw_rect(Rect2(at, Vector2(40, 4)), INK)
-				draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
+	for item in run.enemies:
+		if item.hp < item.max_hp or item.boss:
+			var at: Vector2 = item.pos + world_offset - Vector2(20, 57 if item.boss else 38)
+			draw_rect(Rect2(at, Vector2(40, 4)), INK)
+			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
 	for shot in run.shots:
 		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
 		draw_line(at - shot.velocity.normalized() * 13, at, GOLD, 3, true)

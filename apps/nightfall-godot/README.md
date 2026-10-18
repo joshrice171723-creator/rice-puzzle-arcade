@@ -32,6 +32,14 @@ Android has a separate **Test rewarded video** diagnostic in the pause menu. It 
 ./scripts/nightfall-godot.ps1 -Action Android
 ```
 
+The graphical batching regression runs with a window, not headless:
+
+```powershell
+& "$env:LOCALAPPDATA/NightfallTools/Godot-4.7.2/Godot_v4.7.2-stable_win64_console.exe" --path apps/nightfall-godot --script tests/render_test.gd
+```
+
+It exercises 120 enemies and 40 experience pickups with a 60-draw-call ceiling. Shadows and pickups share small textures; actors remain depth-sorted, with health bars drawn afterward. Ordinary play no longer retains an unbounded frame-history array; detailed frame samples are collected only during explicitly timed benchmarks.
+
 Exports land in `artifacts/nightfall-godot/`, excluded from Git. Use internal debug builds only. Android package: `com.joshuarice.nightfallproof`, deliberately distinct from the older prototype.
 
 Prerequisites: matching official Godot export templates, Android SDK platform 36, build tools 36.1.0, installed NDK 27.1.12297006, and Android Studio's JBR. The helper extracts the matching Android template, copies the Kotlin bridge, and pins Kotlin 2.3.20 because Ads 25.5.0 requires newer metadata than the template's compiler. Gradle uses two workers and a 1536 MB heap to limit workstation pressure. Native compilation runs before emulator QA.

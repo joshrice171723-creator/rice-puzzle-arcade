@@ -1,6 +1,6 @@
 # Nightfall engine proof verification
 
-October 18, 2026. Joshua authorized implementation of the delivery plan with “ok start.” M0 is **partially verified**, not complete: desktop rendering, game rules, phone-layout geometry, Windows export, and native Android compilation pass; Android runtime, touch, actual rewarded video, and device performance are still open.
+October 18, 2026. Joshua authorized implementation of the delivery plan with “ok start.” Android installation, native rendering, touch controls, background pause, and genuine Google sample-video earned callbacks now have emulator evidence. M0 remains provisional pending the remaining cancellation, sustained-performance, and physical-phone checks described below. Production ads and inventory rewards are not enabled by this diagnostic.
 
 ## Delivered
 
@@ -16,12 +16,15 @@ The Android Kotlin bridge compiles against Google Mobile Ads 25.5.0 and UMP 4.0.
 |---|---|---|
 | Gameplay rules | 17 checks passed | Pause; boss arrival at enemy cap; no boss deadline; victory/death precedence; dodge protection; contact damage interval; one-time upgrade; seeded reproducibility; bounded entities and movement |
 | Layout geometry | 15 checks passed | Largest diagnostic menu, upgrade modal, and main controls at 320×568, 390×844, and 430×760 windows; logical canvas letterboxes |
+| Rendering regression | Passed, 21 draw calls | Graphics-window check with 120 enemies plus 40 pickups; ceiling 60; rejects headless execution |
 | Desktop visual inspection | Passed for prototype framing | Corrected unequal sprite-sheet row cropping, camera edge exposure, and modal overflow; final screenshot saved |
 | Windows export | Passed | Standalone internal debug executable created |
 | Android export | Passed | Signed internal debug APK, arm64 and x86_64, includes compiled native test-ad plugin |
-| Android install | Earlier basic APK installed | This predates the final ad-enabled APK; do not treat it as final-build installation proof |
-| Android launch | Not accepted | Earlier emulator advertised only GLES 2 and crashed before gameplay; corrected launch flags advertise GLES 3, but final launch is blocked by host disk space |
-| Real test video and reward callback | Not verified | Native compilation is evidence of integration buildability, not ad delivery |
+| Android install and launch | Passed on both ad-enabled builds | Exact APKs installed; GLES 3 Compatibility rendering reached the actual game; latest hashes and captures below |
+| Touch and lifecycle | Passed on emulator | Movement, dodge/pulse cooldowns, XP collection, level-up menu, and background return to explicit pause observed |
+| Real test video and reward callback | Passed on both builds | Four completed placements on the first build; one additional placement on the optimized build; exactly one earned callback each; game remained paused |
+| Network failure and recovery | Passed on emulator | Emulator-only Wi-Fi/data disable produced consent-request failure with unchanged counter; restoring network allowed a new video and callback |
+| Early dismissal without reward | Still open | Back attempts during sample playback were ignored by the SDK creative; later completion is not cancellation evidence |
 | Physical-phone performance / thermal / 15-minute soak | Not run | No physical-phone or sustained native acceptance claim |
 
 Commands: `./scripts/nightfall-godot.ps1 -Action Test`, `-Action Windows`, and `-Action Android`. Source and asset provenance: [project README](../../apps/nightfall-godot/README.md), [asset prompts](../../apps/nightfall-godot/ASSET_SOURCES.md).
@@ -44,12 +47,12 @@ Local evidence lives in the Git-ignored `artifacts/nightfall-godot/` directory: 
 
 | Artifact | SHA256 |
 |---|---|
-| `artifacts/nightfall-godot/nightfall-proof.apk` | `FC2C974BA048FC8899AA09B39728E79AFF81A4F4D502C39D6281C73593956B57` |
-| `artifacts/nightfall-godot/NightfallProof.exe` | `B9882B79D16F096153F48C69A5C608118FF204F5AF8F9D83907C8DD434033280` |
+| `artifacts/nightfall-godot/nightfall-proof.apk` | `38C0884CE6D251975D8D492539B5BFFCF7B3A03CA899A1B70B353FFFF6A9C59A` |
+| `artifacts/nightfall-godot/NightfallProof.exe` | `4BA51790095C75D7E5EEE1B8E8F46A0AF3DFEBAA447378DEA56D65059DEB3A78` |
 
 Both are internal proof builds, not store releases. The Android package is `com.joshuarice.nightfallproof` and does not replace the existing Nightfall application.
 
-## Environment repairs and remaining blocker
+## Environment repairs and historical blockers
 
 - Installed portable Godot 4.7.2 and selected export templates from the official release, with SHA512 checks against its checksum manifest.
 - Reused Android Studio's JBR, installed SDK platform 36 via the existing licensed Gradle workflow, and reused NDK 27.1.12297006 for packaging prebuilt Godot libraries.
@@ -60,7 +63,7 @@ Both are internal proof builds, not store releases. The Android package is `com.
 - The final emulator startup refused to proceed with approximately 0.45 GB free on C:. Docker shutdown improved memory but did not solve storage exhaustion.
 - Automatic approval review rejected removal of `apps/nightfall-godot/android/build/build` as “blocked by policy.” That generated folder remains. The redundant downloaded engine ZIP was removed separately after checksum verification and extraction. No user files were deleted.
 
-## Resume order
+## Initial resume order (historical; current results below)
 
 1. Obtain at least 3 GB working disk headroom without deleting project source or the final artifacts.
 2. Start the existing QA emulator with `-gpu host -feature GLESDynamicVersion`, no snapshots, and wait for boot completion. Keep compilation and emulator work sequential.
@@ -70,3 +73,25 @@ Both are internal proof builds, not store releases. The Android package is `com.
 6. Run sustained native crowd scenarios, then physical-phone acceptance when available. Keep engine adoption provisional until the native evidence is credible.
 
 No changes to router settings, publisher accounts, production ad IDs, or the hosted studio were made in this implementation pass.
+
+## Android retry and rendering repair — October 18
+
+The user freed disk space, leaving approximately 3.5 GiB at retry. The existing `Arcade_QA_API30` emulator booted with `-gpu host -feature GLESDynamicVersion`. The original ad-enabled APK (SHA256 `FC2C974BA048FC8899AA09B39728E79AFF81A4F4D502C39D6281C73593956B57`) installed successfully and rendered the complete 1080×1920 game menu. The emulator was subsequently opened as a visible window at the user's request.
+
+Sample-ad evidence: `android-ad-show.png`, `android-ad-complete.png`, `android-reward-verified.png`, `android-offline.png`, `android-ad-repeat.log`, and `android-ad-recovery.log`. The first earned callback was at 18:25:54 in emulator log time, and dismissal at 18:26:35 reported `Closed • reward verified`. The offline request kept the count at 2; recovery took approximately 37 seconds to show its video and then earned callback 3. A fourth placement completed afterward. Only Google sample IDs were used. No inventory benefit, production mediation fill, or revenue is implied.
+
+Gameplay evidence: `android-touch-abilities.png` shows both cooldowns after touch actions; `android-background-paused.png` and `android-paused-stable.png` show the timer held at 03:41; `android-upgrade-check.png` shows the level-2 choice menu after collecting XP. No AndroidRuntime exception or Godot script error appeared in the filtered log during these checks.
+
+The first crowd pass exposed a rendering problem: the HUD snapshot showed 13 FPS / 113.5 ms p95 at 120 enemies, versus 38 FPS / 30.5 ms at 30 enemies. These are rolling HUD snapshots, not whole-run averages. Physics peak was only 1.10 ms in the 120-enemy capture. A desktop rendering probe measured 265 draw calls for 120 actors. Grouping actors and shadows reduced that to 145; replacing individual shadow polygons with a shared texture reduced it to 25 in the same probe. Experience pickups used the same per-object polygon pattern and were converted to a shared texture as well. The deterministic graphics regression with 120 actors and 40 pickups now measures 21 calls. Actors remain depth-sorted; shadows are below the actor layer, and health bars are above it.
+
+The frame-history array is now populated only for explicitly timed benchmarks, avoiding unbounded growth during normal play. Gameplay rules were unchanged. All 17 rule and 15 layout checks were rerun successfully, and both export artifacts were regenerated; hashes above identify the new rendering build. The Android export completed, but its console wrapper held an inherited Gradle pipe until a separate `gradlew --stop` call released it. This build-tool process-lifetime issue is distinct from gameplay and remains a helper-workflow limitation.
+
+### Optimized-build acceptance
+
+The APK identified above was installed over the first proof and launched in the visible emulator. `android-crowd120-after20.png`, `android-crowd120-moving.png`, and `android-crowd120-label-check.png` each show 60 FPS / 16.7 ms rolling p95 with 120 enemies. The moving capture includes touch movement, dodge, pulse, and a drag released over the dodge button; the stick returned to neutral. These are short sampled checks across a few minutes, not a 15-minute soak or a whole-run statistical benchmark. Crowd mode is explicitly invulnerable and does not prove mission balance.
+
+The final APK requested a test video at 18:42:19, showed it at 18:42:29, and received one earned callback at 18:42:38 (emulator log time). `android-final-ad.png` shows the SDK's Test Ad / Reward granted state; `android-final-reward.png` shows the paused game with one earned callback. The full filtered trace is `android-final-ad.log`. A new survival run then responded to touch movement and both abilities; `android-final-survival.png` shows 59 FPS / 16.7 ms p95. `nightfall-android-gameplay.mp4` is a 25-second recording from the visible emulator, not a rendered concept video.
+
+An intermittent display defect remains: some crowd screenshots omit static button lettering, especially the pause bars, while the button shapes and hit targets remain functional. A later capture restores Pulse/Dodge text but still omits the pause glyph. Normal-survival and menu captures display the labels. Root cause has not been isolated; do not mark complete visual acceptance from the frame-rate improvement alone. The updated build also logged one cached-shader recompile warning at startup, then rendered successfully; this is not established as the cause.
+
+Remaining acceptance: investigate that control-label artifact, verify an actual early dismissal without an earned callback using a cancellable test creative, complete sustained native and physical-phone performance checks, and test a full boss win/loss journey. Inventory rewards, production IDs/mediation, and purchases remain later milestones. No network/router configuration was changed; emulator Wi-Fi/data were restored after the offline test.
