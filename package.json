@@ -1,0 +1,37 @@
+{
+  "name": "rice-puzzle-arcade",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "start:grid": "pnpm --filter @arcade/grid-foundry start",
+    "start:merge": "pnpm --filter @arcade/merge-drift start",
+    "start:cascade": "pnpm --filter @arcade/color-cascade start",
+    "assets": "node scripts/assets.mjs",
+    "check:release": "node scripts/check-release.cjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/react": "^19.2.0",
+    "@types/node": "^24.0.0",
+    "vitest": "^4.0.0",
+    "sharp": "^0.34.0"
+  },
+  "dependencies": {
+    "expo-audio": "~58.0.0",
+    "expo-haptics": "~58.0.0",
+    "react-native-google-mobile-ads": "17.3.0",
+    "react-native": "0.88.0",
+    "react-native-web": "^0.21.0",
+    "expo": "~58.0.14",
+    "expo-build-properties": "~58.0.0",
+    "react-dom": "19.3.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "react": "19.3.0",
+    "expo-dev-client": "~58.0.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "expo-system-ui": "~58.0.6"
+  }
+}

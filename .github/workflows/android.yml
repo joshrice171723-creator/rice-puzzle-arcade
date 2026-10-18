@@ -1,0 +1,54 @@
+name: Internal Android artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: internal-android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app: [grid-foundry, merge-drift, color-cascade]
+    env:
+      EXPO_PUBLIC_BUILD_PROFILE: internal
+      EXPO_PUBLIC_ADS_MODE: test
+      EAS_BUILD_PROFILE: internal
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Install Android compile toolchain
+        run: sdkmanager 'platforms;android-37' 'build-tools;37.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
+      - run: npm install -g pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Compile internal APK and AAB
+        shell: pwsh
+        run: ./scripts/build-android.ps1 -App '${{ matrix.app }}'
+      - name: Preserve build receipts and installable artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-internal-test-${{ github.sha }}
+          path: artifacts/android/${{ matrix.app }}/
+          if-no-files-found: warn
+          retention-days: 14

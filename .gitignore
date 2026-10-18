@@ -1,0 +1,16 @@
+node_modules/
+.expo/
+dist/
+web-build/
+artifacts/
+graft/
+*.log
+.env
+.env.*.local
+*.keystore
+*.jks
+credentials.json
+local.properties
+apps/*/android/
+apps/*/ios/
+.pnpm-store/
