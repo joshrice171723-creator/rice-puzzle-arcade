@@ -3,6 +3,7 @@ import { AppState, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, Te
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAudioPlayer } from 'expo-audio';
+import { gameThemes, Theme, ThemeContext } from './themes';
 import { createAdsService } from '../ads';
 import { ArcadeSave, createSaveWriter, dailySeed, emptySave, localDate, Mode, parseSave, Run, updateRun } from '../game-utils/storage';
 
@@ -13,8 +14,12 @@ export default function GameShell(props: Props) {
   return <SafeAreaProvider><Shell {...props} /></SafeAreaProvider>;
 }
 
-function Shell({ slug, title, subtitle, accent, background, tutorial, rewardDescription, Game }: Props) {
+function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Props) {
   const [data, setData] = useState<ArcadeSave>(emptySave);
+  const collection = gameThemes(slug);
+  const theme = collection.themes.find(item => item.id === data.settings.theme) ?? collection.themes[0];
+  const { accent, background } = theme;
+  const styles = makeStyles(theme);
   const latest = useRef(data);
   const [loaded, setLoaded] = useState(false);
   const [screen, setScreen] = useState<'home' | 'play'>('home');
@@ -128,25 +133,31 @@ function Shell({ slug, title, subtitle, accent, background, tutorial, rewardDesc
     } finally { transitionLock.current = false; setTransitioning(false); }
   };
   const closeTutorial = () => { setHelp(false); commit({ ...latest.current, settings: { ...latest.current.settings, tutorialSeen: true } }); };
-  const button = (label: string, action: () => void, primary = false, disabled = false) => <Pressable accessibilityRole="button" disabled={disabled} onPress={action} style={({ pressed }) => [styles.button, { borderColor: accent }, primary && { backgroundColor: accent }, pressed && { opacity: 0.7 }, disabled && { opacity: 0.4 }]}><Text style={[styles.buttonText, { color: primary ? background : accent }]}>{label}</Text></Pressable>;
+  const button = (label: string, action: () => void, primary = false, disabled = false) => <Pressable accessibilityRole="button" disabled={disabled} onPress={action} style={({ pressed }) => [styles.button, { borderColor: accent }, primary && { backgroundColor: accent }, pressed && { opacity: 0.7 }, disabled && { opacity: 0.4 }]}><Text style={[styles.buttonText, { color: primary ? theme.background : accent }]}>{label}</Text></Pressable>;
   const openSite = (path: string) => {
     const base = process.env.EXPO_PUBLIC_WEBSITE_URL;
     if (base && /^https:\/\//.test(base)) void Linking.openURL(`${base.replace(/\/$/, '')}/${path}`).catch(() => setNotice('This link could not be opened. Please try again later.'));
     else setPrivacy(true);
   };
   const modal = (visible: boolean, title: string, children: React.ReactNode, close: () => void) => <Modal visible={visible} transparent animationType="fade" onRequestClose={close}><View style={styles.scrim}><View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: background }]}><ScrollView contentContainerStyle={styles.dialogContent}><Text style={[styles.dialogTitle, { color: accent }]}>{title}</Text>{children}</ScrollView></View></View></Modal>;
-  return <SafeAreaView style={[styles.safe, { backgroundColor: background }]}>
+  return <ThemeContext.Provider value={{ theme, softTiles: data.settings.softTiles }}><SafeAreaView style={[styles.safe, { backgroundColor: background }]}>
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
       <View style={styles.content}>
         <View style={styles.header}><View style={styles.brand}><Text style={[styles.eyebrow, { color: accent }]}>RICE PUZZLE ARCADE</Text><Text style={styles.title}>{title}</Text></View>{button('Settings', () => setSettings(true))}</View>
         {!!notice && <Pressable accessibilityRole="button" accessibilityLabel={`${notice} Dismiss notice`} onPress={() => setNotice('')}><Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text></Pressable>}
         {!loaded ? <Text style={styles.copy}>Opening your arcade…</Text> : screen === 'home' ? <>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <View style={styles.welcome}>
+            <View style={styles.heroTop}><Text style={styles.themeLabel}>{theme.name.toUpperCase()}</Text><Text style={styles.sparkles}>✦ · ✦</Text></View>
+            <Text style={styles.mascot} accessibilityLabel={slug === 'grid-foundry' ? 'Your workshop teddy bear' : slug === 'merge-drift' ? 'Your ocean whale' : 'Your garden flowers'}>{theme.icon}</Text>
+            <Text style={styles.subtitle}>{collection.greeting}</Text>
+            <Text style={styles.copy}>{subtitle}</Text>
+          </View>
+          {button('Choose your theme', () => setSettings(true))}
           <View style={styles.summary}><Text style={[styles.eyebrow, { color: accent }]}>YOUR PERSONAL BEST</Text><Text style={styles.best}>{data.stats.best.toLocaleString()}</Text><Text style={styles.copy}>{data.stats.games} games played{data.stats.highestTile > 0 ? ` · Highest tile ${data.stats.highestTile.toLocaleString()}` : ''}</Text></View>
           {data.runs.normal && button(data.runs.normal.ended ? 'View last result' : 'Continue game', () => begin('normal', true), true)}
           {button('New game', () => begin('normal'), !data.runs.normal)}
           {button(data.runs.daily?.date === today && !data.runs.daily.ended ? 'Continue daily challenge' : 'Daily challenge', () => begin('daily', data.runs.daily?.date === today))}
-          <Text style={styles.small}>Today’s shared seed · {today}{data.stats.dailyDate === today ? ` · Best ${data.stats.dailyBest.toLocaleString()}` : ''}</Text>
+          <Text style={styles.small}>A fresh puzzle every day · {today}{data.stats.dailyDate === today ? ` · Best ${data.stats.dailyBest.toLocaleString()}` : ''}</Text>
           {button('How to play', () => setHelp(true))}
           <Text style={styles.small}>Play offline. No account needed. Optional reward videos may be available after a run.</Text>
         </> : run ? <>
@@ -166,6 +177,12 @@ function Shell({ slug, title, subtitle, accent, background, tutorial, rewardDesc
       {button('Restart', () => begin(mode))}{button('Home · save progress', () => { setScreen('home'); setPaused(false); })}
     </>, () => setPaused(false))}
     {modal(settings, 'Make it yours', <>
+      <Text style={styles.copy}>Choose a little world to play in. Your progress stays with you.</Text>
+      {collection.themes.map(option => <Pressable key={option.id} accessibilityRole="radio" accessibilityState={{ checked: theme.id === option.id }} accessibilityLabel={option.name} onPress={() => commit({ ...latest.current, settings: { ...latest.current.settings, theme: option.id } })} style={[styles.themeOption, { backgroundColor: option.surface, borderColor: theme.id === option.id ? option.accent : option.edge }]}>
+        <View style={{ flex: 1, gap: 5 }}><Text style={{ color: option.ink, fontSize: 16, fontWeight: '800' }}>{theme.id === option.id ? '✓ ' : ''}{option.name}</Text><Text style={{ color: option.muted, fontSize: 12 }}>{option.description}</Text></View>
+        <View style={{ flexDirection: 'row', gap: 4 }}>{[option.board, option.tile, option.accent].map(color => <View key={color} style={{ width: 16, height: 28, borderRadius: 8, backgroundColor: color }} />)}</View>
+      </Pressable>)}
+      <View style={styles.setting}><Text style={styles.copy}>Rounded tiles</Text><Switch accessibilityLabel="Rounded tiles" value={data.settings.softTiles} onValueChange={softTiles => commit({ ...latest.current, settings: { ...latest.current.settings, softTiles } })} trackColor={{ true: accent }} /></View>
       <View style={styles.setting}><Text style={styles.copy}>Sound</Text><Switch accessibilityLabel="Sound" value={data.settings.sound} onValueChange={sound => commit({ ...latest.current, settings: { ...latest.current.settings, sound } })} trackColor={{ true: accent }} /></View>
       <View style={styles.setting}><Text style={styles.copy}>Haptics</Text><Switch accessibilityLabel="Haptics" value={data.settings.haptics} onValueChange={haptics => commit({ ...latest.current, settings: { ...latest.current.settings, haptics } })} trackColor={{ true: accent }} /></View>
       {button('How to play', () => { setSettings(false); setHelp(true); })}
@@ -180,19 +197,25 @@ function Shell({ slug, title, subtitle, accent, background, tutorial, rewardDesc
       <Text selectable style={styles.copy}>Support: {process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'The support website will be available with the published release.'}</Text>
       <Text selectable style={styles.small}>App: {slug} · Version 0.1.0</Text>{button('Close', () => setPrivacy(false), true)}
     </>, () => setPrivacy(false))}
-  </SafeAreaView>;
+  </SafeAreaView></ThemeContext.Provider>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: Theme) => StyleSheet.create({
+  welcome: { padding: 24, borderRadius: 30, backgroundColor: theme.empty, gap: 8 },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  themeLabel: { color: theme.accent, fontSize: 10, letterSpacing: 1.4, fontWeight: '800' },
+  sparkles: { color: theme.accent, fontSize: 22 },
+  mascot: { fontSize: 68, textAlign: 'center', marginVertical: 4 },
+  themeOption: { flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 2, minHeight: 78 },
   safe: { flex: 1 }, page: { flexGrow: 1, padding: 20, paddingBottom: 30 }, content: { width: '100%', maxWidth: 470, alignSelf: 'center', gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, brand: { flex: 1 }, title: { color: '#f5f7fc', fontWeight: '800', fontSize: 28, marginTop: 6 },
-  eyebrow: { fontSize: 10, letterSpacing: 1.6, fontWeight: '700' }, subtitle: { color: '#c8d7e3', fontSize: 23, lineHeight: 32, marginVertical: 18 },
-  summary: { paddingVertical: 20, gap: 8 }, best: { color: '#fff', fontSize: 58, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  copy: { color: '#cfdae6', fontSize: 15, lineHeight: 23 }, small: { color: '#a7b8ca', fontSize: 12, lineHeight: 19 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, brand: { flex: 1 }, title: { color: theme.ink, fontWeight: '800', fontSize: 28, marginTop: 6 },
+  eyebrow: { fontSize: 10, letterSpacing: 1.6, fontWeight: '700' }, subtitle: { color: theme.ink, fontSize: 23, lineHeight: 32, marginVertical: 4 },
+  summary: { padding: 20, gap: 5, borderRadius: 24, backgroundColor: theme.surface }, best: { color: theme.ink, fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  copy: { color: theme.ink, fontSize: 15, lineHeight: 23 }, small: { color: theme.muted, fontSize: 12, lineHeight: 19 },
   button: { borderWidth: 1, borderRadius: 14, minHeight: 48, paddingHorizontal: 15, paddingVertical: 13, justifyContent: 'center', alignItems: 'center' },
   buttonText: { fontSize: 14, fontWeight: '700', textAlign: 'center' }, toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   results: { paddingVertical: 18, gap: 14 }, links: { flexDirection: 'row', gap: 12, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' },
   notice: { backgroundColor: '#273b50', color: '#f0e4ba', padding: 14, borderRadius: 12, lineHeight: 21 },
-  scrim: { flex: 1, backgroundColor: '#000b', padding: 24, alignItems: 'center', justifyContent: 'center' }, dialog: { width: '100%', maxWidth: 430, maxHeight: '90%', borderRadius: 24, borderWidth: 1, borderColor: '#5c6e80' },
-  dialogContent: { padding: 24, gap: 18 }, dialogTitle: { fontSize: 26, fontWeight: '800' }, tutorial: { color: '#d9e5ee', fontSize: 17, lineHeight: 27 }, setting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  scrim: { flex: 1, backgroundColor: '#000b', padding: 24, alignItems: 'center', justifyContent: 'center' }, dialog: { width: '100%', maxWidth: 430, maxHeight: '90%', borderRadius: 24, borderWidth: 1, borderColor: theme.edge },
+  dialogContent: { padding: 24, gap: 18 }, dialogTitle: { fontSize: 26, fontWeight: '800' }, tutorial: { color: theme.ink, fontSize: 17, lineHeight: 27 }, setting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

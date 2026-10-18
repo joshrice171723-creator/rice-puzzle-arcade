@@ -1,3 +1,4 @@
+import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -22,6 +23,8 @@ type Props = {
 };
 
 export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics }: Props) {
+  const { theme, softTiles } = useGameTheme();
+  const styles = makeStyles(theme, softTiles);
   const [state, setState] = useState(() => restoreGame(saved) ?? createGame(seed));
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
   const [feedback, setFeedback] = useState('Find a matching group of 3 or more');
@@ -112,7 +115,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
           <Text style={styles.clockLabel}>TIME LEFT</Text><Text style={[styles.time, seconds <= 15 && styles.urgentText]}>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</Text>
         </View>
       </View>
-      <View style={styles.track}><View style={[styles.progress, { width: `${state.remainingMs / 90_000 * 100}%`, backgroundColor: seconds <= 15 ? '#ff8c91' : '#fae38a' }]} /></View>
+      <View style={styles.track}><View style={[styles.progress, { width: `${state.remainingMs / 90_000 * 100}%`, backgroundColor: seconds <= 15 ? '#ff8c91' : theme.accent }]} /></View>
       <Text style={styles.feedback} accessibilityLiveRegion="polite">{state.shuffleCount > 0 && state.groupsCleared === 0 ? 'Free shuffle! A fresh match is ready.' : feedback}</Text>
       <View onLayout={event => setStride((event.nativeEvent.layout.width - 11) / 7)} style={styles.board} accessibilityLabel="Color Cascade symbol board">
         {state.board.map((row, r) => (
@@ -135,28 +138,28 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
   game: { width: '100%', maxWidth: 490, alignSelf: 'center', paddingHorizontal: 12, paddingBottom: 18 },
   stats: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
-  eyebrow: { color: '#b6bddc', fontSize: 11, fontWeight: '700', letterSpacing: 2 },
-  score: { color: '#fff8e1', fontSize: 42, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  clock: { alignItems: 'center', backgroundColor: '#2b3152', borderRadius: 18, paddingHorizontal: 20, paddingVertical: 9 },
-  clockLabel: { color: '#c6ccec', fontSize: 9, letterSpacing: 1.5, fontWeight: '700' },
-  time: { fontSize: 26, color: '#fae38a', fontWeight: '800', fontVariant: ['tabular-nums'] },
+  eyebrow: { color: theme.muted, fontSize: 11, fontWeight: '700', letterSpacing: 2 },
+  score: { color: theme.ink, fontSize: 42, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  clock: { alignItems: 'center', backgroundColor: theme.empty, borderRadius: 18, paddingHorizontal: 20, paddingVertical: 9 },
+  clockLabel: { color: theme.muted, fontSize: 9, letterSpacing: 1.5, fontWeight: '700' },
+  time: { fontSize: 26, color: theme.accent, fontWeight: '800', fontVariant: ['tabular-nums'] },
   urgent: { backgroundColor: '#fbe5df' },
   urgentText: { color: '#a93532' },
-  track: { height: 5, backgroundColor: '#313956', borderRadius: 4, marginTop: 14, overflow: 'hidden' },
+  track: { height: 5, backgroundColor: theme.empty, borderRadius: 4, marginTop: 14, overflow: 'hidden' },
   progress: { height: '100%', borderRadius: 4 },
-  feedback: { minHeight: 48, textAlign: 'center', color: '#e4e7fa', fontSize: 13, fontWeight: '600', paddingVertical: 14 },
-  board: { padding: 7, borderRadius: 22, backgroundColor: '#262c49', borderWidth: 1, borderColor: '#4b5275', gap: 5, overflow: 'hidden' },
+  feedback: { minHeight: 48, textAlign: 'center', color: theme.ink, fontSize: 13, fontWeight: '600', paddingVertical: 14 },
+  board: { padding: 7, borderRadius: 22, backgroundColor: theme.board, borderWidth: 1, borderColor: theme.edge, gap: 5, overflow: 'hidden' },
   row: { flexDirection: 'row', gap: 5 },
   tileSlot: { flex: 1, aspectRatio: 1 },
-  tile: { flex: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#ffffff99', borderBottomWidth: 4, borderBottomColor: '#00000020' },
+  tile: { flex: 1, borderRadius: softTiles ? 15 : 3, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#ffffff99', borderBottomWidth: 4, borderBottomColor: '#00000020' },
   pressed: { opacity: 0.65, transform: [{ scale: 0.9 }] },
   symbol: { color: '#ffffff', fontSize: 25, fontWeight: '800', textShadowColor: '#00000020', textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 },
   legendSymbol: { fontSize: 19 },
-  hint: { color: '#c4cbe7', textAlign: 'center', fontSize: 12, lineHeight: 19, marginTop: 6 },
-  detail: { color: '#a2adce', fontSize: 11, textAlign: 'center', marginTop: 7 },
-  finished: { textAlign: 'center', fontSize: 18, fontWeight: '700', color: '#fae38a', padding: 18 },
+  hint: { color: theme.muted, textAlign: 'center', fontSize: 12, lineHeight: 19, marginTop: 6 },
+  detail: { color: theme.muted, fontSize: 11, textAlign: 'center', marginTop: 7 },
+  finished: { textAlign: 'center', fontSize: 18, fontWeight: '700', color: theme.accent, padding: 18 },
 });

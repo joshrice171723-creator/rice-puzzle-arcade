@@ -1,3 +1,4 @@
+import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View, type ViewInstance } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -8,9 +9,11 @@ type Props = {
   onEnd: () => void; rewardToken: number; haptics: boolean;
 };
 type Preview = { row: number; col: number; index: number };
-const copper = '#e8a66f';
+
 
 export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics }: Props) {
+  const { theme, softTiles } = useGameTheme();
+  const styles = makeStyles(theme, softTiles);
   const [state, setState] = useState<GameState>(() => restoreGame(saved) ?? newGame(seed));
   const [selected, setSelected] = useState<number | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -127,7 +130,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
         </Pressable>;
       })}</View>)}
     </View>
-    <View style={[styles.trayHeader, { width: boardSize }]}><Text style={styles.eyebrow}>NEXT IN THE FORGE</Text><Text style={styles.trayHint}>drag or tap to place</Text></View>
+    <View style={[styles.trayHeader, { width: boardSize }]}><Text style={styles.eyebrow}>YOUR LITTLE BUILDING BLOCKS</Text><Text style={styles.trayHint}>drag or tap to place</Text></View>
     <View style={[styles.tray, { width: boardSize }]}>{state.tray.map((shape, index) =>
       <View key={index} {...responders[index].panHandlers} style={[styles.pieceSlot, selected === index && styles.selectedSlot]}>
         {shape ? <Pressable accessibilityRole="button" accessibilityLabel={'Select ' + shape + ' shape, ' + SHAPES[shape].length + ' cells'}
@@ -137,13 +140,15 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
         </Pressable> : <Text style={styles.usedSlot} accessibilityLabel="Piece placed">✓</Text>}
       </View>)}</View>
     {state.ended ? <View style={[styles.result, { width: boardSize }]} accessibilityRole="summary">
-      <Text style={styles.resultTitle}>SHIFT COMPLETE</Text>
+      <Text style={styles.resultTitle}>NICE BUILDING!</Text>
       <Text style={styles.resultCopy}>{state.revived ? 'Your second wind was well spent.' : 'A rewarded revive clears your two busiest rows and brings a playable tray.'}</Text>
     </View> : <Text style={styles.footer}>Fill a row or column. Make room for what’s next.</Text>}
   </View>;
 }
 
 function MiniShape({ shape }: { shape: Shape }) {
+  const { theme, softTiles } = useGameTheme();
+  const styles = makeStyles(theme, softTiles);
   const cells = SHAPES[shape];
   const rows = Math.max(...cells.map(([r]) => r)) + 1;
   const cols = Math.max(...cells.map(([, c]) => c)) + 1;
@@ -151,33 +156,33 @@ function MiniShape({ shape }: { shape: Shape }) {
     <View key={r + ':' + c} style={[styles.miniCell, { top: r * 19, left: c * 19 }]} />)}</View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
   root: { alignItems: 'center', paddingVertical: 12, width: '100%' },
   scorePanel: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 3 },
-  eyebrow: { color: '#b8b7b4', fontSize: 10, fontWeight: '700', letterSpacing: 1.5 },
-  score: { color: '#fff4e8', fontSize: 45, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -2 },
-  moveBadge: { borderLeftWidth: 1, borderLeftColor: '#46515c', paddingLeft: 18, alignItems: 'center' },
-  moveNumber: { color: copper, fontSize: 24, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  notice: { color: '#d2cbc4', fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 16, minHeight: 18, paddingHorizontal: 16 },
-  board: { backgroundColor: '#101c27', borderRadius: 13, padding: 4, borderWidth: 0, overflow: 'hidden' },
+  eyebrow: { color: theme.muted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5 },
+  score: { color: theme.ink, fontSize: 45, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -2 },
+  moveBadge: { borderLeftWidth: 1, borderLeftColor: theme.edge, paddingLeft: 18, alignItems: 'center' },
+  moveNumber: { color: theme.accent, fontSize: 24, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  notice: { color: theme.muted, fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 16, minHeight: 18, paddingHorizontal: 16 },
+  board: { backgroundColor: theme.board, borderRadius: 13, padding: 4, borderWidth: 0, overflow: 'hidden' },
   row: { flexDirection: 'row' },
-  cell: { margin: 2, borderRadius: 4, backgroundColor: '#23323f', borderWidth: 1, borderColor: '#354552', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  filled: { backgroundColor: '#c98a57', borderColor: '#ffe0b5', borderTopWidth: 2, borderBottomColor: '#8e542c' },
-  tileInset: { width: '65%', height: '65%', borderColor: '#eeb784', borderWidth: 1, borderRadius: 2 },
+  cell: { margin: 2, borderRadius: softTiles ? 9 : 2, backgroundColor: theme.empty, borderWidth: 1, borderColor: theme.edge, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  filled: { backgroundColor: theme.tile, borderColor: theme.surface, borderTopWidth: 2, borderBottomColor: '#8e542c' },
+  tileInset: { width: '65%', height: '65%', borderColor: theme.surface, borderWidth: 1, borderRadius: 2 },
   ghost: { backgroundColor: '#6d735e', borderColor: '#f8dda9', borderStyle: 'dashed', borderWidth: 2 },
   illegal: { backgroundColor: '#683e44', borderColor: '#f8a5a5', borderWidth: 2 },
   clearFlash: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#ffe8b9' },
   paused: { opacity: .35 },
   trayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 10 },
-  trayHint: { color: '#aab6c1', fontSize: 10 },
+  trayHint: { color: theme.muted, fontSize: 10 },
   tray: { flexDirection: 'row', gap: 10 },
-  pieceSlot: { flex: 1, height: 91, borderRadius: 12, backgroundColor: '#23323f', borderWidth: 1, borderColor: '#46515c', justifyContent: 'center', alignItems: 'center' },
-  selectedSlot: { borderColor: copper, borderWidth: 2, backgroundColor: '#3a3934' },
+  pieceSlot: { flex: 1, height: 91, borderRadius: 12, backgroundColor: theme.empty, borderWidth: 1, borderColor: theme.edge, justifyContent: 'center', alignItems: 'center' },
+  selectedSlot: { borderColor: theme.accent, borderWidth: 2, backgroundColor: theme.empty },
   pieceButton: { flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center', minHeight: 48 },
-  miniCell: { position: 'absolute', width: 16, height: 16, borderRadius: 3, backgroundColor: copper, borderWidth: 1, borderColor: '#ffdfb6' },
+  miniCell: { position: 'absolute', width: 16, height: 16, borderRadius: softTiles ? 5 : 1, backgroundColor: theme.accent, borderWidth: 1, borderColor: theme.surface },
   usedSlot: { color: '#729281', fontSize: 25 },
-  footer: { color: '#aab6c1', fontSize: 11, marginTop: 19, textAlign: 'center', paddingHorizontal: 12 },
-  result: { marginTop: 18, borderTopWidth: 1, borderTopColor: '#46515c', paddingTop: 16 },
-  resultTitle: { color: copper, fontSize: 15, letterSpacing: 2, fontWeight: '800', textAlign: 'center' },
-  resultCopy: { color: '#d2cbc4', fontSize: 12, lineHeight: 19, textAlign: 'center', marginTop: 8 },
+  footer: { color: theme.muted, fontSize: 11, marginTop: 19, textAlign: 'center', paddingHorizontal: 12 },
+  result: { marginTop: 18, borderTopWidth: 1, borderTopColor: theme.edge, paddingTop: 16 },
+  resultTitle: { color: theme.accent, fontSize: 15, letterSpacing: 2, fontWeight: '800', textAlign: 'center' },
+  resultCopy: { color: theme.muted, fontSize: 12, lineHeight: 19, textAlign: 'center', marginTop: 8 },
 });

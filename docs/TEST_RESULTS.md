@@ -16,3 +16,11 @@ Grid Android prebuild succeeded after recovery, recreating removed generated fil
 Browser previews run the production game engines and React Native Web screens; they do not simulate ad rewards. Core move smoke checks are not complete end-to-end native acceptance.
 
 Disk-full failure recovery: restored truncated Grid screen from retained source, confirmed its nonzero length and TypeScript validity, repaired dependency installation and regenerated native files. Expo cache writes may still warn while C: remains full. Use the headless single-worker preview script to avoid debugger downloads.
+
+## Theme update - October 17, 2026
+- Added three palettes per game, friendly home mascots, and rounded/square tile preferences. Existing saves migrate without losing runs or scores.
+- TypeScript passed; 87 tests passed, including old-save migration and theme preference persistence.
+- Browser: all three home screens and saved boards rendered; Grid theme and tile shape survived reload; light and evening theme picker inspected. No gameplay rules changed.
+- App tsconfigs now resolve the hoisted Expo base explicitly, fixing the test transform resolver failure.
+- Native Android/theme rendering and live ads remain unverified.
+

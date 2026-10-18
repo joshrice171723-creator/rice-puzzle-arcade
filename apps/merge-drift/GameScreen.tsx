@@ -1,3 +1,4 @@
+import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -7,6 +8,8 @@ type Props = { seed: number; paused: boolean; saved?: unknown; onSave: (state: u
 const colors = ['#a9eef0', '#6cdcdf', '#38c8d4', '#2aabc5', '#237da9', '#3964ab', '#6656b8', '#9660ba', '#ba6ca8'];
 
 export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics }: Props) {
+  const { theme, softTiles } = useGameTheme();
+  const styles = makeStyles(theme, softTiles);
   const [state, setState] = useState<MergeState>(() => restoreGame(saved) ?? createGame(seed));
   const [width, setWidth] = useState(300);
   const [movement, setMovement] = useState<Movement[] | null>(null);
@@ -104,25 +107,25 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   </View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
   container: { width: '100%', maxWidth: 470, alignSelf: 'center', gap: 14 },
   stats: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { color: '#93c6d0', fontSize: 11, fontWeight: '700', letterSpacing: 1.4 },
-  score: { color: '#f0fdff', fontSize: 38, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  label: { color: theme.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1.4 },
+  score: { color: theme.ink, fontSize: 38, fontWeight: '800', fontVariant: ['tabular-nums'] },
   best: { alignItems: 'flex-end' },
-  highest: { color: '#6ee7ee', fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  milestone: { color: '#b9edf0', fontSize: 13, minHeight: 20 },
-  board: { width: '100%', backgroundColor: '#0a233b', borderRadius: 18, borderWidth: 1, borderColor: '#28516b', overflow: 'hidden' },
-  empty: { position: 'absolute', backgroundColor: '#14324a', borderRadius: 12 },
-  tile: { position: 'absolute', justifyContent: 'center', alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: '#ffffff50' },
+  highest: { color: theme.accent, fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  milestone: { color: theme.muted, fontSize: 13, minHeight: 20 },
+  board: { width: '100%', backgroundColor: theme.board, borderRadius: 18, borderWidth: 1, borderColor: theme.edge, overflow: 'hidden' },
+  empty: { position: 'absolute', backgroundColor: theme.empty, borderRadius: softTiles ? 18 : 3 },
+  tile: { position: 'absolute', justifyContent: 'center', alignItems: 'center', borderRadius: softTiles ? 18 : 3, borderWidth: 1, borderColor: '#ffffff50' },
   number: { fontWeight: '800', fontVariant: ['tabular-nums'], paddingHorizontal: 3 },
-  cover: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#071829ed', alignItems: 'center', justifyContent: 'center' },
-  coverTitle: { color: '#adf3f4', fontSize: 25, fontWeight: '700' },
-  hint: { color: '#a5c5d3', textAlign: 'center', fontSize: 13, lineHeight: 20 },
+  cover: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' },
+  coverTitle: { color: theme.ink, fontSize: 25, fontWeight: '700' },
+  hint: { color: theme.muted, textAlign: 'center', fontSize: 13, lineHeight: 20 },
   controls: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
-  control: { minWidth: 54, minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: '#366174', alignItems: 'center', justifyContent: 'center', backgroundColor: '#123247' },
-  pressed: { backgroundColor: '#24536a' },
+  control: { minWidth: 54, minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: theme.edge, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.empty },
+  pressed: { backgroundColor: theme.empty },
   disabled: { opacity: 0.35 },
-  arrow: { color: '#b3f6f5', fontSize: 26 },
-  footer: { color: '#739eae', fontSize: 10, letterSpacing: 1.7, textAlign: 'center' },
+  arrow: { color: theme.ink, fontSize: 26 },
+  footer: { color: theme.muted, fontSize: 10, letterSpacing: 1.7, textAlign: 'center' },
 });

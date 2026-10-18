@@ -12,11 +12,20 @@ describe('arcade persistence', () => {
   it('saves independent daily and normal runs and round-trips settings', () => {
     let save = updateRun(emptySave(), run());
     save = updateRun(save, run({ mode: 'daily', id: 'daily', seed: 12, saved: { score: 80 } }));
-    save.settings = { sound: true, haptics: false, tutorialSeen: true };
+    save.settings = { ...save.settings, sound: true, haptics: false, tutorialSeen: true };
     expect(parseSave(JSON.stringify(save))).toEqual(save);
     expect(save.runs.normal?.seed).toBe(42);
     expect(save.runs.daily?.seed).toBe(12);
     expect(save.stats).toEqual({ best: 80, highestTile: 16, games: 0, dailyBest: 80, dailyDate: '2026-10-17' });
+  });
+  it('restores older saves and persists visual preferences without changing a run', () => {
+    const save = updateRun(emptySave(), run());
+    const old = JSON.parse(JSON.stringify(save));
+    delete old.settings.theme; delete old.settings.softTiles;
+    expect(parseSave(JSON.stringify(old))).toEqual(save);
+    save.settings.theme = 'night'; save.settings.softTiles = false;
+    expect(parseSave(JSON.stringify(save))).toEqual(save);
+    expect(parseSave(JSON.stringify({ ...save, settings: { ...save.settings, theme: 'unknown', softTiles: null } }))?.settings).toEqual({ ...save.settings, theme: 'day', softTiles: true });
   });
   it('counts a whole run only once across an earned rescue and second ending', () => {
     let save = updateRun(emptySave(), run({ ended: true }));
