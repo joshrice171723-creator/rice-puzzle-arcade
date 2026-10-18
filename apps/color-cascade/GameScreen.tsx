@@ -87,7 +87,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
     rewardSeen.current = rewardToken;
     if (!incremented) return;
     setState(current => extendTime(current, true));
-    setFeedback('20 extra seconds. Keep the colors flowing!');
+    setFeedback('20 seconds added.');
   }, [rewardToken]);
 
   function tap(row: number, col: number) {
@@ -106,7 +106,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
     }
     setDrops(fall);
     setState(next);
-    setFeedback(next.shuffleCount > state.shuffleCount ? 'Free shuffle! A fresh match is ready.' : `+${next.score - state.score} · ${next.lastGroupSize} symbols${next.lastGroupSize >= 6 ? ' · Beautiful cascade!' : ''}`);
+    setFeedback(next.shuffleCount > state.shuffleCount ? 'Board shuffled: no matches remained.' : `+${next.score - state.score} · ${next.lastGroupSize} symbols`);
     if (haptics) void Haptics.selectionAsync().catch(() => {});
     if (!reducedMotion) {
       entrance.stopAnimation();
@@ -139,7 +139,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
           </View>
         ))}
       </View>
-      <Text style={styles.hint}>{state.remainingMs === 0 ? `Time’s up! ${state.score.toLocaleString()} points.` : `${state.groupsCleared} groups cleared · Bigger groups, bigger scores.`}</Text>
+      <Text style={styles.hint}>{state.remainingMs === 0 ? `Time’s up! ${state.score.toLocaleString()} points.` : `${state.groupsCleared} groups cleared`}</Text>
     </View>
   );
 }

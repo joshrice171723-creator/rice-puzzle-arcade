@@ -29,6 +29,9 @@ type Slot = { handle: AdHandle; readyAt: number | null; cleanup: (() => void)[];
 /** The game engines never receive ad inventory, consent, pricing, or history. */
 export class AdsService {
   private state: AdsState = { initialized: false, busy: false, consentAllowed: false, privacyOptionsRequired: false, lastResult: 'not_ready' };
+  private eventListeners = new Set<(name: string, fields: { format: string; code?: string }) => void>();
+  subscribeEvents = (listener: (name: string, fields: { format: string; code?: string }) => void) => { this.eventListeners.add(listener); return () => { this.eventListeners.delete(listener); }; };
+  private emit(name: string, format: AdFormat, code?: string) { for (const listener of this.eventListeners) { try { listener(name, { format, ...(code ? { code } : {}) }); } catch {} } }
   private listeners = new Set<(state: AdsState) => void>();
   private slots: Partial<Record<AdFormat, Slot>> = {};
   private startedAt: number;
@@ -131,10 +134,12 @@ export class AdsService {
       const existing = this.slots[format];
       if (existing && (existing.readyAt === null || this.now() - existing.readyAt < 55 * 60_000)) continue;
       this.clearSlot(format);
+      this.emit('ad_request', format);
       try {
         const handle = this.adapter.create(format);
         const slot: Slot = { handle, readyAt: null, cleanup: [], timer: setTimeout(() => {
           this.clearSlot(format);
+          this.emit('ad_failed', format, 'timeout');
           this.result('timeout');
         }, 15_000) };
         this.slots[format] = slot;
@@ -142,14 +147,17 @@ export class AdsService {
           if (this.slots[format] !== slot) return;
           clearTimeout(slot.timer);
           slot.readyAt = this.now();
+          this.emit('ad_loaded', format);
           this.update({});
         }), handle.on('error', () => {
           if (this.slots[format] !== slot || this.showingFormat === format) return;
           this.clearSlot(format);
+          this.emit('ad_failed', format, 'load');
           this.result('failed');
         }));
         handle.load();
       } catch {
+        this.emit('ad_failed', format, 'create');
         this.clearSlot(format);
         this.result('failed');
       }
@@ -196,6 +204,7 @@ export class AdsService {
       const finish = (code: AdCode) => {
         if (finished) return;
         finished = true;
+        this.emit(code === 'failed' || code === 'timeout' ? 'ad_failed' : 'ad_closed', format, code);
         clearTimeout(timer);
         this.cancelShow = null;
         this.showingFormat = null;
@@ -212,10 +221,11 @@ export class AdsService {
         finish('timeout');
       }, 180_000);
       this.cancelShow = () => finish('disposed');
-      slot.cleanup.push(slot.handle.on('opened', () => { opened = true; }),
+      slot.cleanup.push(slot.handle.on('opened', () => { if (!opened) this.emit('ad_shown', format); opened = true; }),
         slot.handle.on('earned', () => {
           if (format !== 'rewarded' || earned || finished || this.disposed) return;
           earned = true;
+          this.emit('ad_earned', format);
           try { onRewardEarned?.(); } catch { /* A caller failure cannot grant the same reward again. */ }
         }),
         slot.handle.on('closed', () => {
@@ -231,5 +241,6 @@ export class AdsService {
     this.cancelShow?.();
     this.clearSlots();
     this.listeners.clear();
+    this.eventListeners.clear();
   };
 }

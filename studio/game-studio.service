@@ -1,0 +1,17 @@
+[Unit]
+Description=Game Studio analytics
+After=network.target
+[Service]
+User=game-studio
+Group=game-studio
+WorkingDirectory=/opt/game-studio/current
+Environment=STUDIO_DB=/var/lib/game-studio/events.sqlite3
+ExecStart=/usr/bin/python3 /opt/game-studio/current/server.py
+Restart=on-failure
+StateDirectory=game-studio
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

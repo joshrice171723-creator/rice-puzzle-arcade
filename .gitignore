@@ -14,3 +14,6 @@ local.properties
 apps/*/android/
 apps/*/ios/
 .pnpm-store/
+
+*.sqlite3
+__pycache__/

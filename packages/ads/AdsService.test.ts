@@ -39,6 +39,23 @@ describe('consent and loading', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(0); });
   afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
+  it('reports actual SDK impressions and only one earned event', async () => {
+    const { service, current } = setup();
+    const events: string[] = [];
+    service.subscribeEvents((name, fields) => events.push(`${fields.format}:${name}`));
+    await service.initializeAfterConsent();
+    expect(events).toContain('rewarded:ad_request');
+    expect(events).toContain('rewarded:ad_loaded');
+    expect(events).not.toContain('rewarded:ad_shown');
+    const handle = current('rewarded');
+    const shown = service.showRewardedIfReady(() => {});
+    handle.emit('earned'); handle.emit('earned'); handle.emit('closed');
+    await shown;
+    expect(events.filter(e => e === 'rewarded:ad_earned')).toHaveLength(1);
+    expect(events.filter(e => e === 'rewarded:ad_shown')).toHaveLength(1);
+    service.dispose();
+  });
+
   it('does not load or initialize before consent; coalesces launch calls', async () => {
     const { service, adapter } = setup();
     service.preload();

@@ -44,7 +44,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   useEffect(() => {
     if (rewardToken > previousReward.current) {
       setState(value => rescue(value, true));
-      setMilestone('A little room to drift. Keep going.');
+      setMilestone('Two smallest cubes removed.');
     }
     previousReward.current = rewardToken;
   }, [rewardToken]);
@@ -56,8 +56,11 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
     if (!result.changed) return;
     current.current = result.state;
     setState(result.state);
+    if (result.movements.every(item => item.from === item.to && !item.merged)) {
+      setMilestone('No cubes moved. One new cube added.');
+    }
     if (result.state.highestTile >= 128 && result.state.highestTile > state.highestTile) {
-      setMilestone(`${result.state.highestTile.toLocaleString()} reached. Beautifully done.`);
+      setMilestone(`${result.state.highestTile.toLocaleString()} tile reached.`);
       AccessibilityInfo.announceForAccessibility(`${result.state.highestTile} tile milestone reached`);
     }
     if (callbacks.current.haptics) void Haptics.selectionAsync().catch(() => {});
@@ -94,15 +97,15 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   };
   return <View onLayout={event => setFrame({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} style={styles.container}>
     <View style={styles.stats}>
-      <View><Text style={styles.label}>CURRENT FLOW</Text><Text style={styles.score}>{state.score.toLocaleString()}</Text></View>
+      <View><Text style={styles.label}>SCORE</Text><Text style={styles.score}>{state.score.toLocaleString()}</Text></View>
       <View style={styles.best}><Text style={styles.label}>HIGHEST TILE</Text><Text style={styles.highest}>{state.highestTile.toLocaleString()}</Text></View>
     </View>
     <GoalMeter {...(goal ?? { label: 'Next tile', value: state.highestTile, target: state.highestTile * 2 })} />
-    <Text accessibilityLiveRegion="polite" style={styles.milestone}>{state.ended ? 'No moves remain. Your next flow awaits.' : milestone}</Text>
+    <Text accessibilityLiveRegion="polite" style={styles.milestone}>{state.ended ? 'No moves remain.' : milestone}</Text>
     <View testID="merge-board" {...responder.panHandlers} style={[styles.board, { width, height: width }]}>
       {Array.from({ length: 16 }, (_, index) => <View key={index} style={[styles.empty, { width: cell, height: cell, left: 6 + index % 4 * stride, top: 6 + Math.floor(index / 4) * stride }]} />)}
       {movement ? movement.map((item, index) => tile(item.value, `move-${index}`, item.from, item)) : state.board.map((value, index) => value > 0 && tile(value, `${index}-${value}`, index))}
-      {paused && <View style={styles.cover}><Text style={styles.coverTitle}>Flow paused</Text></View>}
+      {paused && <View style={styles.cover}><Text style={styles.coverTitle}>Paused</Text></View>}
     </View>
     <View style={styles.controls}>
       {(['left', 'up', 'down', 'right'] as Direction[]).map((direction, index) => <Pressable key={direction} accessibilityRole="button" accessibilityLabel={`Move ${direction}`} disabled={paused || state.ended} onPress={() => swipe.current(direction)} style={({ pressed }) => [styles.control, pressed && styles.pressed, (paused || state.ended) && styles.disabled]}><Text style={styles.arrow}>{['←', '↑', '↓', '→'][index]}</Text></Pressable>)}

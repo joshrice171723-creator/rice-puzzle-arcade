@@ -76,12 +76,37 @@ describe('Merge Drift engine', () => {
     expect(JSON.stringify(initial)).toBe(before);
   });
 
-  it('does not spawn or consume randomness on unchanged swipe', () => {
-    const initial = state([2, 4, 0, 0, ...Array(12).fill(0)]);
-    const result = move(initial, 'left');
-    expect(result.changed).toBe(false);
-    expect(result.state).toBe(initial);
-    expect(result.movements).toEqual([]);
+  it.each(['left', 'right', 'up', 'down'] as Direction[])('adds one cube after a blocked %s move', direction => {
+    const board = Array(16).fill(0);
+    const positions = { left: [0, 4], right: [3, 7], up: [0, 1], down: [12, 13] }[direction];
+    board[positions[0]] = 2; board[positions[1]] = 4;
+    const initial = state(board);
+    const result = move(initial, direction);
+    expect(result.changed).toBe(true);
+    expect(result.state.board.filter(Boolean)).toHaveLength(3);
+    expect(result.state.score).toBe(0);
+    expect(result.state.moves).toBe(1);
+    expect(result.state.rng).not.toBe(initial.rng);
+    expect(initial.board).toEqual(board);
+    expect(restoreGame(JSON.parse(JSON.stringify(result.state)))).toEqual(result.state);
+  });
+
+  it('does not overwrite cubes on a full board with a blocked direction', () => {
+    const initial = state([2, 4, 8, 16, 2, 4, 8, 16, 4, 8, 16, 32, 8, 16, 32, 64]);
+    expect(initial.ended).toBe(false);
+    expect(move(initial, 'right').state).toBe(initial);
+  });
+
+  it('checks game over when the penalty cube fills the final space', () => {
+    const board = [...blocked]; board[15] = 0;
+    let losses = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const result = move(state(board, { rng: seed }), 'up').state;
+      expect(result.board.filter(Boolean)).toHaveLength(16);
+      expect(result.ended).toBe(isGameOver(result.board));
+      if (result.ended) losses++;
+    }
+    expect(losses).toBeGreaterThan(0);
   });
 
   it('uses the exact 90/10 tile probability boundary', () => {

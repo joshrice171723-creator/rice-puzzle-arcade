@@ -77,7 +77,8 @@ export function move(state: MergeState, direction: Direction): { state: MergeSta
       }
     }
   }
-  if (board.every((value, index) => value === state.board[index])) return { state, changed: false, movements: [] };
+  // A blocked direction still costs a turn when there is room for a new cube.
+  if (!board.includes(0) && board.every((value, index) => value === state.board[index])) return { state, changed: false, movements: [] };
   const spawned = spawn(board, state.rng);
   return {
     changed: true,
