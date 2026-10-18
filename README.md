@@ -64,6 +64,8 @@ No signing credentials belong in Git. Android native directories are generated f
 
 ## Action-game expansion
 
+The [Nightfall main design plan](docs/nightfall/NIGHTFALL_MAIN_PLAN.md) is the saved October 18 planning baseline: 20 zones, 100 boss encounters, classes, equipment, magic, progression, and rewards. Its campaign loop is timed waves followed by a required boss kill, with no second timer. [Art concepts A and B](docs/nightfall/ART_DIRECTION.md) are awaiting visual review. These are plans and concept images, not implemented features of the prototype below.
+
 [Nightfall Arena](apps/nightfall-arena/README.md) is the first playable action-game slice: a five-minute courtyard survival run with a joystick, automatic fire, moving healing shelters, three upgrade choices, and one scrap-powered defense. Start it with `powershell -ExecutionPolicy Bypass -File scripts/preview.ps1 -App nightfall-arena` at port 8084. It has an independent package/save namespace and does not request ads. The original three puzzle games retain their own implementation and build targets.
 
 See the [expansion audit](docs/EXPANSION_AUDIT.md) and [rendering decision](docs/ADR_001_ARENA_RENDERING.md). Arcane Run, Bullet Rush Arena, Last Stand Workshop, and Kingdom Path Defense are later milestones after review of this slice.
