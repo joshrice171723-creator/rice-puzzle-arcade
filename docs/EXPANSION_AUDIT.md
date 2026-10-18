@@ -1,0 +1,11 @@
+# Expansion audit - 2026-10-18
+
+Baseline b4506c5, clean master pulled before work. Feature branch: codex/arena-expansion. No main branch exists. Existing app stack: Expo 58.0.14, React Native 0.88.0, React 19.3, react-native-google-mobile-ads 17.3.0. All 231 tests and TypeScript pass before expansion. Three independent apps, unique packages, pure seeded puzzle engines; shared ads, analytics, UI, music and local save adapters. Existing latest APK/AAB builds and actual emulator rewarded-video verification are documented in docs/MUSIC.md and docs/REWARDED_VIDEO_VALIDATION_2026-10-18.md. STATUS.md and supplied briefs contain older unverified-ad statements; the dated native evidence supersedes those statements.
+
+Reusable: Expo/Metro packaging, Android build scripts, seeded utilities, AsyncStorage, lifecycle wiring, generated art/audio pipeline, ad state machine (later), consent and telemetry interfaces. Puzzle GameShell assumes turn-based score/progression rules and must not drive real-time action. Analytics collector currently validates known game keys; new game telemetry stays off until its schema is intentionally extended. No existing production ad ID may be used by the new game.
+
+Ad state: official test IDs for internal builds; per-app production mapping with explicit release guard. Existing native earned callbacks verified in emulator; physical device, paid events and live revenue not verified. AppLovin partnership accepted, but SDK key, mapping and SDK integration remain incomplete. New slice has no ad requests, no analytics transmission and no new accounts.
+
+Commands: pnpm test; pnpm typecheck; powershell -File scripts/preview.ps1 -App <slug>; powershell -File scripts/build-android.ps1 -App <slug>. Android SDK and emulator exist. Free C: space at audit: ~2.9 GiB, a material constraint on a fourth native build. No outputs/Three_Games_Agent_Handoff_2026-10-18.zip found in the workspace. The five supplied Markdown/text briefs were read in full.
+
+Initial delivery is Nightfall Arena's playable vertical slice, followed by an owner playtest. Arcane Run, Bullet Rush Arena and Last Stand Workshop remain distinct subsequent milestones; Kingdom Path Defense is optional later. No store/title clearance or production release is claimed.
