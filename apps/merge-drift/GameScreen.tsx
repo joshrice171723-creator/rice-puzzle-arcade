@@ -1,3 +1,4 @@
+import { PieceArt } from '../../packages/ui/PieceArt';
 import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -5,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { createGame, Direction, MergeState, Movement, move, rescue, restoreGame } from './game';
 
 type Props = { seed: number; paused: boolean; saved?: unknown; onSave: (state: unknown) => void; onEnd: () => void; rewardToken: number; haptics: boolean };
-const colors = ['#a9eef0', '#6cdcdf', '#38c8d4', '#2aabc5', '#237da9', '#3964ab', '#6656b8', '#9660ba', '#ba6ca8'];
+
 
 export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, haptics }: Props) {
   const { theme, softTiles } = useGameTheme();
@@ -76,16 +77,16 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
     },
   })).current;
   const tile = (value: number, key: string, position: number, animation?: Movement) => {
-    const color = colors[Math.min(colors.length - 1, Math.max(0, Math.log2(value) - 1))];
     return <Animated.View key={key} accessible accessibilityLabel={`${value}, row ${Math.floor(position / 4) + 1}, column ${position % 4 + 1}`}
-      style={[styles.tile, { width: cell, height: cell, left: 6 + position % 4 * stride, top: 6 + Math.floor(position / 4) * stride, backgroundColor: color }, animation && {
+      style={[styles.tile, { width: cell, height: cell, left: 6 + position % 4 * stride, top: 6 + Math.floor(position / 4) * stride, backgroundColor: 'transparent' }, animation && {
         transform: [
           { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [0, (animation.to % 4 - animation.from % 4) * stride] }) },
           { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [0, (Math.floor(animation.to / 4) - Math.floor(animation.from / 4)) * stride] }) },
           { scale: progress.interpolate({ inputRange: [0, 0.8, 1], outputRange: [1, 1, animation.merged ? 1.07 : 1] }) },
         ],
       }]}>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.number, { fontSize: cell * (value >= 10000 ? 0.27 : 0.38), color: value <= 16 ? '#083344' : '#f4feff' }]}>{value}</Text>
+      <PieceArt kind="glass" />
+      <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.number, { fontSize: cell * (value >= 10000 ? 0.27 : 0.38), color: '#063a50' }]}>{value}</Text>
     </Animated.View>;
   };
   return <View style={styles.container}>
@@ -117,7 +118,7 @@ const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
   milestone: { color: theme.muted, fontSize: 13, minHeight: 20 },
   board: { width: '100%', backgroundColor: theme.board, borderRadius: 18, borderWidth: 1, borderColor: theme.edge, overflow: 'hidden' },
   empty: { position: 'absolute', backgroundColor: theme.empty, borderRadius: softTiles ? 18 : 3 },
-  tile: { position: 'absolute', justifyContent: 'center', alignItems: 'center', borderRadius: softTiles ? 18 : 3, borderWidth: 1, borderColor: '#ffffff50' },
+  tile: { position: 'absolute', justifyContent: 'center', alignItems: 'center', borderRadius: softTiles ? 18 : 3, borderWidth: 0 },
   number: { fontWeight: '800', fontVariant: ['tabular-nums'], paddingHorizontal: 3 },
   cover: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' },
   coverTitle: { color: theme.ink, fontSize: 25, fontWeight: '700' },

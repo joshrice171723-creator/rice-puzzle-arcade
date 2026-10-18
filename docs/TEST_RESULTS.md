@@ -24,3 +24,10 @@ Disk-full failure recovery: restored truncated Grid screen from retained source,
 - App tsconfigs now resolve the hoisted Expo base explicitly, fixing the test transform resolver failure.
 - Native Android/theme rendering and live ads remain unverified.
 
+
+## Fixed artwork update - October 17, 2026
+- Removed player theme and tile-style controls. Each game now uses one fixed identity; old appearance preferences are ignored without invalidating existing saves.
+- Added original generated workshop/ocean/garden scene backgrounds and transparent wood, sea-glass, and candy sprites. Candy atlas frames exclude neighboring pieces. Decorative images do not intercept input.
+- Browser verified all three saved boards with new graphics and settings without appearance choices. Color Cascade inspected at 390px viewport; override reset afterward.
+- TypeScript and all 87 tests pass. Android device rendering remains unverified.
+

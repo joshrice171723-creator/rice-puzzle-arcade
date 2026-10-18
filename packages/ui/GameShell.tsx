@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { AppState, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAudioPlayer } from 'expo-audio';
-import { gameThemes, Theme, ThemeContext } from './themes';
+import { gameTheme, Theme, ThemeContext } from './themes';
 import { createAdsService } from '../ads';
 import { ArcadeSave, createSaveWriter, dailySeed, emptySave, localDate, Mode, parseSave, Run, updateRun } from '../game-utils/storage';
 
@@ -16,8 +16,7 @@ export default function GameShell(props: Props) {
 
 function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Props) {
   const [data, setData] = useState<ArcadeSave>(emptySave);
-  const collection = gameThemes(slug);
-  const theme = collection.themes.find(item => item.id === data.settings.theme) ?? collection.themes[0];
+  const theme = gameTheme(slug);
   const { accent, background } = theme;
   const styles = makeStyles(theme);
   const latest = useRef(data);
@@ -140,7 +139,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
     else setPrivacy(true);
   };
   const modal = (visible: boolean, title: string, children: React.ReactNode, close: () => void) => <Modal visible={visible} transparent animationType="fade" onRequestClose={close}><View style={styles.scrim}><View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: background }]}><ScrollView contentContainerStyle={styles.dialogContent}><Text style={[styles.dialogTitle, { color: accent }]}>{title}</Text>{children}</ScrollView></View></View></Modal>;
-  return <ThemeContext.Provider value={{ theme, softTiles: data.settings.softTiles }}><SafeAreaView style={[styles.safe, { backgroundColor: background }]}>
+  return <ThemeContext.Provider value={{ theme, softTiles: true }}><SafeAreaView style={[styles.safe, { backgroundColor: background }]}><Image pointerEvents="none" accessible={false} source={sceneArt[slug]} style={StyleSheet.absoluteFill} resizeMode="cover" />
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
       <View style={styles.content}>
         <View style={styles.header}><View style={styles.brand}><Text style={[styles.eyebrow, { color: accent }]}>RICE PUZZLE ARCADE</Text><Text style={styles.title}>{title}</Text></View>{button('Settings', () => setSettings(true))}</View>
@@ -148,11 +147,10 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
         {!loaded ? <Text style={styles.copy}>Opening your arcade…</Text> : screen === 'home' ? <>
           <View style={styles.welcome}>
             <View style={styles.heroTop}><Text style={styles.themeLabel}>{theme.name.toUpperCase()}</Text><Text style={styles.sparkles}>✦ · ✦</Text></View>
-            <Text style={styles.mascot} accessibilityLabel={slug === 'grid-foundry' ? 'Your workshop teddy bear' : slug === 'merge-drift' ? 'Your ocean whale' : 'Your garden flowers'}>{theme.icon}</Text>
-            <Text style={styles.subtitle}>{collection.greeting}</Text>
+            <Image source={sceneArt[slug]} accessibilityLabel={theme.name + " illustration"} style={styles.scene} resizeMode="cover" />
+            <Text style={styles.subtitle}>{theme.greeting}</Text>
             <Text style={styles.copy}>{subtitle}</Text>
           </View>
-          {button('Choose your theme', () => setSettings(true))}
           <View style={styles.summary}><Text style={[styles.eyebrow, { color: accent }]}>YOUR PERSONAL BEST</Text><Text style={styles.best}>{data.stats.best.toLocaleString()}</Text><Text style={styles.copy}>{data.stats.games} games played{data.stats.highestTile > 0 ? ` · Highest tile ${data.stats.highestTile.toLocaleString()}` : ''}</Text></View>
           {data.runs.normal && button(data.runs.normal.ended ? 'View last result' : 'Continue game', () => begin('normal', true), true)}
           {button('New game', () => begin('normal'), !data.runs.normal)}
@@ -161,6 +159,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
           {button('How to play', () => setHelp(true))}
           <Text style={styles.small}>Play offline. No account needed. Optional reward videos may be available after a run.</Text>
         </> : run ? <>
+          <Image source={sceneArt[slug]} accessible={false} style={styles.playScene} resizeMode="cover" />
           <View style={styles.toolbar}><Text style={[styles.eyebrow, { color: accent }]}>{mode === 'daily' ? `DAILY · ${run.date}` : 'FREE PLAY'}</Text>{button('Pause', () => setPaused(true), false, run.ended)}</View>
           <Game key={run.id} seed={run.seed} saved={run.saved} onSave={onSave} onEnd={onEnd} paused={paused || settings || help || privacy || adState.busy || transitioning} rewardToken={rewardToken} haptics={data.settings.haptics} />
           {run.ended && <View style={styles.results}><Text accessibilityRole="header" accessibilityLiveRegion="polite" style={[styles.dialogTitle, { color: accent }]}>A good run.</Text><Text style={styles.copy}>Personal best: {data.stats.best.toLocaleString()}</Text>
@@ -176,13 +175,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
       <Text style={styles.copy}>Your game is paused. Resume when you’re ready.</Text>{button('Resume', () => setPaused(false), true)}
       {button('Restart', () => begin(mode))}{button('Home · save progress', () => { setScreen('home'); setPaused(false); })}
     </>, () => setPaused(false))}
-    {modal(settings, 'Make it yours', <>
-      <Text style={styles.copy}>Choose a little world to play in. Your progress stays with you.</Text>
-      {collection.themes.map(option => <Pressable key={option.id} accessibilityRole="radio" accessibilityState={{ checked: theme.id === option.id }} accessibilityLabel={option.name} onPress={() => commit({ ...latest.current, settings: { ...latest.current.settings, theme: option.id } })} style={[styles.themeOption, { backgroundColor: option.surface, borderColor: theme.id === option.id ? option.accent : option.edge }]}>
-        <View style={{ flex: 1, gap: 5 }}><Text style={{ color: option.ink, fontSize: 16, fontWeight: '800' }}>{theme.id === option.id ? '✓ ' : ''}{option.name}</Text><Text style={{ color: option.muted, fontSize: 12 }}>{option.description}</Text></View>
-        <View style={{ flexDirection: 'row', gap: 4 }}>{[option.board, option.tile, option.accent].map(color => <View key={color} style={{ width: 16, height: 28, borderRadius: 8, backgroundColor: color }} />)}</View>
-      </Pressable>)}
-      <View style={styles.setting}><Text style={styles.copy}>Rounded tiles</Text><Switch accessibilityLabel="Rounded tiles" value={data.settings.softTiles} onValueChange={softTiles => commit({ ...latest.current, settings: { ...latest.current.settings, softTiles } })} trackColor={{ true: accent }} /></View>
+    {modal(settings, 'Settings', <>
       <View style={styles.setting}><Text style={styles.copy}>Sound</Text><Switch accessibilityLabel="Sound" value={data.settings.sound} onValueChange={sound => commit({ ...latest.current, settings: { ...latest.current.settings, sound } })} trackColor={{ true: accent }} /></View>
       <View style={styles.setting}><Text style={styles.copy}>Haptics</Text><Switch accessibilityLabel="Haptics" value={data.settings.haptics} onValueChange={haptics => commit({ ...latest.current, settings: { ...latest.current.settings, haptics } })} trackColor={{ true: accent }} /></View>
       {button('How to play', () => { setSettings(false); setHelp(true); })}
@@ -200,16 +193,22 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
   </SafeAreaView></ThemeContext.Provider>;
 }
 
+const sceneArt: Record<string, ReturnType<typeof require>> = {
+  'grid-foundry': require('./assets/workshop.png'),
+  'merge-drift': require('./assets/ocean.png'),
+  'color-cascade': require('./assets/garden.png'),
+};
+
 const makeStyles = (theme: Theme) => StyleSheet.create({
-  welcome: { padding: 24, borderRadius: 30, backgroundColor: theme.empty, gap: 8 },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  welcome: { padding: 12, borderRadius: 30, backgroundColor: theme.surface, gap: 12 },
+  heroTop: { paddingHorizontal: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   themeLabel: { color: theme.accent, fontSize: 10, letterSpacing: 1.4, fontWeight: '800' },
   sparkles: { color: theme.accent, fontSize: 22 },
-  mascot: { fontSize: 68, textAlign: 'center', marginVertical: 4 },
-  themeOption: { flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 2, minHeight: 78 },
-  safe: { flex: 1 }, page: { flexGrow: 1, padding: 20, paddingBottom: 30 }, content: { width: '100%', maxWidth: 470, alignSelf: 'center', gap: 18 },
+  playScene: { width: '100%', height: 100, borderRadius: 22 },
+  scene: { width: '100%', aspectRatio: 1.6, borderRadius: 20 },
+  safe: { flex: 1 }, page: { flexGrow: 1, padding: 12, paddingBottom: 30 }, content: { width: '100%', maxWidth: 494, alignSelf: 'center', gap: 16, padding: 12, borderRadius: 28, backgroundColor: theme.background + 'ed' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, brand: { flex: 1 }, title: { color: theme.ink, fontWeight: '800', fontSize: 28, marginTop: 6 },
-  eyebrow: { fontSize: 10, letterSpacing: 1.6, fontWeight: '700' }, subtitle: { color: theme.ink, fontSize: 23, lineHeight: 32, marginVertical: 4 },
+  eyebrow: { fontSize: 10, letterSpacing: 1.6, fontWeight: '700' }, subtitle: { color: theme.ink, fontSize: 23, lineHeight: 32, marginVertical: 4, paddingHorizontal: 8 },
   summary: { padding: 20, gap: 5, borderRadius: 24, backgroundColor: theme.surface }, best: { color: theme.ink, fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'] },
   copy: { color: theme.ink, fontSize: 15, lineHeight: 23 }, small: { color: theme.muted, fontSize: 12, lineHeight: 19 },
   button: { borderWidth: 1, borderRadius: 14, minHeight: 48, paddingHorizontal: 15, paddingVertical: 13, justifyContent: 'center', alignItems: 'center' },

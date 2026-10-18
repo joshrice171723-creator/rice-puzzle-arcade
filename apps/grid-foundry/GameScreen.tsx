@@ -1,3 +1,4 @@
+import { PieceArt } from '../../packages/ui/PieceArt';
 import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View, type ViewInstance } from 'react-native';
@@ -29,7 +30,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
   const endedReported = useRef(false);
   const lastReward = useRef(rewardToken);
   const width = useWindowDimensions().width;
-  const boardSize = Math.min(width - 40, 420);
+  const boardSize = Math.min(width - 48, 420);
   const cellSize = (boardSize - 8) / SIZE;
 
   useEffect(() => {
@@ -125,7 +126,7 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
           onPress={() => { if (selected !== null) drop(selected, r, c); else setNotice('Choose one of the three shapes below first.'); }}
           style={[styles.cell, { width: cellSize - 4, height: cellSize - 4 }, !!occupied && styles.filled,
             highlighted && (legalPreview ? styles.ghost : styles.illegal)]}>
-          {!!occupied && <View style={styles.tileInset} />}
+          {!!occupied && <PieceArt kind="wood" />}
           {clearCells.includes(key) && <Animated.View pointerEvents="none" style={[styles.clearFlash, { opacity: clearOpacity }]} />}
         </Pressable>;
       })}</View>)}
@@ -153,7 +154,7 @@ function MiniShape({ shape }: { shape: Shape }) {
   const rows = Math.max(...cells.map(([r]) => r)) + 1;
   const cols = Math.max(...cells.map(([, c]) => c)) + 1;
   return <View pointerEvents="none" style={{ width: cols * 19, height: rows * 19 }}>{cells.map(([r, c]) =>
-    <View key={r + ':' + c} style={[styles.miniCell, { top: r * 19, left: c * 19 }]} />)}</View>;
+    <View key={r + ':' + c} style={[styles.miniCell, { top: r * 19, left: c * 19 }]}><PieceArt kind="wood" /></View>)}</View>;
 }
 
 const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
@@ -164,11 +165,10 @@ const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
   moveBadge: { borderLeftWidth: 1, borderLeftColor: theme.edge, paddingLeft: 18, alignItems: 'center' },
   moveNumber: { color: theme.accent, fontSize: 24, fontWeight: '600', fontVariant: ['tabular-nums'] },
   notice: { color: theme.muted, fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 16, minHeight: 18, paddingHorizontal: 16 },
-  board: { backgroundColor: theme.board, borderRadius: 13, padding: 4, borderWidth: 0, overflow: 'hidden' },
+  board: { backgroundColor: theme.board, borderRadius: 20, padding: 4, borderWidth: 0, overflow: 'hidden' },
   row: { flexDirection: 'row' },
-  cell: { margin: 2, borderRadius: softTiles ? 9 : 2, backgroundColor: theme.empty, borderWidth: 1, borderColor: theme.edge, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  filled: { backgroundColor: theme.tile, borderColor: theme.surface, borderTopWidth: 2, borderBottomColor: '#8e542c' },
-  tileInset: { width: '65%', height: '65%', borderColor: theme.surface, borderWidth: 1, borderRadius: 2 },
+  cell: { margin: 2, borderRadius: softTiles ? 9 : 2, backgroundColor: '#73502b25', borderWidth: 1, borderColor: '#7d512c50', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  filled: { backgroundColor: 'transparent', borderWidth: 0 },
   ghost: { backgroundColor: '#6d735e', borderColor: '#f8dda9', borderStyle: 'dashed', borderWidth: 2 },
   illegal: { backgroundColor: '#683e44', borderColor: '#f8a5a5', borderWidth: 2 },
   clearFlash: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#ffe8b9' },
@@ -179,7 +179,7 @@ const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
   pieceSlot: { flex: 1, height: 91, borderRadius: 12, backgroundColor: theme.empty, borderWidth: 1, borderColor: theme.edge, justifyContent: 'center', alignItems: 'center' },
   selectedSlot: { borderColor: theme.accent, borderWidth: 2, backgroundColor: theme.empty },
   pieceButton: { flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center', minHeight: 48 },
-  miniCell: { position: 'absolute', width: 16, height: 16, borderRadius: softTiles ? 5 : 1, backgroundColor: theme.accent, borderWidth: 1, borderColor: theme.surface },
+  miniCell: { position: 'absolute', width: 16, height: 16, borderRadius: softTiles ? 5 : 1, backgroundColor: 'transparent' },
   usedSlot: { color: '#729281', fontSize: 25 },
   footer: { color: theme.muted, fontSize: 11, marginTop: 19, textAlign: 'center', paddingHorizontal: 12 },
   result: { marginTop: 18, borderTopWidth: 1, borderTopColor: theme.edge, paddingTop: 16 },

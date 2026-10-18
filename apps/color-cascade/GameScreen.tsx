@@ -1,3 +1,4 @@
+import { PieceArt } from '../../packages/ui/PieceArt';
 import { Theme, useGameTheme } from '../../packages/ui/themes';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -122,8 +123,8 @@ export default function Game({ seed, paused, saved, onSave, onEnd, rewardToken, 
           <View key={r} style={styles.row}>
             {row.map((color, c) => (
               <Animated.View key={c} style={[styles.tileSlot, { opacity: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }), transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [drops[r][c] * stride, 0] }) }] }]}>
-                <Pressable accessibilityRole="button" accessibilityLabel={`Row ${r + 1}, column ${c + 1}, ${symbols[color].name}, group of ${findGroup(state.board, r, c).length}`} disabled={paused || !foreground || seconds === 0} onPress={() => tap(r, c)} style={({ pressed }) => [styles.tile, { backgroundColor: symbols[color].color }, pressed && styles.pressed]}>
-                  <Text style={styles.symbol}>{symbols[color].glyph}</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={`Row ${r + 1}, column ${c + 1}, ${symbols[color].name}, group of ${findGroup(state.board, r, c).length}`} disabled={paused || !foreground || seconds === 0} onPress={() => tap(r, c)} style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
+                  <PieceArt kind="candy" color={color} />
                 </Pressable>
               </Animated.View>
             ))}
@@ -154,9 +155,8 @@ const makeStyles = (theme: Theme, softTiles: boolean) => StyleSheet.create({
   board: { padding: 7, borderRadius: 22, backgroundColor: theme.board, borderWidth: 1, borderColor: theme.edge, gap: 5, overflow: 'hidden' },
   row: { flexDirection: 'row', gap: 5 },
   tileSlot: { flex: 1, aspectRatio: 1 },
-  tile: { flex: 1, borderRadius: softTiles ? 15 : 3, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#ffffff99', borderBottomWidth: 4, borderBottomColor: '#00000020' },
+  tile: { flex: 1, borderRadius: softTiles ? 15 : 3, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff30' },
   pressed: { opacity: 0.65, transform: [{ scale: 0.9 }] },
-  symbol: { color: '#ffffff', fontSize: 25, fontWeight: '800', textShadowColor: '#00000020', textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 },
   legendSymbol: { fontSize: 19 },
   hint: { color: theme.muted, textAlign: 'center', fontSize: 12, lineHeight: 19, marginTop: 6 },
