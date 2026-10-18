@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { AppState, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAudioPlayer } from 'expo-audio';
@@ -7,7 +7,7 @@ import { gameTheme, Theme, ThemeContext } from './themes';
 import { createAdsService } from '../ads';
 import { ArcadeSave, createSaveWriter, dailySeed, emptySave, localDate, Mode, parseSave, Run, updateRun } from '../game-utils/storage';
 
-type GameProps = { seed: number; paused: boolean; saved?: unknown; onSave: (state: unknown) => void; onEnd: () => void; rewardToken: number; haptics: boolean };
+type GameProps = { seed: number; paused: boolean; saved?: unknown; onSave: (state: unknown) => void; onEnd: () => void; rewardToken: number; haptics: boolean; bestScore?: number };
 type Props = { slug: string; title: string; subtitle: string; accent: string; background: string; tutorial: string[]; rewardDescription: string; Game: React.ComponentType<GameProps> };
 
 export default function GameShell(props: Props) {
@@ -22,6 +22,8 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
   const latest = useRef(data);
   const [loaded, setLoaded] = useState(false);
   const [screen, setScreen] = useState<'home' | 'play'>('home');
+  const viewport = useWindowDimensions();
+  const fitPlay = slug === 'grid-foundry' && screen === 'play';
   const [mode, setMode] = useState<Mode>('normal');
   const currentMode = useRef<Mode>('normal');
   const [paused, setPaused] = useState(false);
@@ -139,10 +141,10 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
     else setPrivacy(true);
   };
   const modal = (visible: boolean, title: string, children: React.ReactNode, close: () => void) => <Modal visible={visible} transparent animationType="fade" onRequestClose={close}><View style={styles.scrim}><View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: background }]}><ScrollView contentContainerStyle={styles.dialogContent}><Text style={[styles.dialogTitle, { color: accent }]}>{title}</Text>{children}</ScrollView></View></View></Modal>;
-  return <ThemeContext.Provider value={{ theme, softTiles: true }}><SafeAreaView style={[styles.safe, { backgroundColor: background }]}><Image pointerEvents="none" accessible={false} source={sceneArt[slug]} style={StyleSheet.absoluteFill} resizeMode="cover" />
-    <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-      <View style={styles.content}>
-        <View style={styles.header}><View style={styles.brand}><Text style={[styles.eyebrow, { color: accent }]}>RICE PUZZLE ARCADE</Text><Text style={styles.title}>{title}</Text></View>{button('Settings', () => setSettings(true))}</View>
+  return <ThemeContext.Provider value={{ theme, softTiles: true }}><SafeAreaView style={[styles.safe, { backgroundColor: background }, fitPlay && { height: viewport.height, maxHeight: viewport.height }]}><Image pointerEvents="none" accessible={false} source={sceneArt[slug]} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} resizeMode="cover" />
+    <ScrollView scrollEnabled={!fitPlay} contentContainerStyle={[styles.page, fitPlay && { height: '100%', padding: 8, paddingBottom: 8 }]} keyboardShouldPersistTaps="handled">
+      <View style={[styles.content, fitPlay && { flex: 1, minHeight: 0, gap: 8, maxWidth: viewport.width > viewport.height ? 900 : 494 }]}>
+        <View style={styles.header}><View style={styles.brand}><Text style={[styles.eyebrow, { color: accent }]}>{fitPlay ? mode === 'daily' ? 'DAILY PUZZLE' : 'COZY WORKSHOP' : 'RICE PUZZLE ARCADE'}</Text><Text style={[styles.title, fitPlay && { fontSize: 22, marginTop: 2 }]}>{title}</Text></View>{fitPlay && button('Pause', () => setPaused(true), false, !!run?.ended)}{button('Settings', () => setSettings(true))}</View>
         {!!notice && <Pressable accessibilityRole="button" accessibilityLabel={`${notice} Dismiss notice`} onPress={() => setNotice('')}><Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text></Pressable>}
         {!loaded ? <Text style={styles.copy}>Opening your arcade…</Text> : screen === 'home' ? <>
           <View style={styles.welcome}>
@@ -159,26 +161,33 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
           {button('How to play', () => setHelp(true))}
           <Text style={styles.small}>Play offline. No account needed. Optional reward videos may be available after a run.</Text>
         </> : run ? <>
-          <Image source={sceneArt[slug]} accessible={false} style={styles.playScene} resizeMode="cover" />
-          <View style={styles.toolbar}><Text style={[styles.eyebrow, { color: accent }]}>{mode === 'daily' ? `DAILY · ${run.date}` : 'FREE PLAY'}</Text>{button('Pause', () => setPaused(true), false, run.ended)}</View>
-          <Game key={run.id} seed={run.seed} saved={run.saved} onSave={onSave} onEnd={onEnd} paused={paused || settings || help || privacy || adState.busy || transitioning} rewardToken={rewardToken} haptics={data.settings.haptics} />
-          {run.ended && <View style={styles.results}><Text accessibilityRole="header" accessibilityLiveRegion="polite" style={[styles.dialogTitle, { color: accent }]}>A good run.</Text><Text style={styles.copy}>Personal best: {data.stats.best.toLocaleString()}</Text>
+          {!fitPlay && <Image source={sceneArt[slug]} accessible={false} style={styles.playScene} resizeMode="cover" />}
+          {!fitPlay && <View style={styles.toolbar}><Text style={[styles.eyebrow, { color: accent }]}>{mode === 'daily' ? `DAILY · ${run.date}` : 'FREE PLAY'}</Text>{button('Pause', () => setPaused(true), false, run.ended)}</View>}
+          <Game key={run.id} seed={run.seed} saved={run.saved} onSave={onSave} onEnd={onEnd} paused={paused || settings || help || privacy || adState.busy || transitioning} rewardToken={rewardToken} haptics={data.settings.haptics} bestScore={data.stats.best} />
+          {run.ended && !fitPlay && <View style={styles.results}><Text accessibilityRole="header" accessibilityLiveRegion="polite" style={[styles.dialogTitle, { color: accent }]}>A good run.</Text><Text style={styles.copy}>Personal best: {data.stats.best.toLocaleString()}</Text>
             {!run.rewardUsed && <><Text style={styles.copy}>{rewardDescription}</Text>{ads.isReady('rewarded') ? button('Watch video · earn continue', () => { void reward(); }, false, transitioning || adState.busy) : <Text style={styles.small}>No reward video is available. Replay is always free.</Text>}</>}
             {button(ads.isReady('interstitial') ? 'Replay · may show an ad' : 'Replay', () => { void replay(); }, true, transitioning || adState.busy)}
             {button('Back to home', () => setScreen('home'), false, transitioning || adState.busy)}
           </View>}
         </> : null}
-        <View style={styles.links}>{button('Privacy', () => openSite('privacy'))}{button('Help & support', () => openSite('support'))}</View>
+        {!fitPlay && <View style={styles.links}>{button('Privacy', () => openSite('privacy'))}{button('Help & support', () => openSite('support'))}</View>}
       </View>
     </ScrollView>
     {modal(paused && screen === 'play' && !settings && !help && !privacy && !run?.ended && !adState.busy, 'Take a breath.', <>
       <Text style={styles.copy}>Your game is paused. Resume when you’re ready.</Text>{button('Resume', () => setPaused(false), true)}
       {button('Restart', () => begin(mode))}{button('Home · save progress', () => { setScreen('home'); setPaused(false); })}
     </>, () => setPaused(false))}
+    {modal(fitPlay && !!run?.ended && !settings && !privacy && !adState.busy, 'Nice building!', <>
+      <Text style={styles.copy}>Personal best: {data.stats.best.toLocaleString()}</Text>
+      {button(ads.isReady('interstitial') ? 'Play again · may show an ad' : 'Play again', () => { void replay(); }, true, transitioning)}
+      {button('Back to home', () => setScreen('home'), false, transitioning)}
+      {!run?.rewardUsed && ads.isReady('rewarded') && <><Text style={styles.small}>{rewardDescription}</Text>{button('Watch video · earn continue', () => { void reward(); }, false, transitioning)}</>}
+    </>, () => setScreen('home'))}
     {modal(settings, 'Settings', <>
       <View style={styles.setting}><Text style={styles.copy}>Sound</Text><Switch accessibilityLabel="Sound" value={data.settings.sound} onValueChange={sound => commit({ ...latest.current, settings: { ...latest.current.settings, sound } })} trackColor={{ true: accent }} /></View>
       <View style={styles.setting}><Text style={styles.copy}>Haptics</Text><Switch accessibilityLabel="Haptics" value={data.settings.haptics} onValueChange={haptics => commit({ ...latest.current, settings: { ...latest.current.settings, haptics } })} trackColor={{ true: accent }} /></View>
       {button('How to play', () => { setSettings(false); setHelp(true); })}
+      {button('Privacy & support', () => { setSettings(false); setPrivacy(true); })}
       {button('Privacy choices', () => { void ads.showPrivacyOptions().then(result => { if (result.code === 'unsupported') setNotice('Advertising is unavailable in this browser preview.'); }); }, false, adState.busy)}
       {button('Done', () => setSettings(false), true)}
     </>, () => setSettings(false))}
@@ -206,7 +215,7 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
   sparkles: { color: theme.accent, fontSize: 22 },
   playScene: { width: '100%', height: 100, borderRadius: 22 },
   scene: { width: '100%', aspectRatio: 1.6, borderRadius: 20 },
-  safe: { flex: 1 }, page: { flexGrow: 1, padding: 12, paddingBottom: 30 }, content: { width: '100%', maxWidth: 494, alignSelf: 'center', gap: 16, padding: 12, borderRadius: 28, backgroundColor: theme.background + 'ed' },
+  safe: { flex: 1, overflow: 'hidden' }, page: { flexGrow: 1, padding: 12, paddingBottom: 30 }, content: { width: '100%', maxWidth: 494, alignSelf: 'center', gap: 16, padding: 12, borderRadius: 28, backgroundColor: theme.background + 'ed' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, brand: { flex: 1 }, title: { color: theme.ink, fontWeight: '800', fontSize: 28, marginTop: 6 },
   eyebrow: { fontSize: 10, letterSpacing: 1.6, fontWeight: '700' }, subtitle: { color: theme.ink, fontSize: 23, lineHeight: 32, marginVertical: 4, paddingHorizontal: 8 },
   summary: { padding: 20, gap: 5, borderRadius: 24, backgroundColor: theme.surface }, best: { color: theme.ink, fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'] },

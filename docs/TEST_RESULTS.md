@@ -38,3 +38,11 @@ Disk-full failure recovery: restored truncated Grid screen from retained source,
 - Browser: selected-piece hover; held drag with floating artwork; valid drop to the previewed four cells (+40); occupied-cell rejection and outside-board cancellation preserved score and tray. Verification used the daily run, preserving the normal run.
 - Added two placement geometry tests. TypeScript passed. Native Android touch behavior still requires device verification.
 
+
+## Grid Foundry fitted gameplay - October 18, 2026
+- Active play now uses the available viewport, measured board sizing, compact header and a side-by-side landscape layout. Results use a dialog so controls cannot push the board offscreen.
+- Background images now explicitly fill their container; their intrinsic 1536x1024 dimensions previously caused document overflow.
+- Browser: 390x667 board bottom 540 / tray bottom 643; 320x568 board bottom 441 / tray bottom 544; 844x390 board bottom 366 / tray bottom 339. Document height equaled viewport height and scrollY was zero in each check. Emulation restored afterward.
+- Verified placement, +10 score, progress update and three-piece tray refill. Added true best-score/500-point goals, earned milestone messages and a reduced-motion-aware score pulse. No urgency, penalties for leaving, or ad-pressure changes.
+- TypeScript and all 90 tests pass. Native device layout and touch remain unverified.
+
