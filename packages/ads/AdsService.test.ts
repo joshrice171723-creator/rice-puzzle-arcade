@@ -258,6 +258,21 @@ describe('interstitial placement and frequency', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(0); });
   afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
+  it('places journey interstitials only after every third completed level with cooldowns', async () => {
+    const { service, current } = setup();
+    await service.initializeAfterConsent();
+    await vi.advanceTimersByTimeAsync(121_000);
+    for (const level of [0, 1, 2, 4, 5, 7, 8, 10]) {
+      expect((await service.showInterstitialAtNaturalBreak({ atResults: true, level })).code).toBe('frequency_cap');
+    }
+    const ad = current('interstitial');
+    const shown = service.showInterstitialAtNaturalBreak({ atResults: true, level: 3 });
+    ad.emit('closed');
+    expect((await shown).code).toBe('shown');
+    expect((await service.showInterstitialAtNaturalBreak({ atResults: true, level: 6 })).code).toBe('frequency_cap');
+    service.dispose();
+  });
+
   it('requires results, over 120 seconds and at least three completed rounds', async () => {
     const { service, current } = setup();
     await service.initializeAfterConsent();
@@ -313,6 +328,8 @@ describe('interstitial placement and frequency', () => {
     await vi.advanceTimersByTimeAsync(180_000);
     expect((await service.showInterstitialAtNaturalBreak({ atResults: true })).code).toBe('frequency_cap');
     service.roundCompleted();
+    expect((await service.showInterstitialAtNaturalBreak({ atResults: true })).code).toBe('frequency_cap');
+    service.roundCompleted(); service.roundCompleted();
     const next = current('interstitial');
     const second = service.showInterstitialAtNaturalBreak({ atResults: true });
     next.emit('closed');

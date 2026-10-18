@@ -166,9 +166,9 @@ export class AdsService {
 
   showRewardedIfReady = (onRewardEarned: () => void): Promise<AdResult> => this.show('rewarded', onRewardEarned);
 
-  showInterstitialAtNaturalBreak = ({ atResults }: { atResults: boolean }): Promise<AdResult> => {
+  showInterstitialAtNaturalBreak = ({ atResults, level }: { atResults: boolean; level?: number }): Promise<AdResult> => {
     if (!atResults) return Promise.resolve(this.result('invalid_transition'));
-    if (this.now() - this.startedAt <= 120_000 || this.rounds < 3 ||
+    if (this.now() - this.startedAt <= 120_000 || (level === undefined ? this.rounds < 3 || this.rounds % 3 !== 0 : !Number.isInteger(level) || level < 1 || level % 3 !== 0) ||
       this.now() - this.lastFullscreen < 180_000 || this.lastInterstitialRound === this.rounds) {
       return Promise.resolve(this.result('frequency_cap'));
     }

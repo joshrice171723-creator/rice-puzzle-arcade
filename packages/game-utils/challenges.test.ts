@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { journey, levelGoal } from './challenges';
+import { journey, levelGoal, levelInfo, completionAllowed } from './challenges';
 import { emptySave, parseSave, Run, updateRun } from './storage';
 
 describe('level journeys', () => {
@@ -20,10 +20,14 @@ describe('level journeys', () => {
       const targets = journey(slug).targets;
       const { metrics } = journey(slug);
       expect(metrics).toHaveLength(targets.length);
-      for (const metric of new Set(metrics)) {
-        const series = targets.filter((_, index) => metrics[index] === metric);
-        expect(series.every((target, index) => index === 0 || target > series[index - 1])).toBe(true);
-      }
+      expect(targets).toHaveLength(100);
+      expect(targets.every(target => Number.isInteger(target) && target > 0)).toBe(true);
+      expect(targets[99]).toBeGreaterThan(targets[9]);
+      expect(levelInfo(slug, 10)).toMatchObject({ zone: 1, stage: 10, difficulty: 'Finale' });
+      expect(levelInfo(slug, 11)).toMatchObject({ zone: 2, stage: 1 });
+      expect(levelInfo(slug, 100)).toMatchObject({ zone: 10, stage: 10 });
+      expect(levelInfo(slug, 7).difficulty).toBe('Expert');
+      expect(levelInfo(slug, 8).difficulty).toBe('Hard');
       const metric = slug === 'merge-drift' ? 'highestTile' : 'score';
       expect(levelGoal(slug, 1, { [metric]: targets[0] - 1 }).complete).toBe(false);
       expect(levelGoal(slug, 1, { [metric]: targets[0] }).complete).toBe(true);
@@ -55,5 +59,42 @@ describe('level journeys', () => {
     delete old.stats.unlockedLevel;
     expect(parseSave(JSON.stringify(old))).toEqual(save);
     expect(levelGoal('grid-foundry', 1, null).value).toBe(0);
+  });
+});
+
+
+describe('zone completion rules', () => {
+  it('requires three ended attempts on every seventh global level, preserved across reload', () => {
+    let save = emptySave();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      expect(completionAllowed(7, save.levelFailures[7] ?? 0, true)).toBe(false);
+      const run: Run = { id: `attempt-${attempt}`, mode: 'journey', level: 7, completed: false, seed: 1, date: '2026-10-18', ended: true, counted: false, rewardUsed: false, saved: { score: 4000 } };
+      save = updateRun(save, run);
+      save = updateRun(save, save.runs.journey!);
+      expect(save.levelFailures[7]).toBe(attempt + 1);
+      expect(save.stats.unlockedLevel).toBe(1);
+      save = parseSave(JSON.stringify(save))!;
+    }
+    expect(completionAllowed(7, save.levelFailures[7], false)).toBe(true);
+    expect(completionAllowed(14, 2, true)).toBe(false);
+    expect(completionAllowed(14, 3, false)).toBe(true);
+  });
+  it('requires an earned boost on stages eight and ten in all ten zones', () => {
+    for (let zone = 0; zone < 10; zone++) {
+      for (const stage of [8, 10]) {
+        const level = zone * 10 + stage;
+        expect(completionAllowed(level, 3, false)).toBe(false);
+        expect(completionAllowed(level, 3, true)).toBe(true);
+      }
+    }
+    expect(completionAllowed(28, 2, true)).toBe(false);
+    expect(completionAllowed(28, 3, true)).toBe(true);
+    expect(completionAllowed(9, 0, false)).toBe(true);
+  });
+  it('migrates prior saves without attempt counts and rejects malformed counts', () => {
+    const old = JSON.parse(JSON.stringify(emptySave()));
+    delete old.levelFailures;
+    expect(parseSave(JSON.stringify(old))?.levelFailures).toEqual({});
+    expect(parseSave(JSON.stringify({ ...old, levelFailures: { 7: -1 } }))).toBeNull();
   });
 });

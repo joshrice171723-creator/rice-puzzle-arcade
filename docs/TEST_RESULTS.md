@@ -102,3 +102,12 @@ APK SHA-256:
 - Cascade: ec10a2c53f9831e3d0dea7016fd403a2863de3c2507f9491857930f6d43d57ed
 
 These are internal Google test-ad builds. Successful installation and startup do not establish that an ad loaded, displayed, or awarded its benefit. No production serving or mediation acceptance is claimed. Gameplay generation does not receive best score or ad availability, and no near-high-score forced-loss mechanic was added.
+
+
+## Ten-zone progression — October 18, 2026
+
+- 100 stages per game across 10 named zones. Zone menus have ten buttons, previous/next zone controls, and locked-state accessibility labels. Existing unlocked progress is retained; older saves default to zero failed attempts.
+- User-requested shell gates supersede earlier no-ad-completion claims: global seventh levels require three failed attempts; stage eight and ten in each zone require an SDK-earned reward. Gates are independent of ad bids, country, device value or best score. Failed-round results retain the video-continue and retry choices, and can be reopened from home.
+- 215 tests in 13 files and TypeScript pass. Coverage includes persisted/once-only failure counts, combined gates, old-save migration, every-third-level interstitial eligibility and cooldowns. Cascade's 100 numeric targets are reachable by a scripted largest-group player within 90 seconds; this does not bypass completion gates or establish human difficulty.
+- Browser: all three zone menus at 320x568 have document height 568 and no buttons outside the viewport. Grid zone navigation reaches 10/10 with ten locked stages and a disabled next-zone button. Merge resumes its saved level under the zone/level header with controls inside the viewport. Screenshot: artifacts/themes/zone-map-phone.png. Device overrides cleared afterward.
+- Emulator network: Google Private DNS validates against 8.8.8.8/8.8.4.4 and resolves googleads.g.doubleclick.net, which ordinary host DNS could not resolve. Subsequent Android logs show Google ad JavaScript loading; that is not proof of a displayed video or an earned reward.

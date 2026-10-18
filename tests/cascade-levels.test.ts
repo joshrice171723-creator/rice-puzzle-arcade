@@ -4,7 +4,7 @@ import { journey, levelGoal } from '../packages/game-utils/challenges';
 import { dailySeed } from '../packages/game-utils/storage';
 
 // A fast scripted player establishes reachability, not human difficulty or retention.
-it.each(journey('color-cascade').targets.map((_, index) => index + 1))('Cascade level %i can be reached without an ad boost', level => {
+it.each(journey('color-cascade').targets.map((_, index) => index + 1))('Cascade level %i numeric objective is reachable within the base timer', level => {
   let state = createGame(dailySeed('color-cascade-journey', String(level)));
   for (let turn = 0; turn < 90 && !levelGoal('color-cascade', level, state).complete; turn++) {
     let best = { row: 0, col: 0, size: 0 };
