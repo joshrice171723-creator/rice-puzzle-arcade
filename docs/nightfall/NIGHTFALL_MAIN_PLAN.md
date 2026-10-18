@@ -4,6 +4,8 @@ Saved October 18, 2026. Canonical planning baseline approved for preservation by
 
 ## Decision precedence
 
+Implementation status, October 18, 2026: Joshua authorized starting the engineering plan. The isolated Godot proof is underway; see [engine proof verification](ENGINE_PROOF_QA.md) for what is built and tested. Historical planning-only statements preserved below describe the design discussion at the time, not a reversal of this later authorization.
+
 The [Nightfall engineering and delivery plan](BUILD_PLAN.md) defines the proposed toolchain, first playable milestone, production order, and acceptance gates. It is planning only; its Godot evaluation is a proposed architecture revision, not an implemented migration.
 
 Later working design discussion and visual concepts for proximity-charged shrines, temporary Relics, level-up choices, mission previews, and rescue screens are preserved in [Shrines and run interface concepts](SHRINES_AND_RUN_UI.md). They extend the plan for review; numerical tuning and individual screen designs are not implemented or playtested.

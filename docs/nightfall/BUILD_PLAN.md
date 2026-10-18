@@ -1,6 +1,6 @@
 # Nightfall Engineering and Delivery Plan
 
-October 18, 2026. Planning only. No engine migration, game implementation, installation, purchase, or deployment is authorized by this document. The proposed implementation order is ready for Joshua's review.
+October 18, 2026. Joshua subsequently authorized starting this plan with “ok start.” Implementation is proceeding through the milestones below. The isolated M0 proof and its remaining acceptance gaps are recorded in [engine proof verification](ENGINE_PROOF_QA.md). Production migration, purchases, and deployment are not implied by a successful prototype build.
 
 Build a polished, complete mission first, expand it into one five-mission zone, then prove that a second zone can be produced efficiently before scaling to 20 zones and 100 missions. The first technical decision is to evaluate Godot for Nightfall with real art and Android integration. Passing that evaluation precedes committing to the migration.
 

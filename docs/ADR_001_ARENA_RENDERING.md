@@ -2,6 +2,8 @@
 
 Status: provisional for the vertical slice, pending Android measurements. No migration of the existing apps.
 
+October 18 update: Joshua authorized the [Nightfall delivery plan](nightfall/BUILD_PLAN.md), including an isolated Godot evaluation. `apps/nightfall-godot/` now exists alongside the original prototype. Its [verification report](nightfall/ENGINE_PROOF_QA.md) records passing desktop and export checks, with native runtime/ad acceptance blocked by disk space. The original prototype is preserved; the evaluation has not yet established a production renderer decision.
+
 | Option | Rendering / 100+ enemies | Android / ads | Cost and risk |
 | --- | --- | --- | --- |
 | RN + Skia | GPU canvas; good candidate for larger sprite scenes, fixed-step TS simulation | Extra native dependency plus CanvasKit setup on web; existing RN platform services remain available | Additional native binary/build dependency; performance still needs measurement |
