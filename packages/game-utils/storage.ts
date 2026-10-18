@@ -3,12 +3,12 @@ export type Run = { id: string; seed: number; mode: Mode; date: string; saved?: 
 export type ArcadeSave = {
   version: 1;
   levelFailures: Record<string, number>;
-  settings: { sound: boolean; haptics: boolean; tutorialSeen: boolean; theme: 'day' | 'bloom' | 'night'; softTiles: boolean };
+  settings: { music: boolean; sound: boolean; haptics: boolean; tutorialSeen: boolean; theme: 'day' | 'bloom' | 'night'; softTiles: boolean };
   stats: { best: number; highestTile: number; games: number; dailyDate: string; dailyBest: number; unlockedLevel: number };
   runs: Partial<Record<Mode, Run>>;
 };
 export interface StorageAdapter { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<unknown> }
-export const emptySave = (): ArcadeSave => ({ version: 1, levelFailures: {}, settings: { sound: false, haptics: true, tutorialSeen: false, theme: 'day', softTiles: true }, stats: { best: 0, highestTile: 0, games: 0, dailyDate: '', dailyBest: 0, unlockedLevel: 1 }, runs: {} });
+export const emptySave = (): ArcadeSave => ({ version: 1, levelFailures: {}, settings: { music: true, sound: false, haptics: true, tutorialSeen: false, theme: 'day', softTiles: true }, stats: { best: 0, highestTile: 0, games: 0, dailyDate: '', dailyBest: 0, unlockedLevel: 1 }, runs: {} });
 const count = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 export const localDate = (date = new Date()): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -31,7 +31,7 @@ export function parseSave(text: string | null): ArcadeSave | null {
       if (!record(value.levelFailures) || Object.entries(value.levelFailures).some(([level, failures]) => !/^[1-9]\d?$|^100$/.test(level) || !count(failures))) return null;
       result.levelFailures = { ...value.levelFailures } as Record<string, number>;
     }
-    result.settings = { sound: settings.sound as boolean, haptics: settings.haptics as boolean, tutorialSeen: settings.tutorialSeen as boolean, theme: settings.theme === 'bloom' || settings.theme === 'night' ? settings.theme : 'day', softTiles: typeof settings.softTiles === 'boolean' ? settings.softTiles : true };
+    result.settings = { music: typeof settings.music === 'boolean' ? settings.music : true, sound: settings.sound as boolean, haptics: settings.haptics as boolean, tutorialSeen: settings.tutorialSeen as boolean, theme: settings.theme === 'bloom' || settings.theme === 'night' ? settings.theme : 'day', softTiles: typeof settings.softTiles === 'boolean' ? settings.softTiles : true };
     result.stats = { best: stats.best as number, highestTile: stats.highestTile as number, games: stats.games as number, dailyDate: stats.dailyDate, dailyBest: stats.dailyBest as number, unlockedLevel: count(stats.unlockedLevel) && stats.unlockedLevel > 0 ? stats.unlockedLevel : 1 };
     for (const mode of ['normal', 'daily', 'journey'] as const) {
       const run = runs[mode];

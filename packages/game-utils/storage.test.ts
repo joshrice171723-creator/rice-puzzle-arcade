@@ -27,6 +27,14 @@ describe('arcade persistence', () => {
     expect(parseSave(JSON.stringify(save))).toEqual(save);
     expect(parseSave(JSON.stringify({ ...save, settings: { ...save.settings, theme: 'unknown', softTiles: null } }))?.settings).toEqual({ ...save.settings, theme: 'day', softTiles: true });
   });
+  it('preserves music preference and upgrades old saves without losing progress', () => {
+    const save = updateRun(emptySave(), run());
+    save.settings.music = false;
+    expect(parseSave(JSON.stringify(save))).toEqual(save);
+    const old = JSON.parse(JSON.stringify(save));
+    delete old.settings.music;
+    expect(parseSave(JSON.stringify(old))).toEqual({ ...save, settings: { ...save.settings, music: true } });
+  });
   it('counts a whole run only once across an earned rescue and second ending', () => {
     let save = updateRun(emptySave(), run({ ended: true }));
     expect(save.stats.games).toBe(1);

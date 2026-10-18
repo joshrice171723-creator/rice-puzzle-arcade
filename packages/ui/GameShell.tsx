@@ -4,6 +4,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAudioPlayer } from 'expo-audio';
 import { gameTheme, Theme, ThemeContext } from './themes';
+import { Music } from './Music';
 import { createTelemetry, Fields } from '../analytics/client';
 import { createAdsService } from '../ads';
 import { boostAvailable } from '../game-utils/boost';
@@ -33,6 +34,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
   const [mode, setMode] = useState<Mode>('normal');
   const currentMode = useRef<Mode>('normal');
   const [paused, setPaused] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState !== 'background');
   const [settings, setSettings] = useState(false);
   const [help, setHelp] = useState(false);
   const [privacy, setPrivacy] = useState(false);
@@ -81,6 +83,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
     const heartbeat = setInterval(() => { if (activity.current && AppState.currentState !== 'background') { void telemetry.record('session_active', { seconds: 15 }); const activeRun = latest.current.runs[currentMode.current]; if (activeRun) void telemetry.record('run_progress', runFields(activeRun)); } void telemetry.flush(); }, 15000);
     void ads.initializeAfterConsent();
     const subscription = AppState.addEventListener('change', status => {
+      setForeground(status === 'active');
       if (status !== 'active') {
         setPaused(true);
         void telemetry.flush();
@@ -174,6 +177,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
   const iconButton = (label: string, icon: string, action: () => void, disabled = false) => <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={action} style={({ pressed }) => [styles.button, { borderColor: accent, width: 48, height: 48, paddingHorizontal: 0, paddingVertical: 0 }, pressed && { opacity: .7 }, disabled && { opacity: .4 }]}><Text style={{ color: accent, fontSize: 24, fontWeight: '700' }}>{icon}</Text></Pressable>;
   const modal = (visible: boolean, title: string, children: React.ReactNode, close: () => void) => <Modal visible={visible} transparent animationType="fade" onRequestClose={close}><View style={styles.scrim}><View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: background }]}><View style={styles.dialogContent}><Text style={[styles.dialogTitle, { color: accent }]}>{title}</Text>{children}</View></View></View></Modal>;
   return <ThemeContext.Provider value={{ theme, softTiles: true }}><SafeAreaView style={[styles.safe, { backgroundColor: background }, { height: viewport.height, maxHeight: viewport.height }]}><Image pointerEvents="none" accessible={false} source={sceneArt[slug]} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} resizeMode="cover" />
+    <Music slug={slug} playing={loaded && data.settings.music && foreground && screen === 'play' && !paused && !settings && !help && !privacy && !boostOpen && !run?.ended && !adState.busy && !transitioning} />
     <View style={[styles.page, { flex: 1, minHeight: 0, padding: 8, paddingBottom: 8 }]}>
       <View style={[styles.content, { flex: 1, minHeight: 0, gap: 8, maxHeight: 844, maxWidth: slug === 'grid-foundry' && viewport.width > viewport.height && viewport.height < 500 ? 900 : 430, alignSelf: 'center' }]}>
         <View style={styles.header}><View style={styles.brand}><Text style={[styles.eyebrow, { color: accent }]}>{fitPlay ? mode === 'daily' ? 'DAILY PUZZLE' : mode === 'journey' ? `ZONE ${levelInfo(slug, run?.level ?? 1).zone} / 10 · LEVEL ${levelInfo(slug, run?.level ?? 1).stage} / 10` : '' : ''}</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[styles.title, { fontSize: 22, marginTop: 2 }]}>{title}</Text></View>{fitPlay ? <>{iconButton('Pause', 'Ⅱ', () => setPaused(true), !!run?.ended)}{iconButton('Settings', '⚙', () => setSettings(true))}</> : button('Settings', () => setSettings(true))}</View>
@@ -230,6 +234,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
       {button('Back', () => setLevelsOpen(false))}
     </>, () => setLevelsOpen(false))}
     {modal(settings, 'Settings', <>
+      <View style={styles.setting}><Text style={styles.copy}>Music</Text><Switch accessibilityLabel="Music" value={data.settings.music} onValueChange={music => commit({ ...latest.current, settings: { ...latest.current.settings, music } })} trackColor={{ true: accent }} /></View>
       <View style={styles.setting}><Text style={styles.copy}>Sound</Text><Switch accessibilityLabel="Sound" value={data.settings.sound} onValueChange={sound => commit({ ...latest.current, settings: { ...latest.current.settings, sound } })} trackColor={{ true: accent }} /></View>
       <View style={styles.setting}><Text style={styles.copy}>Haptics</Text><Switch accessibilityLabel="Haptics" value={data.settings.haptics} onValueChange={haptics => commit({ ...latest.current, settings: { ...latest.current.settings, haptics } })} trackColor={{ true: accent }} /></View>
       {button('How to play', () => { setSettings(false); setHelp(true); })}
