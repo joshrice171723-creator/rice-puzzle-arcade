@@ -29,4 +29,25 @@ class StudioTests(unittest.TestCase):
         e=self.event('run_start'); e['at']=0
         with self.assertRaises(ValueError): server.ingest([e])
 
+    def test_all_eight_games_and_nightfall_outcome(self):
+        event=self.event('run_end',run='arena12345',score=500,outcome='win',wave=5)
+        event['game']='nightfall-arena'
+        server.ingest([event])
+        report=server.report('test',7)
+        self.assertEqual(len(report['games']),8)
+        self.assertEqual(report['games'][3]['wins'],1)
+        self.assertEqual(report['games'][3]['lastEvent'],event['at'])
+        self.assertEqual(report['games'][7]['status'],'Planned')
+        self.assertEqual(report['games'][7]['players'],0)
+        self.assertEqual(server.report('production',7)['events'],0)
+
+    def test_bad_numeric_fields_do_not_break_reports(self):
+        for value in ['bad', float('nan'), float('inf'), -1, True]:
+            with self.assertRaises(ValueError): server.ingest([self.event('session_active',seconds=value)])
+    def test_run_ids_are_scoped_to_installation(self):
+        a=self.event('run_end',run='same-run-id',outcome='win')
+        b=self.event('run_end','event-other',run='same-run-id',outcome='loss'); b['player']='player-other'
+        server.ingest([a,b])
+        self.assertEqual(server.report('test',7)['games'][1]['finished'],2)
+
 if __name__=='__main__': unittest.main()

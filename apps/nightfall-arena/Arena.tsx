@@ -4,9 +4,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { DOMProps } from 'expo/dom';
 import { chooseUpgrade, createGame, defend, DURATION, HEIGHT, restoreGame, State, STEP, tick, UPGRADES, WIDTH, wave } from './game';
 import { draw, makeFloor } from './render';
+import { createRunObserver } from './telemetry';
+import type { Fields } from '../../packages/analytics/client';
 
-type Props = { foreground: boolean; load: () => Promise<string | null>; save: (value: string) => Promise<void>; dom?: DOMProps };
-type Menu = 'home' | 'play' | 'pause' | 'help';
+type Props = { emit: (name: string, fields: Fields) => Promise<void>; getTracking: () => Promise<boolean>; setTracking: (enabled: boolean) => Promise<void>; foreground: boolean; load: () => Promise<string | null>; save: (value: string) => Promise<void>; dom?: DOMProps };
+type Menu = 'home' | 'play' | 'pause' | 'help' | 'privacy';
 type RecordBook = { best: number; survived: number; tutorial: boolean; buttons: boolean };
 const timeLabel = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 const css = `
@@ -15,6 +17,9 @@ const css = `
 
 export default function Arena(props: Props) {
   const bridge = useRef(props); bridge.current = props;
+  const runId = useRef('');
+  const [tracking, setTracking] = useState(false);
+  const [observer] = useState(() => createRunObserver((name, fields) => { void bridge.current.emit(name, fields); }));
   const game = useRef<State>(createGame(1)), record = useRef<RecordBook>({ best: 0, survived: 0, tutorial: false, buttons: false });
   const canvas = useRef<HTMLCanvasElement>(null), knob = useRef<HTMLDivElement>(null), input = useRef({ x: 0, y: 0 });
   const keys = useRef(new Set<string>()), menuRef = useRef<Menu>('home'), pointer = useRef<number | null>(null);
@@ -26,6 +31,7 @@ export default function Arena(props: Props) {
   function changeMenu(value: Menu) { resetInput(); menuRef.current = value; setMenu(value); }
   function refresh() {
     const s = game.current;
+    observer.observe(s);
     setHud({ score: s.score, hp: s.player.hp, maxHp: s.player.maxHp, time: s.time, wave: wave(s), scrap: s.scrap, used: s.pulseUsed, phase: s.phase, choices: [...s.choices] });
   }
   function persist() {
@@ -35,10 +41,11 @@ export default function Arena(props: Props) {
     setBest(record.current.best);
     const current = s.time > 0 && (s.phase === 'playing' || s.phase === 'upgrade') ? s : null;
     setResumable(!!current);
-    void bridge.current.save(JSON.stringify({ version: 1, record: record.current, current })).catch(() => setNotice('Could not save this run. Keep the app open and try again.'));
+    void bridge.current.save(JSON.stringify({ version: 1, record: record.current, current, runId: runId.current })).catch(() => setNotice('Could not save this run. Keep the app open and try again.'));
   }
   useEffect(() => {
     let cancelled = false;
+    void bridge.current.getTracking().then(value => { if (!cancelled) setTracking(value); });
     bridge.current.load().then(raw => {
       if (cancelled || !raw) return;
       try {
@@ -46,7 +53,7 @@ export default function Arena(props: Props) {
         if (data.version !== 1 || !data.record || !Number.isFinite(data.record.best) || data.record.best < 0 || !Number.isFinite(data.record.survived) || data.record.survived < 0) throw new Error('save');
         record.current = { best: data.record.best, survived: Math.min(DURATION, data.record.survived), tutorial: data.record.tutorial === true, buttons: data.record.buttons === true };
         setBest(record.current.best); setButtons(record.current.buttons);
-        if (data.current) { const restored = restoreGame(data.current); if (!restored) throw new Error('run'); game.current = restored; setResumable(restored.phase === 'playing' || restored.phase === 'upgrade'); }
+        if (data.current) { const restored = restoreGame(data.current); if (!restored) throw new Error('run'); game.current = restored; runId.current = typeof data.runId === 'string' && /^[A-Za-z0-9_-]{8,100}$/.test(data.runId) ? data.runId : `restored-${Date.now()}`; setResumable(restored.phase === 'playing' || restored.phase === 'upgrade'); }
       } catch { setNotice('The unfinished run could not be restored. You can start a new one.'); }
     }).catch(() => { if (!cancelled) setNotice('Saved progress is unavailable. You can still play.'); }).finally(() => { if (!cancelled) { refresh(); setReady(true); } });
     return () => { cancelled = true; };
@@ -64,6 +71,7 @@ export default function Arena(props: Props) {
     let frame = 0, last = 0, accumulator = 0, hudAt = 0, saveAt = 0, active = true, simCost = 0, drawnTime = -1;
     let drawnState: State | null = null;
     const times: number[] = [];
+    let activeSeconds = 0;
     const pause = () => { if (menuRef.current === 'play') { changeMenu('pause'); persist(); } resetInput(); accumulator = 0; last = 0; };
     const visibility = () => { if (document.hidden) pause(); };
     const keydown = (e: KeyboardEvent) => {
@@ -79,6 +87,8 @@ export default function Arena(props: Props) {
       const s = game.current;
       if (menuRef.current === 'play' && bridge.current.foreground && !document.hidden && s.phase === 'playing') {
         if (elapsed > 0) { times.push(elapsed); if (times.length > 600) times.shift(); }
+        activeSeconds += Math.min(elapsed / 1000, 1);
+        if (activeSeconds >= 15) { void bridge.current.emit('session_active', { seconds: 15 }); activeSeconds -= 15; }
         accumulator += Math.min(elapsed / 1000, .1);
         const start = performance.now();
         const k = keys.current, direction = k.size ? { x: Number(k.has('d') || k.has('arrowright')) - Number(k.has('a') || k.has('arrowleft')), y: Number(k.has('s') || k.has('arrowdown')) - Number(k.has('w') || k.has('arrowup')) } : input.current;
@@ -99,7 +109,7 @@ export default function Arena(props: Props) {
     window.addEventListener('blur', pause); document.addEventListener('visibilitychange', visibility); window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup);
     return () => { active = false; cancelAnimationFrame(frame); resize.disconnect(); window.removeEventListener('blur', pause); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('keydown', keydown); window.removeEventListener('keyup', keyup); };
   }, [ready]);
-  function start() { game.current = createGame(Date.now() >>> 0); refresh(); changeMenu(record.current.tutorial ? 'play' : 'help'); setResumable(false); }
+  function start() { observer.exit(game.current); game.current = createGame(Date.now() >>> 0); runId.current = `run-${Date.now()}-${Math.random().toString(36).slice(2)}`; observer.begin(runId.current, game.current); refresh(); changeMenu(record.current.tutorial ? 'play' : 'help'); setResumable(false); }
   function stick(e: React.PointerEvent<HTMLDivElement>) {
     if (pointer.current !== e.pointerId) return;
     const box = e.currentTarget.getBoundingClientRect(), dx = e.clientX - box.left - box.width / 2, dy = e.clientY - box.top - box.height / 2, length = Math.hypot(dx, dy), reach = box.width * .29;
@@ -117,12 +127,12 @@ export default function Arena(props: Props) {
     <div className="controls">{buttons ? <div className="dpad" aria-label="Movement controls">{([['up', '↑', 0, -1], ['left', '←', -1, 0], ['down', '↓', 0, 1], ['right', '→', 1, 0]] as const).map(([name, label, x, y]) => <button key={name} className={name} aria-label={`Move ${name}`} onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); input.current = { x, y }; }} onPointerUp={resetInput} onPointerCancel={resetInput} onLostPointerCapture={resetInput}>{label}</button>)}</div> : <div className="stick" role="group" aria-label="Movement joystick" onPointerDown={e => { if (pointer.current !== null) return; pointer.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); stick(e); }} onPointerMove={stick} onPointerUp={resetInput} onPointerCancel={resetInput} onLostPointerCapture={resetInput}><div className="knob" ref={knob} /></div>}
       <button className="defense" disabled={hud.used || hud.scrap < 8 || menu !== 'play' || hud.phase !== 'playing'} onClick={() => { if (defend(game.current)) { refresh(); persist(); } }}>◈ {hud.used ? 'Pulse deployed' : 'Defense pulse'}<small>{hud.used ? 'Used this run' : `${hud.scrap} / 8 scrap · one use`}</small></button></div>
     {notice && <div className="notice" role="status">{notice}</div>}
-    {menu !== 'play' || ended || hud.phase === 'upgrade' ? <div className="curtain"><section className="panel" role="dialog" aria-modal="true" aria-label={menu === 'home' ? 'Nightfall Arena' : menu === 'help' ? 'How to play' : menu === 'pause' ? 'Paused' : ended ? 'Run complete' : 'Choose an upgrade'}>
-      {menu === 'home' ? <><div className="hero-mark">✦</div><div className="eyebrow" style={{ marginTop: 13 }}>FIVE MINUTES UNTIL DAWN</div><h1>NIGHTFALL<br /><span style={{ color: '#edc476' }}>ARENA</span></h1><p>The courtyard is closing in.<br />Keep moving. Build your way out.</p><div className="high-score"><span className="label">YOUR BEST TO BEAT</span><strong>{best.toLocaleString()}</strong></div><div className="chips"><span>5 WAVES</span><span>3 UPGRADES</span><span>ONE WAY OUT</span></div>{resumable && <button className="primary" onClick={() => changeMenu('play')}>Continue · {timeLabel(hud.time)}</button>}<button className={resumable ? 'secondary' : 'primary'} onClick={start}>{resumable ? 'Start a new run' : 'Enter the courtyard'}</button><div className="build-label">PLAYABLE PROTOTYPE · NO ADS</div></> :
+    {menu !== 'play' || ended || hud.phase === 'upgrade' ? <div className="curtain"><section className="panel" role="dialog" aria-modal="true" aria-label={menu === 'privacy' ? 'Privacy' : menu === 'home' ? 'Nightfall Arena' : menu === 'help' ? 'How to play' : menu === 'pause' ? 'Paused' : ended ? 'Run complete' : 'Choose an upgrade'}>
+      {menu === 'privacy' ? <><h2>Privacy</h2><label className="small-note"><input type="checkbox" checked={tracking} onChange={e => { const enabled = e.target.checked; setTracking(enabled); void bridge.current.setTracking(enabled); }} /> Share gameplay analytics</label><p className="small-note">Optional anonymous activity and results help improve the game. No name or email. Events expire after 90 days.</p><button className="primary" onClick={() => changeMenu('home')}>Back</button></> : menu === 'home' ? <><div className="hero-mark">✦</div><div className="eyebrow" style={{ marginTop: 13 }}>FIVE MINUTES UNTIL DAWN</div><h1>NIGHTFALL<br /><span style={{ color: '#edc476' }}>ARENA</span></h1><p>The courtyard is closing in.<br />Keep moving. Build your way out.</p><div className="high-score"><span className="label">YOUR BEST TO BEAT</span><strong>{best.toLocaleString()}</strong></div><div className="chips"><span>5 WAVES</span><span>3 UPGRADES</span><span>ONE WAY OUT</span></div>{resumable && <button className="primary" onClick={() => { observer.begin(runId.current, game.current, true); changeMenu('play'); }}>Continue · {timeLabel(hud.time)}</button>}<button className={resumable ? 'secondary' : 'primary'} onClick={start}>{resumable ? 'Start a new run' : 'Enter the courtyard'}</button><button className="secondary" onClick={() => changeMenu('privacy')}>Privacy</button><div className="build-label">PLAYABLE PROTOTYPE · NO ADS</div></> :
       menu === 'help' ? <><div className="eyebrow">YOUR FIRST NIGHT</div><h2>Move to survive.</h2><p>Drag the thumb stick to move. Your weapon aims and fires for you. On a keyboard, use WASD or the arrow keys.</p><p><b className="sub">Follow the green shelter.</b> Stand inside to recover health. It moves with each wave.</p><p><b className="sub">Collect gold scrap.</b> Eight pieces power one defense pulse that clears nearby enemies and shields you for three seconds.</p><p>Survive five minutes. Pick an upgrade when supplies arrive.</p><button className="primary" onClick={() => { record.current.tutorial = true; changeMenu('play'); persist(); }}>Let’s go</button></> :
-      menu === 'pause' ? <><div className="eyebrow">TAKE A BREATHER</div><h2>Paused.</h2><p>Your run is saved. The courtyard can wait.</p><button className="primary" onClick={() => changeMenu('play')}>Resume</button><button className="secondary toggle" onClick={() => { const value = !buttons; setButtons(value); record.current.buttons = value; persist(); }}>Movement controls <span>{buttons ? 'Buttons' : 'Joystick'}</span></button><button className="secondary toggle" onClick={() => setDiagnostics(!diagnostics)}>Performance display <span>{diagnostics ? 'On' : 'Off'}</span></button><button className="secondary" onClick={() => { persist(); changeMenu('home'); }}>Save & exit</button></> :
+      menu === 'pause' ? <><div className="eyebrow">TAKE A BREATHER</div><h2>Paused.</h2><p>Your run is saved. The courtyard can wait.</p><button className="primary" onClick={() => changeMenu('play')}>Resume</button><button className="secondary toggle" onClick={() => { const value = !buttons; setButtons(value); record.current.buttons = value; persist(); }}>Movement controls <span>{buttons ? 'Buttons' : 'Joystick'}</span></button><button className="secondary toggle" onClick={() => setDiagnostics(!diagnostics)}>Performance display <span>{diagnostics ? 'On' : 'Off'}</span></button><button className="secondary" onClick={() => { observer.exit(game.current); persist(); changeMenu('home'); }}>Save & exit</button></> :
       ended ? <><div className="eyebrow">{hud.phase === 'won' ? 'EXTRACTION COMPLETE' : 'THE NIGHT GOT YOU'}</div><h2>{hud.phase === 'won' ? 'You made it to dawn.' : 'One more night?'}</h2><p>{timeLabel(hud.time)} survived · {game.current.kills} enemies stopped</p><div className="high-score"><span className="label">RUN SCORE</span><strong>{hud.score.toLocaleString()}</strong><span className="label">BEST {Math.max(best, hud.score).toLocaleString()}</span></div><p className="small-note">{hud.phase === 'lost' ? 'Keep room to move. Use cover to separate the faster enemies.' : 'Try a different upgrade combination on your next run.'}</p><button className="primary" onClick={start}>New run</button><button className="secondary" onClick={() => changeMenu('home')}>Back to courtyard</button></> :
-      <><div className="eyebrow">SUPPLY DROP {game.current.upgradeCount + 1} / 3</div><h2>Make your next move.</h2><p>Choose one upgrade for the rest of this run. The fight is paused.</p>{hud.choices.map(id => { const u = UPGRADES.find(item => item.id === id)!; return <button className="secondary choice" key={id} onClick={() => { if (chooseUpgrade(game.current, id)) { resetInput(); refresh(); persist(); } }}><i>{u.icon}</i><span><b>{u.name}</b><small>{u.detail}</small></span></button>; })}</>}
+      <><div className="eyebrow">SUPPLY DROP {game.current.upgradeCount + 1} / 3</div><h2>Make your next move.</h2><p>Choose one upgrade for the rest of this run. The fight is paused.</p>{hud.choices.map(id => { const u = UPGRADES.find(item => item.id === id)!; return <button className="secondary choice" key={id} onClick={() => { if (chooseUpgrade(game.current, id)) { observer.upgrade(game.current, id); resetInput(); refresh(); persist(); } }}><i>{u.icon}</i><span><b>{u.name}</b><small>{u.detail}</small></span></button>; })}</>}
     </section></div> : null}
   </main></>;
 }

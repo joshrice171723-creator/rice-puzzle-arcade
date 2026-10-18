@@ -17,3 +17,4 @@ apps/*/ios/
 
 *.sqlite3
 __pycache__/
+studio/desktop/ui/

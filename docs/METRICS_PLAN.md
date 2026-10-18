@@ -1,6 +1,6 @@
 # Measurement and genuine tester plan
 
-No measured users, retention or paid revenue is claimed. No external analytics service is configured. Start with actual Console/AdMob reports and consent-appropriate local instrumentation; do not silently add remote telemetry.
+The owner-authorized collector is deployed at https://aimetaclinic.com/games/api/events with private web and Windows desktop dashboards. See studio/README.md for current event definitions and privacy defaults. Test traffic does not establish production users, retention or paid revenue. The table below also includes future integrations; unavailable metrics remain unavailable.
 
 ## Per-app metrics and definitions
 

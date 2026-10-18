@@ -1,0 +1,10 @@
+[
+  {"id":"grid-foundry","title":"Grid Foundry","category":"Puzzle","status":"Playable"},
+  {"id":"merge-drift","title":"Merge Drift","category":"Puzzle","status":"Playable"},
+  {"id":"color-cascade","title":"Color Cascade","category":"Puzzle","status":"Playable"},
+  {"id":"nightfall-arena","title":"Nightfall Arena","category":"Action survival","status":"Prototype"},
+  {"id":"arcane-run","title":"Arcane Run","category":"Action survival","status":"Planned"},
+  {"id":"bullet-rush-arena","title":"Bullet Rush Arena","category":"Action survival","status":"Planned"},
+  {"id":"last-stand-workshop","title":"Last Stand Workshop","category":"Building and defense","status":"Planned"},
+  {"id":"kingdom-path-defense","title":"Kingdom Path Defense","category":"Tower defense","status":"Planned"}
+]
