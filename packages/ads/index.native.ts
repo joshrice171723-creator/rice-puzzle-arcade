@@ -4,6 +4,7 @@ import mobileAds, {
   AdsConsentPrivacyOptionsRequirementStatus,
   AdEventType,
   InterstitialAd,
+  MaxAdContentRating,
   RewardedAd,
   RewardedAdEventType,
   TestIds,
@@ -42,7 +43,11 @@ export function createAdsService(appKey: string): AdsService {
       else await AdsConsent.gatherConsent();
       return consentInfo();
     },
-    initialize: () => mobileAds().initialize(),
+    async initialize() {
+      // A 13+ target audience does not establish an individual player's age of consent.
+      await mobileAds().setRequestConfiguration({ maxAdContentRating: MaxAdContentRating.T });
+      return mobileAds().initialize();
+    },
     isForeground: () => AppState.currentState === 'active',
     create(format): AdHandle {
       const id = ids[format];

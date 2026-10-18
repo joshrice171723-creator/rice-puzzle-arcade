@@ -4,7 +4,7 @@
 
 Earlier entries below are historical. AdMob now opens at https://admob.google.com/v2/home in the owner account and displays **Your account is approved** and **Your payment profile is complete**. Apps still require store linking and review. Three App IDs and six unit IDs from Dot are configured per app in packages/ads/publisher.json; internal builds remain test-only. https://aimetaclinic.com/app-ads.txt returns HTTP 200 with the owner publisher record, but crawler verification is not claimed.
 
-Mediation currently has only the AdMob default group and automatically enabled buyers. AppLovin setup awaits Google Ads Data Processing Terms / secure signal sharing, followed by a bidding agreement. No third-party agreement accepted or partner SDK added. Owner audience selection and public privacy/consent release review remain pending. No earnings verified.
+Mediation currently has only the AdMob default group and automatically enabled buyers. Owner selected teens and adults 13+. Google Ads Data Processing Terms and secure signal sharing were accepted with explicit owner approval on October 18; AdMob confirmed acceptance. The separate bidding agreement is now awaiting owner approval. No partner SDK added. Public privacy/consent release review and age-appropriate request handling remain pending. No earnings verified.
 
 ## Historical ledger
 

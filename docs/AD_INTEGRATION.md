@@ -15,6 +15,8 @@ Production profiles select the app-specific IDs in packages/ads/publisher.json. 
 
 ## Consent and privacy
 
+The owner selected a 13+ target audience on October 18. SDK initialization now sets a maximum ad content rating of Teen before initializing ads. This content ceiling is not age verification: no blanket adult/over-consent-age assertion is sent. Release remains gated on player age/consent handling, mediation partner protections and the final store content rating; lower the ad ceiling if the store rating requires it.
+
 At each app/service launch, `initializeAfterConsent()` calls UMP `AdsConsent.gatherConsent()`, which refreshes consent information and shows the configured consent form when required. The adapter then reads `getConsentInfo().canRequestAds`. It initializes Mobile Ads and preloads inventory only when UMP permits requests. A network failure may use UMP's existing authorized consent, but unknown/unauthorized consent prevents all ad requests. Consent results are never persisted separately by the app.
 
 The native Expo plugin delays app measurement until SDK initialization. AdMob Privacy & messaging still requires owner-side GDPR and applicable US-state message configuration and review. UMP's `canRequestAds` is the request permission supplied by Google; it is not a promise that a person consented to every processing purpose or personalized advertising.

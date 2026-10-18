@@ -3,7 +3,7 @@ import type { AdsAdapter } from './AdsService';
 
 const sdk = vi.hoisted(() => ({
   adapter: null as AdsAdapter | null,
-  consent: vi.fn(), gather: vi.fn(), privacy: vi.fn(), initialize: vi.fn(),
+  consent: vi.fn(), gather: vi.fn(), privacy: vi.fn(), initialize: vi.fn(), configure: vi.fn(),
   requests: [] as string[], events: [] as string[], remove: vi.fn(), destroy: vi.fn(),
 }));
 vi.mock('react-native', () => ({ AppState: { currentState: 'active' } }));
@@ -18,7 +18,8 @@ vi.mock('react-native-google-mobile-ads', () => {
   }
   class RewardedAd extends InterstitialAd {}
   return {
-    default: () => ({ initialize: sdk.initialize }), InterstitialAd, RewardedAd,
+    default: () => ({ initialize: sdk.initialize, setRequestConfiguration: sdk.configure }), InterstitialAd, RewardedAd,
+    MaxAdContentRating: { T: 'T' },
     AdsConsent: { getConsentInfo: sdk.consent, gatherConsent: sdk.gather, showPrivacyOptionsForm: sdk.privacy },
     AdsConsentPrivacyOptionsRequirementStatus: { REQUIRED: 'required' },
     AdEventType: { LOADED: 'loaded', OPENED: 'opened', CLOSED: 'closed', ERROR: 'error' },
@@ -27,6 +28,13 @@ vi.mock('react-native-google-mobile-ads', () => {
   };
 });
 import { createAdsService } from './index.native';
+
+it('sets the teen content ceiling before SDK initialization without declaring everyone an adult', async () => {
+  createAdsService('grid-foundry');
+  await sdk.adapter!.initialize();
+  expect(sdk.configure).toHaveBeenCalledWith({ maxAdContentRating: 'T' });
+  expect(sdk.configure.mock.invocationCallOrder[0]).toBeLessThan(sdk.initialize.mock.invocationCallOrder[0]);
+});
 
 beforeEach(() => {
   vi.clearAllMocks(); sdk.requests.length = 0; sdk.events.length = 0;
