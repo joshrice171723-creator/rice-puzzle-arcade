@@ -162,7 +162,7 @@ function Shell({ slug, title, subtitle, tutorial, rewardDescription, Game }: Pro
             <View style={{ marginTop: 'auto', padding: 10, backgroundColor: theme.surface + 'e8' }}><Text style={styles.themeLabel}>{theme.greeting}</Text></View>
           </View>
           <Text style={styles.small}>Best {data.stats.best.toLocaleString()} - {data.stats.games} games played</Text>
-          {data.runs.journey && !data.runs.journey.completed && button(`${data.runs.journey.ended ? 'View result �' : 'Continue'} zone ${levelInfo(slug, data.runs.journey.level!).zone} · level ${levelInfo(slug, data.runs.journey.level!).stage}`, () => begin('journey', true), true)}
+          {data.runs.journey && !data.runs.journey.completed && button(`${data.runs.journey.ended ? 'View result -' : 'Continue'} zone ${levelInfo(slug, data.runs.journey.level!).zone} · level ${levelInfo(slug, data.runs.journey.level!).stage}`, () => begin('journey', true), true)}
           {button(`${trail.name} · ${Math.min(data.stats.unlockedLevel - 1, trail.targets.length)} / ${trail.targets.length} complete`, () => { setLevelPage(Math.floor((Math.min(data.stats.unlockedLevel, trail.targets.length) - 1) / LEVELS_PER_ZONE)); setLevelsOpen(true); }, !data.runs.journey || data.runs.journey.ended)}
           {data.runs.normal && button(data.runs.normal.ended ? 'View last result' : 'Continue game', () => begin('normal', true), true)}
           <View style={styles.homeRow}><View style={{ flex: 1 }}>{button('New game', () => begin('normal'), !data.runs.normal)}</View><View style={{ flex: 1 }}>{button('How to play', () => setHelp(true))}</View></View>
