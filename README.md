@@ -8,6 +8,12 @@ Three separate offline Android puzzle games built with React Native and Expo 58:
 | Merge Drift | Swipe a 4×4 board; combine equal numbers | `com.joshuarice.mergedrift` |
 | Color Cascade | Tap connected groups; score within 90 active seconds | `com.joshuarice.colorcascade` |
 
+| Grid Foundry | Merge Drift | Color Cascade |
+| --- | --- | --- |
+| ![Grid Foundry game board and shape tray](docs/screenshots/grid-foundry.png) | ![Merge Drift game board and directional controls](docs/screenshots/merge-drift.png) | ![Color Cascade matching board and timer](docs/screenshots/color-cascade.png) |
+
+Actual local browser gameplay captured in Microsoft Edge on October 18, 2026, at a 390 × 844 viewport in fresh sessions. These show the web builds, not native Android or advertising acceptance. The illustrations are in-game assets; these captures are not design mockups.
+
 ## Try it and current status
 
 Run a browser preview below, or follow the [Android build guide](docs/BUILD.md) for a native development build. There is no verified public web demo or app-store release linked here. Gameplay and saves run locally; native advertising needs connectivity and a development/internal Android build.
