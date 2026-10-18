@@ -19,6 +19,11 @@ allprojects {
 gradle.projectsEvaluated {
     allprojects { project ->
         def physicalRoot = project.findProperty('arcadePhysicalRoot')
+        if (physicalRoot && project.plugins.hasPlugin('com.android.application')) {
+            project.tasks.matching { it.name == 'createBundleReleaseJsAndAssets' }.configureEach {
+                inputs.dir(new File(physicalRoot, 'packages')).withPropertyName('sharedArcadeSources')
+            }
+        }
         if (physicalRoot && project.plugins.hasPlugin('com.android.library')) {
             project.tasks.matching { it.name == 'generateCodegenSchemaFromJavaScript' }.configureEach {
                 codegenDir.set(new File(physicalRoot, 'node_modules/@react-native/codegen'))

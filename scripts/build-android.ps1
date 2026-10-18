@@ -69,7 +69,7 @@ try {
             try {
                 $wrapper = if ($env:OS -eq 'Windows_NT') { '.\gradlew.bat' } else { './gradlew' }
                 if ($env:OS -ne 'Windows_NT') { Invoke-Checked 'chmod' @('+x', './gradlew') }
-                $gradleArguments = @(':app:assembleRelease', ':app:bundleRelease', '--no-daemon', '--max-workers=2', '--stacktrace', "-PreactNativeArchitectures=$Architectures")
+                $gradleArguments = @(':app:assembleRelease', ':app:bundleRelease', '--no-daemon', '--max-workers=2', '--stacktrace', '-Pandroid.enableMinifyInReleaseBuilds=false', '-Pandroid.enableShrinkResourcesInReleaseBuilds=false', "-PreactNativeArchitectures=$Architectures")
                 if ($env:OS -eq 'Windows_NT') { $gradleArguments += @('--init-script', (Join-Path $repository 'scripts/windows-cmake.gradle'), '-Pkotlin.incremental=false', "-ParcadePhysicalRoot=$repository") }
                 & $wrapper @gradleArguments 2>&1 |
                     Tee-Object -FilePath (Join-Path $artifactDirectory 'gradle.log')

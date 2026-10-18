@@ -61,3 +61,5 @@ Current build/test outcomes and hardware limitations belong in `docs/TEST_RESULT
 
 
 Existing native projects are reused by default. After changing Expo app configuration or native plugins, pass `-RegenerateNative` to regenerate them. Avoid package installation while Gradle is running: replacing a dependency can remove its generated classes mid-build. Windows library codegen tasks use the physical repository path; the app uses the short mapped drive for CMake.
+
+The Windows build explicitly tracks shared `packages/` sources as inputs to the app's JavaScript bundle, so shared UI/ad fixes invalidate cached bundles. Internal test artifacts disable code/resource shrinking to shorten iteration; this does not change the separate production configuration.
