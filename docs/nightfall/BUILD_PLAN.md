@@ -1,6 +1,6 @@
 # Nightfall Engineering and Delivery Plan
 
-**Current visual priority:** [Nightfall Visual Quality Plan](VISUAL_QUALITY_PLAN.md). The working home menus are below Joshua's requested visual standard. The next planned presentation milestone is one reference-quality Gear screen before a shared rollout. This document update is planning only.
+**Current priority: features first, visual overhaul last.** Joshua deferred the [Nightfall Visual Quality Plan](VISUAL_QUALITY_PLAN.md) and requested continued feature work. The latest progression delivery adds permanent class skill trees, saved equipment builds, three-copy merging, separate substat tuning and equipment sets; see [progression feature QA](PROGRESSION_FEATURES_QA.md) and the [equipment balance ledger](EQUIPMENT_BALANCE_LEDGER.md). Reference-quality Gear remains the first task when the final visual pass begins.
 
 Latest home delivery: [five-tab home product and QA](HOME_PRODUCT_QA.md). Shop, Gear, centered Expedition, Base and Class are now implemented in the Godot proof, including eight-slot migration, vertical inventory, facility entrances and rewarded-key handling. Production billing, zones 2–20, and physical-device acceptance remain separate work.
 

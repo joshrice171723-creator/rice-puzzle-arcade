@@ -22,8 +22,9 @@ func _initialize() -> void:
 	check(r.Content.wave_at(99).spitter == 0 and r.Content.wave_at(100).spitter > 0, "Ranged enemies enter after the opening waves")
 	r.phase = "upgrade"
 	r.level = 2
+	r.available_spells = ["ember", "frost", "chain"]
 	r.make_offers()
-	check(r.offers.size() == 3 and r.offers[0].id == "ember" and r.offers[2].id == "chain", "First level offers all three spells")
+	check(r.offers.size() == 3 and r.offers.all(func(offer): return offer.id in r.available_spells), "First level offers three available spells")
 	r.choose_offer(0)
 	r.choose_offer(0)
 	check(r.spells.ember.rank == 1 and r.phase == "waves", "One selection grants one spell and resumes combat")

@@ -4,8 +4,14 @@ const SLOTS := ["weapon", "helmet", "body", "boots", "charm", "gadget", "ring", 
 const SLOT_LABELS := {"weapon": "Weapon", "helmet": "Head", "body": "Chest", "boots": "Boots", "charm": "Pendant", "gadget": "Gadget", "ring": "Ring", "pants": "Pants"}
 const RARITIES := ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
 const RARITY_SCALE := [1.0, 1.04, 1.08, 1.12, 1.16, 1.20]
+const MERGE_MAX_RARITY := "epic"
 const RARITY_COLORS := ["a4aaba", "92afc4", "78adff", "ba92ff", "ffd27c", "ed7997"]
 const STARTER_NAMES := ["Service Pistol", "Outrider Hood", "Outrider Vest", "Outrider Boots", "Beacon Pendant", "Field Medkit", "Beacon Ring", "Outrider Trousers"]
+const ARMOR_SLOTS := ["helmet", "body", "boots", "pants"]
+const SETS := {
+	"outrider": {"name": "Outrider", "pieces": ["Outrider Hood", "Outrider Vest", "Outrider Boots", "Outrider Trousers"], "two": "+15% XP pickup reach", "three": "+1 protected loot slot"},
+	"ironwatch": {"name": "Ironwatch", "pieces": ["Ironwatch Helm", "Ironwatch Cuirass", "Ironwatch Boots", "Ironwatch Greaves"], "two": "+12 armor", "three": "+6% maximum HP"},
+	"riftweaver": {"name": "Riftweaver", "pieces": ["Riftweaver Cowl", "Riftweaver Robe", "Riftweaver Boots", "Riftweaver Leggings"], "two": "+3% spell damage", "three": "+4% spell cooldown reduction"}}
 const AFFIXES := {
 	"tempered": {"name": "Tempered", "description": "+3% this item's Power", "stat": "power", "value": 0.03, "slots": ["weapon"]},
 	"reinforced": {"name": "Reinforced", "description": "+4% this item's HP", "stat": "hp", "value": 0.04, "slots": ["helmet", "body", "boots", "charm", "ring", "pants"]},
@@ -34,7 +40,7 @@ const MISSIONS := [
 	{"name": "Scrapwall", "boss": "Scrapback", "duration": 240.0, "health": 1000.0, "pressure": 1.15, "attacks": ["slam", "toss", "rush"], "intro": "Circle Scrapback to strike its exposed rear."},
 	{"name": "The Last Street", "boss": "The Breaker", "duration": 240.0, "health": 1200.0, "pressure": 1.25, "attacks": ["rush", "slam", "toss"], "intro": "Break the siege of the Outskirts beacon."}]
 const FACILITIES := {
-	"workshop": {"name": "Workshop", "description": "Upgrade and promote equipment. Rank 2 reduces upgrade credit costs by 10%.", "credits": 400, "parts": 12},
+	"workshop": {"name": "Workshop", "description": "Upgrade, merge and tune equipment. Rank 2 reduces item-level upgrade credit costs by 10%.", "credits": 400, "parts": 12},
 	"quartermaster": {"name": "Storehouse", "description": "Rank 2 increases backpack capacity from 8 to 9. Protected slots stay at two.", "credits": 300, "parts": 10},
 	"infirmary": {"name": "Infirmary", "description": "Improves your once-per-run Field Medkit from 20% to 25% maximum HP.", "credits": 350, "parts": 12}}
 
@@ -46,8 +52,24 @@ static func item_stats(item: Dictionary) -> Dictionary:
 		stats[stat] *= multiplier
 		for affix: String in item.get("affixes", []):
 			if AFFIXES.has(affix) and AFFIXES[affix].stat == stat:
-				stats[stat] *= 1.0 + AFFIXES[affix].value
+				stats[stat] *= 1.0 + affix_value(item, affix)
 	return stats
+
+static func set_id(item: Dictionary) -> String:
+	for id: String in SETS:
+		if item.get("name", "") in SETS[id].pieces:
+			return id
+	return ""
+
+static func affix_rank(item: Dictionary, affix: String) -> int:
+	return int(item.get("affix_levels", {}).get(affix, 1))
+
+static func affix_value(item: Dictionary, affix: String) -> float:
+	return AFFIXES[affix].value * (1.0 + 0.5 * (affix_rank(item, affix) - 1))
+
+static func affix_text(item: Dictionary, affix: String) -> String:
+	var targets := {"power": "item Power", "hp": "item HP", "armor": "item armor", "cooldown": "spell cooldown reduction", "pickup": "XP pickup reach", "speed": "movement speed"}
+	return "%s %d/3 · +%.1f%% %s" % [AFFIXES[affix].name, affix_rank(item, affix), affix_value(item, affix) * 100, targets[AFFIXES[affix].stat]]
 
 static func survivor_level(xp: int) -> int:
 	var level := 1

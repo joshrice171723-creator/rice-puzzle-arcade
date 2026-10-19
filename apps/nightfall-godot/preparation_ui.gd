@@ -48,7 +48,7 @@ static func arcanum(home: Control) -> void:
 	var evolution: Dictionary = Content.EVOLUTIONS[id]
 	home.text_line("ARCANUM • %d/8" % (home.guide_index + 1), 18, Color("ffd27c"))
 	home.text_line(Content.SPELLS[id].name, 23, Color("ba92ff"))
-	home.text_line("Plan your expedition. Learn spells from combat levels; this guide does not equip or unlock them.", 12)
+	home.text_line("Unlock abilities in Class > Skill tree, then find them in run level-up choices. This guide previews their paths.", 12)
 	var path := Diagram.new()
 	path.ability = id
 	home.body.add_child(path)

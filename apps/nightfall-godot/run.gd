@@ -56,6 +56,7 @@ var armor := 0.0
 var speed_multiplier := 1.0
 var pickup_multiplier := 1.0
 var spell_multiplier := 1.0
+var equipment_spell_bonus := 0.0
 var medkit_fraction := 0.0
 var medkit_used := false
 var class_id := "scavenger"
@@ -79,6 +80,7 @@ var mode := "campaign"
 var extract_progress := 0.0
 var target_slot := "weapon"
 var talents = Talents.new()
+var available_spells: Array = Content.SPELLS.keys()
 
 const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
 const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
@@ -101,10 +103,12 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	speed_multiplier = stats.speed
 	pickup_multiplier = stats.pickup
 	spell_multiplier = stats.power / 40.0
+	equipment_spell_bonus = clampf(stats.get("spell_bonus", 0.0), 0, 0.03)
 	field.capacity = stats.capacity
 	field.secure_capacity = stats.secure
 	medkit_fraction = stats.medkit
 	class_id = stats["class"]
+	available_spells = stats.get("ability_pool", Content.SPELLS.keys()).duplicate()
 	blueprints.assign(stats.get("blueprints", ["barricade", "trap"]))
 	mastery_level = stats.get("mastery", 0)
 	permanent_cooldown = clampf(stats.get("cooldown", 0.0), 0, 0.15)
@@ -127,7 +131,7 @@ func snapshot() -> Dictionary:
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
 		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
-		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "talents": talents.snapshot()}
+		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -144,6 +148,12 @@ func restore(saved: Dictionary) -> bool:
 		return false
 	if saved.get("mode", "campaign") not in ["campaign", "salvage"] or saved.get("target_slot", "weapon") not in Haven.SLOTS:
 		return false
+	var saved_pool: Variant = saved.get("available_spells", Content.SPELLS.keys())
+	if not saved_pool is Array or saved_pool.size() < 3 or saved_pool.size() > Content.SPELLS.size():
+		return false
+	for id in saved_pool:
+		if id not in Content.SPELLS or saved_pool.count(id) != 1:
+			return false
 	for key in SNAPSHOT_KEYS:
 		set(key, saved.combat[key])
 	for key in FIELD_KEYS:
@@ -166,6 +176,9 @@ func restore(saved: Dictionary) -> bool:
 	extract_progress = saved.get("extract_progress", 0.0)
 	target_slot = saved.get("target_slot", "weapon")
 	talents.restore(saved.get("talents", {}))
+	# Old expeditions keep their original eight-spell pool until they finish.
+	available_spells = saved_pool.duplicate()
+	equipment_spell_bonus = clampf(saved.get("equipment_spell_bonus", 0.0), 0, 0.03)
 	paused = true
 	return true
 
@@ -282,7 +295,7 @@ func passive_rank(id: String) -> int:
 	return int(passives.get(id, 0))
 
 func spell_scale() -> float:
-	return spell_multiplier * (1.0 + 0.06 * passive_rank("focus")) * (1.08 if "cinder" in field.relics else 1.0)
+	return spell_multiplier * (1.0 + equipment_spell_bonus) * (1.0 + 0.06 * passive_rank("focus")) * (1.08 if "cinder" in field.relics else 1.0)
 
 func spell_cooldown(id: String) -> float:
 	return Content.SPELLS[id].cooldown * (1.0 - minf(0.3, permanent_cooldown + 0.06 * passive_rank("channel")))
@@ -426,7 +439,10 @@ func refresh_evolutions() -> void:
 func make_offers() -> void:
 	offers.clear()
 	if level == 2:
-		for id in ["ember", "frost", "chain"]:
+		var first_choices: Array = available_spells.duplicate()
+		while first_choices.size() > 3:
+			first_choices.remove_at(offer_rng.randi_range(0, first_choices.size() - 1))
+		for id in first_choices:
 			offers.append(spell_offer(id))
 		return
 	var pool: Array[Dictionary] = []
@@ -434,7 +450,7 @@ func make_offers() -> void:
 	for id: String in Content.SPELLS:
 		if spells.has(id) and spells[id].rank < 3:
 			learned.append(spell_offer(id))
-		elif not spells.has(id) and spells.size() < 3:
+		elif id in available_spells and not spells.has(id) and spells.size() < 3:
 			pool.append(spell_offer(id))
 	# At least one current spell upgrade when possible; the other slots vary.
 	if not learned.is_empty():
@@ -491,6 +507,8 @@ func choose_offer(index: int) -> void:
 		if not apply_passive(id):
 			return
 	elif Content.SPELLS.has(id):
+		if id not in available_spells and not spells.has(id):
+			return
 		if spells.has(id):
 			if offers[index].has("branch"):
 				spells[id].branch = offers[index].branch

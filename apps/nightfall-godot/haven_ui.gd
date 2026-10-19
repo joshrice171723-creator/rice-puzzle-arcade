@@ -19,10 +19,21 @@ var facility := "workshop"
 var inspected_class := ""
 var inventory_scroll := 0
 var inventory_sort := "Rarity"
+var filter_slot := ""
+var filter_rarity := ""
+var filter_locked := false
+var build_slot := "1"
+var build_name := ""
 
 const Content = preload("res://haven_content.gd")
 const LootUI = preload("res://loot_ui.gd")
 const Preparation = preload("res://preparation_ui.gd")
+const Armory = preload("res://armory_ui.gd")
+const SkillTreeUI = preload("res://skill_tree_ui.gd")
+const EquipmentWorkshop = preload("res://equipment_workshop_ui.gd")
+var merge_donors: Array = []
+var selected_affix := ""
+var tree_ability := ""
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const EQUIPMENT_ART = preload("res://assets/equipment-icons.png")
@@ -131,9 +142,9 @@ func active_tab() -> String:
 		return "shop"
 	if page in ["mission", "rewards", "contracts", "zones"]:
 		return "mission"
-	if page in ["class", "mastery"]:
+	if page in ["class", "mastery", "skills"]:
 		return "class"
-	return "gear" if page == "gear" else "haven"
+	return "gear" if page in ["gear", "builds", "filters", "merge", "substats", "sets"] else "haven"
 
 func request_shop_video() -> void:
 	if not ads_available:
@@ -279,8 +290,14 @@ func rebuild() -> void:
 		"shop": shop_page()
 		"facility": facility_page()
 		"gear": gear_page()
+		"builds": Armory.builds(self)
+		"filters": Armory.filters(self)
+		"merge": EquipmentWorkshop.merge(self)
+		"substats": EquipmentWorkshop.substats(self)
+		"sets": EquipmentWorkshop.sets(self)
 		"haven": haven_page()
 		"class": class_page()
+		"skills": SkillTreeUI.show_tree(self)
 		"settings": settings_page()
 		"cache": LootUI.show(self)
 		"rewards": LootUI.mission_rewards(self)
@@ -290,7 +307,7 @@ func rebuild() -> void:
 		"arcanum": Preparation.arcanum(self)
 		"mastery": Preparation.mastery(self)
 	status_label.text = profile.error if not profile.error.is_empty() else message
-	if status_label.text.is_empty() and not profile.can_change_loadout() and page in ["gear", "class", "facility", "cache", "rare_choice"]:
+	if status_label.text.is_empty() and not profile.can_change_loadout() and page in ["gear", "builds", "merge", "substats", "class", "skills", "facility", "cache", "rare_choice"]:
 		status_label.text = "Finish your saved expedition to change equipment or upgrades."
 	for index in navigation.get_child_count():
 		var tab: Button = navigation.get_child(index)
@@ -377,7 +394,16 @@ func gear_page() -> void:
 	if selected_item >= 0:
 		item_page()
 		return
-	text_line("Equipment", 24)
+	var heading_row := HBoxContainer.new()
+	body.add_child(heading_row)
+	var heading := Label.new()
+	heading.text = "Equipment"
+	heading.add_theme_font_size_override("font_size", 24)
+	heading.add_theme_font_override("font", Art.DISPLAY_FONT)
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading_row.add_child(heading)
+	button("Sets", func(): navigate("sets"), heading_row, 32).custom_minimum_size.x = 54
+	button("Builds", func(): Armory.pick_build(self, build_slot), heading_row, 32).custom_minimum_size.x = 70
 	var stage := Control.new()
 	stage.custom_minimum_size.y = 254
 	body.add_child(stage)
@@ -408,10 +434,15 @@ func gear_page() -> void:
 	var bar := HBoxContainer.new()
 	body.add_child(bar)
 	var label := Label.new()
-	label.text = "Inventory  ·  %d" % profile.data.inventory.size()
+	var items: Array = Armory.filtered_items(self)
+	label.text = "Inventory · %d" % items.size()
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_font_size_override("font_size", 14)
 	bar.add_child(label)
+	var filtered := not filter_slot.is_empty() or not filter_rarity.is_empty() or filter_locked
+	var filter_button := button("Filter *" if filtered else "Filter", func(): navigate("filters"), bar, 36)
+	filter_button.add_theme_font_size_override("font_size", 12)
+	filter_button.custom_minimum_size.x = 62
 	var sort_button := button("Sort: " + inventory_sort, func():
 		inventory_sort = "Slot" if inventory_sort == "Rarity" else "Rarity"
 		inventory_scroll = 0
@@ -432,13 +463,17 @@ func gear_page() -> void:
 	grid.add_theme_constant_override("h_separation", 5)
 	grid.add_theme_constant_override("v_separation", 5)
 	scroll.add_child(grid)
-	var items: Array = profile.data.inventory.duplicate()
 	items.sort_custom(func(a: Dictionary, b: Dictionary):
 		var left: int = Content.RARITIES.find(a.rarity) if inventory_sort == "Rarity" else Content.SLOTS.find(a.slot)
 		var right: int = Content.RARITIES.find(b.rarity) if inventory_sort == "Rarity" else Content.SLOTS.find(b.slot)
 		return a.id < b.id if left == right else (left > right if inventory_sort == "Rarity" else left < right))
 	for item in items:
 		equipment_tile(item, grid, Vector2(66, 65)).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if items.is_empty():
+		var empty := Label.new()
+		empty.text = "No matches. Change Filter."
+		empty.add_theme_font_size_override("font_size", 14)
+		grid.add_child(empty)
 	scroll.set_deferred("scroll_vertical", inventory_scroll)
 	scroll.get_v_scroll_bar().value_changed.connect(func(value: float): inventory_scroll = int(value))
 
@@ -470,6 +505,16 @@ func equipment_tile(item: Dictionary, parent: Node, dimensions: Vector2) -> Butt
 	caption.position = Vector2(4, dimensions.y - 16)
 	caption.size = Vector2(dimensions.x - 8, 15)
 	tile.add_child(caption)
+	if item.id in profile.data.locked_items:
+		var lock_label := Label.new()
+		lock_label.text = "LOCK"
+		lock_label.position = Vector2(3, 1)
+		lock_label.add_theme_font_size_override("font_size", 10)
+		lock_label.add_theme_color_override("font_color", Color("ffd27c"))
+		lock_label.add_theme_color_override("font_outline_color", Color("0a1020"))
+		lock_label.add_theme_constant_override("outline_size", 3)
+		lock_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tile.add_child(lock_label)
 	return tile
 
 func item_page() -> void:
@@ -498,29 +543,43 @@ func item_page() -> void:
 	var stats: Dictionary = Content.item_stats(item)
 	text_line("Power %.1f   HP %.0f   Armor %.1f" % [stats.power, stats.hp, stats.armor], 16)
 	for affix in item.get("affixes", []):
-		text_line(Content.AFFIXES[affix].description, 13, Color("ba92ff"))
+		text_line(Content.affix_text(item, affix), 12, Color("ba92ff"))
 	if profile.data.equipment[item.slot] != item.id:
 		var current: Dictionary = Content.item_stats(profile.item_by_id(profile.data.equipment[item.slot]))
 		text_line("Compared with equipped: Power %+.1f / HP %+.0f / Armor %+.1f" % [stats.power - current.power, stats.hp - current.hp, stats.armor - current.armor], 12)
 	if item.slot == "gadget":
 		text_line("Once per expedition: automatically restore 20% maximum HP when a nonlethal hit leaves you at 25% HP or lower. Infirmary II raises this to 25%.")
-	elif item.name.begins_with("Outrider"):
-		text_line("Rare Outrider set: 2 pieces +15% XP reach; 3 pieces +1 protected slot.", 13)
+	var set_id := Content.set_id(item)
+	if not set_id.is_empty():
+		var definition: Dictionary = Content.SETS[set_id]
+		text_line("%s set · Rare+: 2 pieces %s; 3 pieces %s." % [definition.name, definition.two, definition.three], 12)
 	var equipped: bool = profile.data.equipment[item.slot] == item.id
-	button("Equipped" if equipped else "Equip", func(): refresh(func(): return profile.equip(item.id), "Equipment changed.")).disabled = equipped or not profile.can_change_loadout()
+	var actions := HBoxContainer.new()
+	body.add_child(actions)
+	var equip_button := button("Equipped" if equipped else "Equip", func(): refresh(func(): return profile.equip(item.id), "Equipment changed."), actions)
+	equip_button.disabled = equipped or not profile.can_change_loadout()
+	equip_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var locked: bool = item.id in profile.data.locked_items
+	var lock_button := button("Unlock item" if locked else "Lock item", func(): refresh(func(): return profile.set_item_locked(item.id, not locked), "Item unlocked." if locked else "Item protected from salvage."), actions)
+	lock_button.disabled = not profile.can_change_loadout()
+	lock_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var cost: Dictionary = profile.upgrade_cost(item.id)
 	var upgrade := button("Upgrade • %d credits + %d parts" % [cost.credits, cost.parts] if not cost.is_empty() else "Level cap reached for this zone", func(): refresh(func(): return profile.upgrade_item(item.id), "Equipment upgraded."))
 	upgrade.disabled = cost.is_empty() or not profile.can_change_loadout() or profile.data.credits < cost.get("credits", 0) or profile.data.parts < cost.get("parts", 0)
-	var promotion: Dictionary = profile.promotion_cost(item.id)
-	if not promotion.is_empty():
-		var promote := button("Promote to %s • %dc / %dp" % [promotion.rarity.capitalize(), promotion.credits, promotion.parts], func(): refresh(func(): return profile.promote(item.id), "Rarity increased. Item level preserved."))
-		promote.disabled = not profile.can_change_loadout() or profile.data.credits < promotion.credits or profile.data.parts < promotion.parts
+	var tuning := HBoxContainer.new()
+	body.add_child(tuning)
+	var merge := button("Merge copies", func(): merge_donors = []; page = "merge"; confirmation = ""; rebuild(), tuning, 40)
+	merge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	merge.disabled = Content.RARITIES.find(item.rarity) >= Content.RARITIES.find(Content.MERGE_MAX_RARITY)
+	merge.tooltip_text = "Maximum merge rarity for this zone" if merge.disabled else "Combine three matching items"
+	button("Substats", func(): page = "substats"; confirmation = ""; selected_affix = ""; rebuild(), tuning, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if not equipped:
-		button("Salvage for %d parts" % (2 + Content.RARITIES.find(item.rarity) + int(item.level) - 1), func():
+		var protection: String = profile.salvage_block_reason(item.id)
+		button(protection if not protection.is_empty() else "Salvage for %d parts" % (2 + Content.RARITIES.find(item.rarity) + int(item.level) - 1), func():
 			if confirmation == "salvage":
 				refresh(func(): return profile.salvage(item.id), "Item salvaged.")
 			else:
-				confirmation = "salvage"; message = "Tap salvage again to permanently dismantle this item."; rebuild()).disabled = not profile.can_change_loadout()
+				confirmation = "salvage"; message = "Tap salvage again to permanently dismantle this item."; rebuild()).disabled = not profile.can_change_loadout() or not protection.is_empty()
 	button("Back to equipment", func(): selected_item = -1; confirmation = ""; message = ""; rebuild())
 
 func haven_page() -> void:
@@ -640,7 +699,10 @@ func class_page() -> void:
 	var selected: bool = profile.data["class"] == id
 	var choose := button("Selected" if selected else ("Select " + info.name if unlocked else info.unlock), func(): refresh(func(): return profile.select_class(id), info.name + " selected."))
 	choose.disabled = selected or not unlocked or not profile.can_change_loadout()
-	button("Mastery talents · 5 / 10 / 15 / 20", func(): page = "mastery"; rebuild(), null, 40)
+	var progression := HBoxContainer.new()
+	body.add_child(progression)
+	button("Skill tree · %d points" % profile.skill_points(id), func(): page = "skills"; tree_ability = ""; rebuild(), progression, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button("Mastery talents", func(): page = "mastery"; rebuild(), progression, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_line("Survivor level %d / 40 · %d lifetime XP" % [Content.survivor_level(profile.data.survivor_xp), profile.data.survivor_xp], 12)
 
 func settings_page() -> void:

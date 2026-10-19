@@ -4,6 +4,8 @@ October 18, 2026. Owner: Joshua Rice. Design and engineering lead: Codex.
 
 **Status: saved plan, not authorization to implement this revision.** The current functional baseline is commit `d6e3626`. Its menus work, but Joshua has explicitly rejected their visual quality as below the approved concepts and the Undead Slayer references. Passing automated tests or exporting an APK does not close that gap.
 
+**Latest scheduling decision:** Joshua said to save this work for last and continue features. This visual plan remains the final polish target. New functional menus may reuse the current components without implying visual acceptance.
+
 The objective is a welcoming, polished, illustrated mobile action RPG: recognizable Nightfall identity, appealing characters, rich but restrained materials, clear equipment progression, concise interface copy, and consistent phone-scale composition. Keep Godot and the existing game systems. First bring **Gear** to the target standard, then use its accepted components and art treatment across Shop, Expedition, Base and Class. Combat presentation follows as a separate stage.
 
 ## 1. References and decision order

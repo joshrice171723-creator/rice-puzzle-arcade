@@ -4,7 +4,9 @@ extends RefCounted
 const Content = preload("res://haven_content.gd")
 const Loot = preload("res://loot.gd")
 const Salvage = preload("res://salvage.gd")
-const VERSION := 2
+const Skills = preload("res://skill_tree.gd")
+const VERSION := 3
+const BUILD_SLOTS := ["1", "2", "3"]
 const SHOP_OFFERS := {"key": {"name": "Supply key", "cost": 25, "currency": "gems", "grant": "cache_keys", "amount": 1}, "parts": {"name": "10 Workshop Parts", "cost": 200, "currency": "credits", "grant": "parts", "amount": 10}}
 var path := "user://haven.json"
 var data: Dictionary = {}
@@ -24,6 +26,8 @@ func fresh() -> Dictionary:
 	return {"version": VERSION, "credits": 0, "parts": 0, "gems": 0, "survivor_xp": 0,
 		"mastery": {"scavenger": 0, "engineer": 0, "warden": 0, "arcanist": 0}, "class": "scavenger",
 		"inventory": items, "equipment": equipment, "next_item": Content.SLOTS.size(), "missions": {}, "zone_claims": [],
+		"loadouts": {}, "locked_items": [], "affix_rolls": 0,
+		"skill_unlocks": {"scavenger": [], "engineer": [], "warden": [], "arcanist": []},
 		"facilities": {"workshop": 1, "quartermaster": 1, "infirmary": 1},
 		"next_attempt": 1, "active_attempt": {}, "last_result": {}, "last_banked": 0,
 		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false, "seen_bosses": [],
@@ -38,7 +42,7 @@ func valid(candidate: Variant) -> bool:
 	for key: String in defaults:
 		if not candidate.has(key):
 			return false
-	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates", "cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "rare_choices", "contract_clears"]:
+	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates", "cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "rare_choices", "contract_clears", "affix_rolls"]:
 		if not (candidate[key] is int or candidate[key] is float) or candidate[key] < 0 or candidate[key] != floor(candidate[key]):
 			return false
 	if candidate["class"] not in Content.CLASSES or not candidate.inventory is Array or not candidate.equipment is Dictionary or not candidate.missions is Dictionary or not candidate.facilities is Dictionary or not candidate.mastery is Dictionary:
@@ -78,6 +82,11 @@ func valid(candidate: Variant) -> bool:
 			if affix not in Content.AFFIXES or affix in seen_affixes or item.slot not in Content.AFFIXES[affix].slots:
 				return false
 			seen_affixes.append(affix)
+		if not item.get("affix_levels", {}) is Dictionary:
+			return false
+		for affix in item.get("affix_levels", {}):
+			if affix not in seen_affixes or not item.affix_levels[affix] is int or item.affix_levels[affix] not in [1, 2, 3]:
+				return false
 		ids.append(item.id)
 	for slot: String in Content.SLOTS:
 		if not candidate.equipment.has(slot):
@@ -91,6 +100,43 @@ func valid(candidate: Variant) -> bool:
 	for id: String in Content.CLASSES:
 		if not candidate.mastery.get(id) is float and not candidate.mastery.get(id) is int:
 			return false
+	if not candidate.skill_unlocks is Dictionary:
+		return false
+	for id: String in Content.CLASSES:
+		var learned: Variant = candidate.skill_unlocks.get(id)
+		if not learned is Array:
+			return false
+		var seen: Array = []
+		for ability in learned:
+			if ability not in Skills.BRANCHES[id] or ability in seen:
+				return false
+			seen.append(ability)
+			if not Skills.prerequisites_met(id, ability, learned):
+				return false
+		if Skills.spent(id, learned) > mini(Skills.POINT_CAP, Content.mastery_level(candidate.mastery[id])):
+			return false
+	if not candidate.loadouts is Dictionary or not candidate.locked_items is Array:
+		return false
+	var locked_ids: Array = []
+	for id in candidate.locked_items:
+		if not id is int or id not in ids or id in locked_ids:
+			return false
+		locked_ids.append(id)
+	for slot in candidate.loadouts:
+		var build: Variant = candidate.loadouts[slot]
+		if slot not in BUILD_SLOTS or not build is Dictionary:
+			return false
+		if not build.get("name") is String or build.name.strip_edges().is_empty() or build.name.length() > 20:
+			return false
+		if build.get("class") not in Content.CLASSES or not build.get("equipment") is Dictionary or build.equipment.size() != Content.SLOTS.size():
+			return false
+		for equipment_slot in Content.SLOTS:
+			var found := false
+			for item in candidate.inventory:
+				if item.id == build.equipment.get(equipment_slot, -1) and item.slot == equipment_slot:
+					found = true
+			if not found:
+				return false
 	for id: String in Content.FACILITIES:
 		if int(candidate.facilities.get(id, 0)) not in [1, 2]:
 			return false
@@ -109,10 +155,15 @@ func read_candidate(file_path: String) -> Variant:
 	if parser.parse(FileAccess.get_file_as_string(file_path)) != OK:
 		return null
 	var parsed: Variant = normalize_numbers(parser.data)
-	if parsed is Dictionary and parsed.get("version") in [1, VERSION] and not parsed.has("settings"):
+	if parsed is Dictionary and parsed.get("version") in [1, 2, VERSION] and not parsed.has("settings"):
 		parsed.settings = fresh().settings
-	if parsed is Dictionary and parsed.get("version") in [1, VERSION]:
+	if parsed is Dictionary and parsed.get("version") in [1, 2, VERSION]:
 		var defaults := fresh()
+		if parsed.version < 3:
+			parsed.loadouts = {}
+			parsed.locked_items = []
+			parsed.skill_unlocks = defaults.skill_unlocks.duplicate(true)
+			parsed.affix_rolls = 0
 		if not parsed.has("seen_bosses"):
 			parsed.seen_bosses = []
 			for key in parsed.get("missions", {}):
@@ -129,7 +180,7 @@ func read_candidate(file_path: String) -> Variant:
 					parsed.next_item += 1
 					parsed.inventory.append(item)
 					parsed.equipment[slot] = item.id
-			parsed.version = VERSION
+		parsed.version = VERSION
 	return parsed
 
 func normalize_numbers(value: Variant) -> Variant:
@@ -215,6 +266,61 @@ func item_by_id(id: int) -> Dictionary:
 func can_change_loadout() -> bool:
 	return not blocked and data.active_attempt.is_empty()
 
+func item_in_build(id: int) -> bool:
+	for build in data.loadouts.values():
+		if id in build.equipment.values():
+			return true
+	return false
+
+func salvage_block_reason(id: int) -> String:
+	if id in data.equipment.values():
+		return "Equipped item"
+	if id in data.locked_items:
+		return "Unlock item to salvage"
+	if item_in_build(id):
+		return "Saved in a build"
+	return ""
+
+func set_item_locked(id: int, locked: bool) -> bool:
+	if not can_change_loadout() or item_by_id(id).is_empty():
+		return false
+	var previous := data.duplicate(true)
+	data.locked_items.erase(id)
+	if locked:
+		data.locked_items.append(id)
+	return commit(previous)
+
+func save_loadout(slot: String, label: String) -> bool:
+	var clean := label.strip_edges()
+	if not can_change_loadout() or slot not in BUILD_SLOTS or clean.is_empty() or clean.length() > 20 or "\n" in clean or "\r" in clean:
+		return false
+	var previous := data.duplicate(true)
+	data.loadouts[slot] = {"name": clean, "class": data["class"], "equipment": data.equipment.duplicate(true)}
+	return commit(previous)
+
+func apply_loadout(slot: String) -> bool:
+	if not can_change_loadout() or slot not in BUILD_SLOTS or not data.loadouts.has(slot):
+		return false
+	var build: Dictionary = data.loadouts[slot]
+	if not class_unlocked(build["class"]):
+		return false
+	# Validate every reference before replacing anything; never partially equip.
+	for equipment_slot in Content.SLOTS:
+		var item := item_by_id(int(build.equipment.get(equipment_slot, -1)))
+		if item.is_empty() or item.slot != equipment_slot:
+			return false
+	var previous := data.duplicate(true)
+	data["class"] = build["class"]
+	data.equipment = build.equipment.duplicate(true)
+	return commit(previous)
+
+func remove_loadout(slot: String) -> bool:
+	if not can_change_loadout() or not data.loadouts.has(slot):
+		return false
+	var previous := data.duplicate(true)
+	data.loadouts.erase(slot)
+	return commit(previous)
+
 func equip(id: int) -> bool:
 	var item := item_by_id(id)
 	if not can_change_loadout() or item.is_empty():
@@ -241,30 +347,95 @@ func upgrade_item(id: int) -> bool:
 
 func salvage(id: int) -> bool:
 	var item := item_by_id(id)
-	if not can_change_loadout() or item.is_empty() or id in data.equipment.values():
+	if not can_change_loadout() or item.is_empty() or not salvage_block_reason(id).is_empty():
 		return false
 	var previous := data.duplicate(true)
 	data.parts += 2 + Content.RARITIES.find(item.rarity) + int(item.level) - 1
 	data.inventory.erase(item)
 	return commit(previous)
 
-func promotion_cost(id: int) -> Dictionary:
-	var item := item_by_id(id)
-	if item.is_empty() or item.rarity not in ["common", "uncommon"]:
-		return {}
-	var tier := Content.RARITIES.find(item.rarity)
-	return {"credits": 180 * (tier + 1), "parts": 10 * (tier + 1), "rarity": Content.RARITIES[tier + 1]}
+func merge_candidates(id: int) -> Array:
+	var target := item_by_id(id)
+	if target.is_empty() or Content.RARITIES.find(target.rarity) >= Content.RARITIES.find(Content.MERGE_MAX_RARITY):
+		return []
+	return data.inventory.filter(func(item: Dictionary): return item.id != id and item.slot == target.slot and item.name == target.name and item.rarity == target.rarity and salvage_block_reason(item.id).is_empty())
 
-func promote(id: int) -> bool:
-	var cost := promotion_cost(id)
+func merge_items(id: int, donors: Array) -> bool:
+	if not can_change_loadout() or donors.size() != 2 or donors[0] == donors[1]:
+		return false
+	var eligible: Array = merge_candidates(id).map(func(item: Dictionary): return item.id)
+	if donors[0] not in eligible or donors[1] not in eligible:
+		return false
+	var previous := data.duplicate(true)
+	var target := item_by_id(id)
+	for donor_id in donors:
+		var donor := item_by_id(donor_id)
+		target.level = maxi(target.level, donor.level)
+		data.inventory.erase(donor)
+	target.rarity = Content.RARITIES[Content.RARITIES.find(target.rarity) + 1]
+	# Preserve the selected item's substats and their ranks, then fill new slots.
+	var kept: Array = target.get("affixes", []).duplicate()
+	var count: int = [0, 1, 1, 2, 3, 3][Content.RARITIES.find(target.rarity)]
+	for affix: String in Loot.affixes(target.slot, target.rarity, id):
+		if kept.size() < count and affix not in kept:
+			kept.append(affix)
+	target.affixes = kept
+	return commit(previous)
+
+func substat_cost(id: int, affix: String) -> Dictionary:
+	var item := item_by_id(id)
+	if item.is_empty() or affix not in item.get("affixes", []):
+		return {}
+	var rank := Content.affix_rank(item, affix)
+	return {} if rank >= 3 else {"credits": rank * 50, "parts": rank * 3}
+
+func upgrade_substat(id: int, affix: String) -> bool:
+	var cost := substat_cost(id, affix)
 	if not can_change_loadout() or cost.is_empty() or data.credits < cost.credits or data.parts < cost.parts:
 		return false
 	var previous := data.duplicate(true)
+	var item := item_by_id(id)
+	if not item.has("affix_levels"):
+		item.affix_levels = {}
+	item.affix_levels[affix] = Content.affix_rank(item, affix) + 1
 	data.credits -= cost.credits
 	data.parts -= cost.parts
-	item_by_id(id).rarity = cost.rarity
-	item_by_id(id).affixes = Loot.affixes(item_by_id(id).slot, cost.rarity, id)
 	return commit(previous)
+
+func substat_options(id: int, affix: String) -> Array:
+	var item := item_by_id(id)
+	if item.is_empty() or affix not in item.get("affixes", []):
+		return []
+	return Content.AFFIXES.keys().filter(func(candidate: String): return candidate not in item.affixes and item.slot in Content.AFFIXES[candidate].slots)
+
+func reroll_substat(id: int, affix: String) -> bool:
+	var options := substat_options(id, affix)
+	if not can_change_loadout() or options.is_empty() or data.credits < 100 or data.parts < 5:
+		return false
+	var previous := data.duplicate(true)
+	var item := item_by_id(id)
+	var roll := RandomNumberGenerator.new()
+	roll.seed = int(data.cache_seed) + int(data.affix_rolls) * 104729 + id * 7937
+	var replacement: String = options[roll.randi_range(0, options.size() - 1)]
+	var rank := Content.affix_rank(item, affix)
+	item.affixes[item.affixes.find(affix)] = replacement
+	if not item.has("affix_levels"):
+		item.affix_levels = {}
+	item.affix_levels.erase(affix)
+	item.affix_levels[replacement] = rank
+	data.credits -= 100
+	data.parts -= 5
+	data.affix_rolls += 1
+	return commit(previous)
+
+func set_counts() -> Dictionary:
+	var result := {"outrider": 0, "ironwatch": 0, "riftweaver": 0}
+	for slot: String in Content.SLOTS:
+		var item := item_by_id(data.equipment[slot])
+		var id := Content.set_id(item)
+		if not id.is_empty() and Content.RARITIES.find(item.rarity) >= 2:
+			result[id] += 1
+	return result
 
 func upgrade_facility(id: String) -> bool:
 	if not can_change_loadout() or id not in Content.FACILITIES or data.facilities[id] >= 2:
@@ -288,6 +459,26 @@ func select_class(id: String) -> bool:
 	data["class"] = id
 	return commit(previous)
 
+func skill_points(class_id: String) -> int:
+	if class_id not in Content.CLASSES:
+		return 0
+	return maxi(0, mini(Skills.POINT_CAP, Content.mastery_level(data.mastery[class_id])) - Skills.spent(class_id, data.skill_unlocks[class_id]))
+
+func ability_pool(class_id: String) -> Array:
+	return Skills.pool(class_id, data.skill_unlocks[class_id])
+
+func unlock_skill(class_id: String, ability: String) -> bool:
+	if not can_change_loadout() or not class_unlocked(class_id):
+		return false
+	var cost: int = Skills.cost(class_id, ability)
+	if cost == 0 or ability in data.skill_unlocks[class_id] or skill_points(class_id) < cost:
+		return false
+	if not Skills.prerequisites_met(class_id, ability, data.skill_unlocks[class_id]):
+		return false
+	var previous := data.duplicate(true)
+	data.skill_unlocks[class_id].append(ability)
+	return commit(previous)
+
 func stats() -> Dictionary:
 	var result := {"hp": 120.0 + 4.0 * (Content.survivor_level(data.survivor_xp) - 1), "power": 0.0, "armor": 0.0,
 		"speed": 1.05 if data["class"] == "scavenger" else 1.0, "pickup": 1.15 if data["class"] == "scavenger" else 1.0,
@@ -299,7 +490,7 @@ func stats() -> Dictionary:
 	if "clear" in data.missions.get("3", []):
 		result.blueprints.append("ward")
 	result.mastery = Content.mastery_level(data.mastery[data["class"]])
-	var outrider := 0
+	result.ability_pool = ability_pool(data["class"])
 	for slot: String in Content.SLOTS:
 		var item := item_by_id(data.equipment[slot])
 		var values := Content.item_stats(item)
@@ -308,15 +499,22 @@ func stats() -> Dictionary:
 		for id: String in item.get("affixes", []):
 			var affix: Dictionary = Content.AFFIXES[id]
 			if affix.stat in ["speed", "pickup", "cooldown"]:
-				result[affix.stat] += affix.value
-		if item.name.begins_with("Outrider") and Content.RARITIES.find(item.rarity) >= 2:
-			outrider += 1
-	if outrider >= 2:
+				result[affix.stat] += Content.affix_value(item, id)
+	var sets := set_counts()
+	if sets.outrider >= 2:
 		result.pickup += 0.15
-	if outrider >= 3:
+	if sets.outrider >= 3:
 		result.secure += 1
+	if sets.ironwatch >= 2:
+		result.armor += 12
+	if sets.ironwatch >= 3:
+		result.hp *= 1.06
+	result.spell_bonus = 0.03 if sets.riftweaver >= 2 else 0.0
+	if sets.riftweaver >= 3:
+		result.cooldown += 0.04
 	result.speed = minf(result.speed, 1.15)
 	result.cooldown = minf(result.cooldown, 0.15)
+	result.pickup = minf(result.pickup, 1.50)
 	return result
 
 func mission_unlocked(mission: int) -> bool:

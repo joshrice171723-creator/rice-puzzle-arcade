@@ -34,7 +34,12 @@ func _initialize() -> void:
 	p.data.parts = 100
 	check(p.upgrade_item(0) and p.item_by_id(0).level == 2 and p.data.credits == 960 and p.data.parts == 98, "Equipment upgrade deducts exact costs once")
 	check(is_equal_approx(p.stats().power, 42), "Equipment upgrade changes real Power")
-	check(p.promote(0) and p.item_by_id(0).rarity == "uncommon" and p.item_by_id(0).level == 2, "Promotion increases rarity and preserves level")
+	var copies: Array = []
+	for index in 2:
+		copies.append(p.data.next_item)
+		p.data.inventory.append(p.Loot.equipment("weapon", "common", p.data.next_item))
+		p.data.next_item += 1
+	check(p.merge_items(0, copies) and p.item_by_id(0).rarity == "uncommon" and p.item_by_id(0).level == 2, "Three-copy merge increases rarity and preserves level")
 	check(not p.salvage(0), "Equipped item cannot be salvaged")
 	check(p.upgrade_facility("quartermaster") and p.stats().capacity == 9 and p.stats().secure == 2, "Quartermaster adds pack capacity without inventing protected slots")
 	check(not p.upgrade_facility("quartermaster"), "Facility rank cap rejects repeat upgrade")

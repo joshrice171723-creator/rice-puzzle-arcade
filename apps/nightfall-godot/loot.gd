@@ -22,8 +22,11 @@ static func affixes(slot: String, rarity: String, identity: int) -> Array:
 		pool.remove_at(choice)
 	return result
 
-static func equipment(slot: String, rarity: String, identity: int) -> Dictionary:
-	return {"id": identity, "slot": slot, "name": Content.STARTER_NAMES[Content.SLOTS.find(slot)],
+static func equipment(slot: String, rarity: String, identity: int, armor_set: String = "outrider") -> Dictionary:
+	var name: String = Content.STARTER_NAMES[Content.SLOTS.find(slot)]
+	if slot in Content.ARMOR_SLOTS and armor_set in Content.SETS:
+		name = Content.SETS[armor_set].pieces[Content.ARMOR_SLOTS.find(slot)]
+	return {"id": identity, "slot": slot, "name": name,
 		"rarity": rarity, "level": 1, "affixes": affixes(slot, rarity, identity)}
 
 static func roll(category: String, seed_value: int, rare_misses: int, epic_misses: int, identity: int) -> Dictionary:
@@ -38,7 +41,9 @@ static func roll(category: String, seed_value: int, rare_misses: int, epic_misse
 	elif rare_misses >= 9 and Content.RARITIES.find(rarity) < 2:
 		rarity = "rare"
 	var slots: Array = CATEGORIES[category].slots
-	var item := equipment(slots[rng.randi_range(0, slots.size() - 1)], rarity, identity)
+	var slot: String = slots[rng.randi_range(0, slots.size() - 1)]
+	var armor_set: String = Content.SETS.keys()[rng.randi_range(0, Content.SETS.size() - 1)] if slot in Content.ARMOR_SLOTS else "outrider"
+	var item := equipment(slot, rarity, identity, armor_set)
 	return {"item": item, "rare_misses": 0 if Content.RARITIES.find(rarity) >= 2 else rare_misses + 1,
 		"epic_misses": 0 if Content.RARITIES.find(rarity) >= 3 else epic_misses + 1}
 
