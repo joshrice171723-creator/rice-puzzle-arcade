@@ -1123,7 +1123,7 @@ Palette:
 
 Green is not the default interface color.
 
-The combat screen always fits on the phone. It shows health, Combat XP, the wave timer, compact collection progress, and essential controls. When the boss arrives, its health bar replaces the wave timer.
+The combat screen always fits on the phone. The October 18 reference-layout revision uses a centered wave timer, thin Combat XP bar, chosen ability icons immediately beneath it, compact collection counters, and a small health bar over the character. There is no opaque header card. When the boss arrives, the centered label becomes its name and a thin boss-health bar appears beneath XP; the boss has no deadline. Progress details and instructions are opened deliberately from Pause. Upgrade and shrine choices pause combat and disappear after selection.
 
 The future balance checks need to answer:
 

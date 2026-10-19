@@ -76,7 +76,20 @@ func capture() -> void:
 	arena.last_screen = ""
 	arena.update_modal()
 	await save_frame("compact-hud")
+	arena.run.class_id = "engineer"
+	arena.run.facing = Vector2.RIGHT
+	await save_frame("engineer-hud")
+	arena.run.facing = Vector2.LEFT
+	await save_frame("engineer-left")
+	arena.run.paused = true
+	arena.last_screen = ""
+	arena.update_modal()
+	await save_frame("compact-pause")
+	arena.progress_view = true
+	arena.last_screen = ""
+	arena.update_modal()
+	await save_frame("mission-progress")
 	arena.queue_free()
 	await process_frame
-	print("Seven static feature captures saved; no combat simulation or player save used.")
+	print("Eleven static feature captures saved; no combat simulation or player save used.")
 	quit()

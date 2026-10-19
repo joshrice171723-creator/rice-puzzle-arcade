@@ -86,3 +86,12 @@ Google's [rewarded-ad documentation](https://developers.google.com/admob/android
 - Pack/Build moved beside the bottom controls. Resource notices expire after three seconds; branding/footer and ordinary debug/ad text were removed from combat.
 - Pause is an explicit compact menu. Instructions are behind How to play; level-up/shrine choices still pause and display when needed.
 - 63 new layout/interaction checks cover three phone viewports and arena edges. Static populated capture: `artifacts/nightfall-godot/compact-hud.png`. Native rendering remains a separate acceptance step.
+
+## Final presentation increment
+
+- Engineer now uses its own original four-pose brass-goggle/tool-backpack atlas. Right/left static captures verify the centered ground pivot. The original source is preserved and its prompt recorded in ASSET_SOURCES.md.
+- Pause > Progress shows current damaging-hit count, rescue eligibility for the combat medal, and opened-cache count. Practice and Salvage Contracts show their own goals. This is an explicit paused screen; combat stays clear of objective cards.
+- Final rules/UI suite: 1,774 checks, zero failures across 17 suites. `final-feature-tests.log` records the run. The compact HUD/progress suite contributes 81 checks across three phone viewports; these are assertions, not 1,774 human play sessions.
+- Static graphical fixture: 120 enemies plus 40 pickups used 24 draw calls against the 60-call limit. `final-render-budget.log` records the result. This is rendering evidence, not a physical-phone FPS claim.
+- Eleven static product captures generated without advancing combat or loading/writing the player's save. Final combat preview: `artifacts/nightfall-godot/compact-hud-final.png`. Engineer left/right, pause, progress, abilities, mastery, contracts and boss captures are alongside it.
+- Deferred ObjectDB teardown warnings remain in the bug log. No manual emulator gameplay or actual rewarded video playback was performed during this feature-only session.

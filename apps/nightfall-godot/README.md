@@ -2,7 +2,7 @@
 
 Isolated, playable technical prototype using Godot **4.7.2 stable**, Compatibility rendering, and typed GDScript. The existing Expo Nightfall and three puzzle games are untouched. See [delivery plan](../../docs/nightfall/BUILD_PLAN.md) for the full product scope.
 
-This is the M0 engine evaluation plus the first M1 combat feature increment. It is not the first production zone. No persistent progress, real purchases, production publisher IDs, mediation, telemetry upload, or earned loot economy is enabled. See [combat slice verification](../../docs/nightfall/COMBAT_SLICE_QA.md) and the [deferred bug log](../../docs/nightfall/KNOWN_ISSUES.md).
+The current feature build implements the first five-mission Outskirts zone, local Haven progression, scavenging/shrines, construction, eight branching spell families, earned loot/chests, boss practice and Salvage Contracts. It is still an internal prototype: production purchases, publisher IDs/mediation, telemetry upload, physical-phone acceptance and a balanced full campaign remain unfinished. See the [feature-session record](../../docs/nightfall/FEATURE_BUILD_SESSION.md) and [deferred bug log](../../docs/nightfall/KNOWN_ISSUES.md).
 
 ## Play
 
@@ -16,23 +16,29 @@ The helper defaults to the locally installed portable executable under `%LOCALAP
 
 - WASD/arrows or drag the left side to move. Automatic fire targets nearby enemies.
 - Space / Dodge: short invulnerable movement, three-second cooldown.
-- E / Pulse: area damage and knockback, eight-second cooldown.
-- Escape / pause button: pause. Backgrounding also pauses; resume is explicit.
+- All weapons, spells and class support powers activate automatically. Dodge is the only manual combat ability. E/Q no longer trigger attacks.
+- Escape / pause button: pause. Progress shows live bonus-medal or contract requirements; How to play holds instructions. Backgrounding also pauses; resume is explicit.
 - Collect violet experience drops to choose a temporary upgrade.
-- Learn Ember Bolt, Frost Ring, or Chain Spark at the first level-up. Later choices upgrade spells to rank three, improve the pistol, or restore missing health. Spells cast automatically while enemies are in range.
+- Learn Ember Bolt, Frost Ring, or Chain Spark at the first level-up. Later choices include Orbiting Wisp, Stone Lance, Consecrated Ground, Spectral Blades and Gravity Knot. Three attack slots and three passive types support different builds. Rank two chooses one of two specializations; rank three plus its paired passive evolves the attack. The Arcanum previews every path.
 - Four wave phases introduce Drifters, fast Rift Runners, and ranged Ash Spitters. Spitter aim lines lock before firing, leaving time to move away.
 - Four minutes of waves, then a mandatory boss kill. Boss fight has no time limit.
-- The Breaker marks a charge lane, slams the ground around itself, and throws three projectiles. Its attack interval shortens below half health. A gold HUD bar tracks its health.
-- **Practice The Breaker** starts a separate no-reward fight with three rank-one spells; it does not skip or complete a campaign mission.
-- The pause menu's 30/60/120-foe buttons are **invulnerable diagnostic modes**, not balanced missions.
+- Garage Mauler, Fence Runner, Porchcaller, Scrapback and The Breaker have distinct attack combinations and boss artwork. Thin boss health appears below XP. Ordinary player health follows the hero; the opaque header and default help card have been removed.
+- **Training Yard** unlocks each boss when encountered, even after defeat. Choose one of three spell presets with your equipped gear. No campaign rewards or progression are granted.
+- **Salvage Contracts** unlock after mission one: open three caches, wait for the 90-second beacon, then hold its ring for three seconds before the three-minute deadline. Choose a targeted equipment slot. Every third clear earns a supply key.
+- Tab / Pack protects up to two starting loot bundles; B / Build opens field construction. Victory banks all carried loot. Defeat retains protected bundles, Credits and earned permanent XP.
+- Haven offers equipment upgrades/promotion/salvage, earned chests, facilities, class selection and mastery. Scavenger starts unlocked; Engineer unlocks after mission four. Their mastery perks unlock at levels 5/10/15/20. Warden and Arcanist remain future campaign unlocks.
+- Settings contains separate internal diagnostic tools. Its 30/60/120-foe controls are invulnerable performance fixtures, not ordinary missions.
 
-Android has a separate **Test rewarded video** diagnostic in the pause menu. It uses Google sample identifiers and shows an earned-callback counter. It does not grant inventory or imply production revenue. Consent/network failures appear in the diagnostic; they never manufacture a reward. Desktop has no simulated ad-success fallback.
+Android uses Google sample identifiers. A native earned callback can grant one expedition rescue at 50% HP; request tokens prevent duplicate/stale rewards. Expired contracts cannot request an unusable rescue. Internal ad diagnostics are separate from the ordinary Pause menu. Desktop has no simulated ad-success fallback. Automated tests simulate callbacks explicitly; they do not prove actual video delivery or production revenue.
+
+`user://haven.json` stores the local profile and active expedition checkpoint with atomic replacement and a backup. Returning to Haven or backgrounding checkpoints the run. Resume is explicitly paused. Original music/effects and audio/accessibility preferences are saved. This local profile is not a secure ledger for paid currency.
 
 ## Verify and export
 
 ```powershell
 ./scripts/nightfall-godot.ps1 -Action Test
 ./scripts/nightfall-godot.ps1 -Action Windows
+$env:GRADLE_OPTS = '-Dorg.gradle.daemon=false'
 ./scripts/nightfall-godot.ps1 -Action Android
 ```
 
@@ -64,10 +70,11 @@ Create the output directory first. The first three seconds are excluded from tim
 
 ## Known scope limits
 
-- AI-generated four-frame, one-view walking art uses mirrored horizontal facing. It is an animation/layout sample, not the planned eight-direction production rig.
+- Scavenger and Engineer use separate AI-generated four-frame, one-view walking atlases with mirrored horizontal facing. These are animation/layout samples, not the planned eight-direction production rigs.
 - One floor texture; walkable bounds are explicit and tall environmental collisions/occlusion are not implemented.
-- Enemy variants currently reuse tinted/scaled atlas artwork and small shape markers. The boss also uses enlarged enemy artwork; production silhouettes and animation remain unfinished.
-- No shrines, Haven, field building, equipment, classes, stash, saves, or sound yet. These remain subsequent milestones.
+- Ordinary enemy variants reuse tinted/scaled atlas artwork and small shape markers. Five bosses have distinct neutral/wind-up poses; full directional production animation remains unfinished.
+- Five missions in one zone are implemented, not the planned twenty zones/one hundred missions. Equipment upgrades currently stop at level five; promotion stops at Rare, while earned chests can roll Epic. Later rarity progression, the remaining classes/facilities/modes and production commerce remain future scope.
+- Rule tests and static layout fixtures establish bounded behavior, not whether the game is fun or appropriately difficult. Human balance passes and native soak tests remain necessary.
 - Entity caps: 120 enemies, 64 shots, 40 pickups. Dense crowds overlap; separation/pathing still needs production work.
 - All HUD controls fit a 430×760 logical canvas; differing aspect ratios letterbox rather than introduce scrolling. Physical safe-area and accessibility acceptance remains separate.
 

@@ -51,6 +51,26 @@ func verify() -> void:
 		await settle()
 		check(arena.modal.visible and arena.modal_title.text == "Paused" and arena.modal.size.y <= 300, "Pause opens a compact deliberate menu")
 		check(not is_instance_valid(arena.ad_label), "Internal ad diagnostics are absent from the ordinary pause menu")
+		arena.progress_view = true
+		arena.last_screen = ""
+		await settle()
+		check(arena.modal_title.text == "Mission progress" and root.get_visible_rect().encloses(arena.modal.get_global_rect()), "Opt-in mission progress fits the phone without scrolling")
+		check("Still available" in arena.mission_progress() and "0/3 caches" in arena.mission_progress(), "Progress reflects current bonus eligibility")
+		arena.run.damage_taken = 9
+		arena.run.field.caches_opened = 3
+		check("Missed this run" in arena.mission_progress() and "Ready on victory" in arena.mission_progress(), "Progress distinguishes missed combat and completed collection requirements")
+		arena.run.damage_taken = 0
+		arena.run.rescued = true
+		check("Missed this run" in arena.mission_progress(), "A rescue excludes the combat medal even with few hits")
+		arena.run.rescued = false
+		arena.run.field.caches_opened = 0
+		arena.run.practice = true
+		check("grants no loot" in arena.mission_progress() and "medal" not in arena.mission_progress(), "Practice progress cannot imply campaign rewards")
+		arena.run.practice = false
+		arena.run.mode = "salvage"
+		check("OPEN CACHES" in arena.mission_progress() and "Guaranteed equipment" in arena.mission_progress(), "Contracts show their own objective and targeted reward")
+		arena.run.mode = "campaign"
+		arena.progress_view = false
 		arena.run.paused = false
 		arena.last_screen = ""
 		await settle()

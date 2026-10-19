@@ -9,6 +9,7 @@ const Soundscape = preload("res://soundscape.gd")
 const PowerHUD = preload("res://power_hud.gd")
 const BossArt = preload("res://boss_art.gd")
 const ACTORS = preload("res://assets/actors.png")
+const ENGINEER = preload("res://assets/engineer.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const SHADOW = preload("res://assets/shadow.svg")
 const EXPERIENCE = preload("res://assets/experience.svg")
@@ -76,6 +77,7 @@ var was_paused := false
 var boss_warning: Label
 var selected_power := ""
 var help_view := false
+var progress_view := false
 var last_field_notice := ""
 var notice_left := 0.0
 
@@ -233,7 +235,7 @@ func build_ui() -> void:
 	power_hud.size = Vector2(230, 54)
 	power_hud.inspect_requested.connect(open_power_view)
 	layer.add_child(power_hud)
-	pause_button = make_button("II", func(): help_view = false; run.paused = not run.paused; clear_input(), layer, 44)
+	pause_button = make_button("II", func(): help_view = false; progress_view = false; run.paused = not run.paused; clear_input(), layer, 44)
 	pause_button.position = Vector2(14, 12)
 	pause_button.size.x = 48
 	dodge_button = make_button("DODGE", func(): run.dodge(), layer, 64)
@@ -443,6 +445,15 @@ func refresh_ad_label() -> void:
 	if is_instance_valid(ad_label):
 		ad_label.text = "%s\nEarned callbacks: %d" % [ad_status.left(140), ad_rewards]
 
+func mission_progress() -> String:
+	if run.practice:
+		return "Defeat %s.\nPractice has no time limit and grants no loot or progression.\nTry different spell builds from the Training Yard." % run.boss_name
+	if run.mode == "salvage":
+		return "%s\nCaches opened: %d/3\nBeacon charge: %.1f/3 seconds\nGuaranteed equipment: %s\nExtract before the timer ends to keep your full pack." % [Run.Salvage.objective(run), mini(3, run.field.caches_opened), run.extract_progress, run.target_slot.capitalize()]
+	var combat: String = "Still available" if run.damage_taken <= 8 and not run.rescued else "Missed this run"
+	var collection: String = "Ready on victory" if run.field.caches_opened >= 3 else "Keep searching"
+	return "Win: survive the waves, then defeat %s.\nThe boss fight has no second timer.\n\nCombat medal: %s\n%d damaging hits / maximum 8. No rescue.\n\nScavenger medal: %s\n%d/3 caches opened.\n\nExtra medals require a boss clear. Missing one does not block the next mission." % [run.boss_name, combat, run.damage_taken, collection, mini(3, run.field.caches_opened)]
+
 func update_modal() -> void:
 	if is_instance_valid(home) and home.visible:
 		modal.hide()
@@ -472,8 +483,11 @@ func update_modal() -> void:
 		"pack": FieldUI.pack(self)
 		"build": FieldUI.build(self)
 		"pause":
-			modal_title.text = "How to play" if help_view else "Paused"
-			if help_view:
+			modal_title.text = "Mission progress" if progress_view else ("How to play" if help_view else "Paused")
+			if progress_view:
+				FieldUI.label(self, mission_progress(), 14)
+				make_button("Back", func(): progress_view = false; last_screen = "", modal_body)
+			elif help_view:
 				var description := "Survive the waves, then defeat %s.\nAttacks and magic fire automatically.\nHold shrine rings to gain temporary powers.\nMove: drag the left side or WASD.\nDodge: button or Space." % run.boss_name
 				if run.mode == "salvage":
 					description = "Open 3 caches. The central beacon activates at 90 seconds. Hold its ring for 3 seconds to leave before the 3-minute deadline.\nAttacks fire automatically.\nMove: drag or WASD. Dodge: button or Space."
@@ -481,7 +495,11 @@ func update_modal() -> void:
 				make_button("Back", func(): help_view = false; last_screen = "", modal_body)
 			else:
 				make_button("Resume", func(): run.paused = false, modal_body)
-				make_button("How to play", func(): help_view = true; last_screen = "", modal_body, 40)
+				var information := HBoxContainer.new()
+				information.add_theme_constant_override("separation", 8)
+				modal_body.add_child(information)
+				make_button("Progress", func(): progress_view = true; last_screen = "", information, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				make_button("How to play", func(): help_view = true; last_screen = "", information, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				make_button("Save & return to Haven", show_haven, modal_body)
 			if diagnostics:
 				var row := HBoxContainer.new()
@@ -759,6 +777,12 @@ func finish_report() -> void:
 	get_tree().quit()
 
 func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: float = 1.0, tint: Color = Color.WHITE) -> void:
+	if not enemy and run.class_id == "engineer":
+		var engineer_size := Vector2(72, 80) * scale_value
+		draw_set_transform(pos + world_offset, 0, Vector2(face, 1))
+		draw_texture_rect_region(ENGINEER, Rect2(Vector2(-engineer_size.x / 2, -engineer_size.y * 0.93), engineer_size), Rect2(frame * 543, 70, 543, 580), tint)
+		draw_set_transform(Vector2.ZERO)
+		return
 	# Generated atlas rows have different occupied bounds; exclude neighboring feet.
 	var width := ACTORS.get_width() / 4.0
 	var source := Rect2(frame * width, 535 if enemy else 20, width, 315 if enemy else 480)
