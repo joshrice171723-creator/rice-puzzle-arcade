@@ -14,9 +14,9 @@ The [main design](NIGHTFALL_MAIN_PLAN.md), [Beaconbound art direction](ART_DIREC
 - Twenty zones, five missions per zone. Four-minute waves in Zone 1, five minutes in Zones 2–5, six minutes thereafter. When the wave timer ends, the boss appears. Killing it is required to win; there is no second timer.
 - Performance and collected supplies determine extra rewards. Completing the mission unlocks the next mission even without all mastery medals.
 - Persistent character progression, class mastery, equipment, Haven improvements, and secured loot are separate from temporary Combat XP, spells, traits, Relics, and Field Scrap.
-- Four classes: Scavenger, Engineer, Warden, Arcanist. Six equipment slots, six rarity tiers, and the stat limits in the main plan.
+- Four classes: Scavenger, Engineer, Warden, Arcanist. Eight target equipment slots (Ring and Pants added October 18), six rarity tiers, and the stat limits in the main plan. The current proof still has six slots; migrate saves and all loot/stat consumers together when adding the two new slots.
 - One fast Artificer trading shrine per arena; two slower Twinflame shrines sharing a three-Relic-per-run allowance. Charging happens in danger; choosing an offer pauses combat.
-- Original chunky Beaconbound artwork, navy/cobalt/violet/ivory/amber palette. Phone controls and combat HUD fit without page scrolling. Inventory uses pages or tabs.
+- Original chunky Beaconbound artwork, navy/cobalt/violet/ivory/amber palette. Phone controls and combat HUD fit without page scrolling. Equipment inventory is five columns wide and scrolls vertically within its panel; the character, equipped slots, stats and navigation remain fixed.
 - Ads and purchases may accelerate progression, but combat rules must be testable independently of ad value or payment history. No scheduled forced losses or hidden changes to boss health when a player approaches victory.
 
 ## 2. What exists and what remains unproven
@@ -121,7 +121,7 @@ Deliver a complete player journey: start at Haven, inspect/equip gear, select a 
 
 Use the first zone's actual five mission definitions: Bruiser, Hunter, Caller, Guardian, signature boss. Their attacks and wave mixes differ while the core game remains the same. Establish each boss with two readable attacks before expanding phases. Add the Engineer at its planned Zone 1 Mission 4 unlock so the unlock has a usable class behind it.
 
-Initial Haven needs Armory, Workshop, and Training functions, not all seven fully developed facilities. All six equipment slots work; initially populate a bounded set of Common through Epic items. Validate Legendary/Mythic data and stat caps later before those tiers become obtainable. Do not fill screens with inactive paid offers or fake upcoming features.
+Initial Haven needs Armory, Workshop, and Training functions, not all seven fully developed facilities. Target eight working equipment slots after the Ring/Pants amendment; initially populate a bounded set of Common through Epic items. Include backward-compatible six-slot save migration and bounded stats in that change. Validate Legendary/Mythic data and stat caps later before those tiers become obtainable. Do not fill screens with inactive paid offers or fake upcoming features.
 
 Implement clear/no-rescue-hit-budget/collection medals, first-clear rewards, repeat rewards, zone milestones, and secured-loot loss rules. Verify rewards against the main plan with explicit rounding. Include one optional rescue path with a diagnostic provider until the genuine SDK path is validated. Test controls must be excluded from release builds.
 
@@ -187,7 +187,7 @@ Model credits, parts, materials, gems, chest pity, and upgrade costs before enab
 | Shrines | Proximity, charge/grace/decay, shared three-Relic limit, rank/currency caps, reroll persistence, pause/resume |
 | Loot | Seeded drop tables, pity/crafting guarantees, first-clear versus repeat, secured versus unsecured defeat outcomes |
 | Saves | Atomic replacement, version migrations, interrupted write fallback, active run resume, no duplicate result claim |
-| UI | Short and tall phones, safe areas, touch targets, font scaling, all combat controls visible, paged inventory |
+| UI | Short and tall phones, safe areas, touch targets, font scaling, all combat controls visible, five-column vertically scrolling inventory with fixed character and navigation |
 | Lifecycle | Background during combat/choice/ad/results, audio focus, process kill, relaunch, interrupted update |
 | Ads | Real test video, earned callback, cancellation, error/no-fill, delayed/duplicate events, reward once, no timer advancement |
 | Purchases | Pending/cancelled/successful, backend verification, restoration, duplicate token, refund, network interruption |
