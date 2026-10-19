@@ -32,13 +32,25 @@ func verify() -> void:
 	arena.home.show()
 	for viewport in [Vector2i(320, 568), Vector2i(390, 844), Vector2i(430, 760)]:
 		root.size = viewport
-		for page in ["mission", "gear", "haven", "class", "settings", "cache", "rare_choice", "rewards", "contracts"]:
+		for page in ["mission", "gear", "haven", "class", "settings", "cache", "rare_choice", "rewards", "contracts", "training", "arcanum"]:
 			arena.home.page = page
 			arena.home.rebuild()
 			await settle()
 			for control in visible_controls(arena.home):
 				check(root.get_visible_rect().encloses(control.get_global_rect()), "%s screen overflow at %s: %s %s" % [page, viewport, control.get_class(), control.get_global_rect()])
 			check(arena.home.body.get_global_rect().end.y <= arena.home.navigation.position.y, "%s content must not overlap navigation" % page)
+		arena.home.page = "arcanum"
+		for index in 8:
+			arena.home.guide_index = index
+			arena.home.rebuild()
+			await settle()
+			check(arena.home.body.get_global_rect().end.y <= arena.home.navigation.position.y, "Ability guide %d fits without scrolling" % index)
+		arena.home.page = "training"
+		for number in range(1, 6):
+			arena.home.training_mission = number
+			arena.home.rebuild()
+			await settle()
+			check(arena.home.body.get_global_rect().end.y <= arena.home.navigation.position.y, "Boss %d practice page fits without scrolling" % number)
 		arena.home.page = "gear"
 		for id in [0, 5]:
 			arena.home.selected_item = id

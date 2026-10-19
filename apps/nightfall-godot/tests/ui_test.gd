@@ -49,8 +49,8 @@ func verify_layout() -> void:
 	arena.run.phase = "victory"
 	arena.replay()
 	checks += 1
-	if not arena.run.practice or arena.run.phase != "boss" or arena.run.health != 120.0:
+	if not arena.run.practice or arena.run.phase != "boss" or arena.run.health != arena.profile.stats().hp:
 		failures += 1
-		push_error("Practice replay must restart practice with fresh health")
+		push_error("Practice replay must restart with full health from equipped gear")
 	print("Nightfall layout: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

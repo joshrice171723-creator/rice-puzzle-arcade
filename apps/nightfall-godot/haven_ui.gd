@@ -3,12 +3,13 @@ extends Control
 signal mission_requested(mission: int)
 signal resume_requested
 signal abandon_requested
-signal practice_requested
+signal practice_requested(mission: int, build: String)
 signal diagnostics_requested
 signal contract_requested(slot: String)
 
 const Content = preload("res://haven_content.gd")
 const LootUI = preload("res://loot_ui.gd")
+const Preparation = preload("res://preparation_ui.gd")
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const EQUIPMENT_ART = preload("res://assets/equipment-icons.png")
@@ -26,6 +27,9 @@ var navigation: HBoxContainer
 var status_label: Label
 var cache_receipt := false
 var contract_slot := "weapon"
+var training_mission := 1
+var training_build := "Balanced"
+var guide_index := 0
 
 func _ready() -> void:
 	size = Vector2(430, 760)
@@ -154,6 +158,8 @@ func rebuild() -> void:
 		"rewards": LootUI.mission_rewards(self)
 		"rare_choice": LootUI.rare_choice(self)
 		"contracts": contracts_page()
+		"training": Preparation.training(self)
+		"arcanum": Preparation.arcanum(self)
 	status_label.text = profile.error if not profile.error.is_empty() else message
 	for index in navigation.get_child_count():
 		var tab: Button = navigation.get_child(index)
@@ -284,8 +290,9 @@ func haven_page() -> void:
 		node.disabled = complete or not profile.can_change_loadout() or profile.data.credits < facility.credits or profile.data.parts < facility.parts
 	var activities := HBoxContainer.new()
 	body.add_child(activities)
-	button("Training Yard", func(): practice_requested.emit(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button("Training", func(): page = "training"; rebuild(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button("Contracts", func(): page = "contracts"; rebuild(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button("Arcanum", func(): page = "arcanum"; rebuild(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func contracts_page() -> void:
 	text_line("SALVAGE CONTRACTS", 22, Color("ffd27c"))

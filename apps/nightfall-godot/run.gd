@@ -317,11 +317,11 @@ func close_pack() -> void:
 	if phase == "pack":
 		phase = "boss" if boss_id >= 0 else "waves"
 
-func start_boss_practice() -> void:
+func start_boss_practice(spell_ids: Array = ["ember", "frost", "chain"]) -> void:
 	practice = true
 	phase = "boss"
 	spawn_enemy(true)
-	for id: String in ["ember", "frost", "chain"]:
+	for id: String in spell_ids:
 		spells[id] = {"rank": 1, "wait": 1.0}
 
 func spawn_enemy(boss: bool = false, kind: String = "drifter") -> void:

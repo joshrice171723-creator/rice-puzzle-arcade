@@ -25,7 +25,7 @@ func fresh() -> Dictionary:
 		"inventory": items, "equipment": equipment, "next_item": 6, "missions": {}, "zone_claims": [],
 		"facilities": {"workshop": 1, "quartermaster": 1, "infirmary": 1},
 		"next_attempt": 1, "active_attempt": {}, "last_result": {}, "last_banked": 0,
-		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false,
+		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false, "seen_bosses": [],
 		"cache_keys": 0, "cache_opened": 0, "rare_misses": 0, "epic_misses": 0, "cache_seed": randi(), "last_cache": {}, "rare_choices": 0, "contract_clears": 0,
 		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false}}
 
@@ -45,6 +45,11 @@ func valid(candidate: Variant) -> bool:
 		return false
 	if not candidate.last_cache is Dictionary or candidate.rare_misses > 9 or candidate.epic_misses > 29:
 		return false
+	if not candidate.seen_bosses is Array:
+		return false
+	for boss in candidate.seen_bosses:
+		if boss not in range(1, 6):
+			return false
 	if not candidate.settings is Dictionary:
 		return false
 	for key in ["music", "sound"]:
@@ -104,6 +109,11 @@ func read_candidate(file_path: String) -> Variant:
 		parsed.settings = fresh().settings
 	if parsed is Dictionary and parsed.get("version") == 1:
 		var defaults := fresh()
+		if not parsed.has("seen_bosses"):
+			parsed.seen_bosses = []
+			for key in parsed.get("missions", {}):
+				if "clear" in parsed.missions[key]:
+					parsed.seen_bosses.append(int(key))
 		for key in ["cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "last_cache", "rare_choices", "contract_clears"]:
 			if not parsed.has(key):
 				parsed[key] = defaults[key]
@@ -342,6 +352,8 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 		if data.contract_clears % 3 == 0:
 			reward.keys += 1
 	elif victory:
+		if mission not in data.seen_bosses:
+			data.seen_bosses.append(mission)
 		var base := Content.clear_rewards(mission)
 		for key in base:
 			reward[key] += base[key]
@@ -455,7 +467,14 @@ func checkpoint(snapshot: Dictionary) -> bool:
 		return false
 	var previous := data.duplicate(true)
 	data.active_attempt.checkpoint = Marshalls.variant_to_base64(snapshot, false)
+	if data.active_attempt.get("mode", "campaign") == "campaign" and snapshot.get("combat", {}).get("boss_id", -1) >= 0:
+		var mission: int = data.active_attempt.mission
+		if mission not in data.seen_bosses:
+			data.seen_bosses.append(mission)
 	return commit(previous)
+
+func practice_unlocked(mission: int) -> bool:
+	return mission in data.seen_bosses or "clear" in data.missions.get(str(mission), [])
 
 func saved_run() -> Dictionary:
 	var encoded: String = data.active_attempt.get("checkpoint", "")

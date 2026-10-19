@@ -327,11 +327,14 @@ func save_checkpoint() -> void:
 	if profile.checkpoint(run.snapshot()):
 		last_checkpoint_key = run.phase + str(run.field.revision)
 
-func begin_practice() -> void:
+func begin_practice(mission: int = 1, build: String = "Balanced") -> void:
+	if not profile.practice_unlocked(mission) or build not in home.Preparation.BUILDS:
+		return
 	attempt_id = 0
 	diagnostics = false
 	restart()
-	run.start_boss_practice()
+	run.configure(mission, profile.stats())
+	run.start_boss_practice(home.Preparation.BUILDS[build])
 	home.hide()
 	last_screen = ""
 
@@ -510,6 +513,13 @@ func restart() -> void:
 
 func replay() -> void:
 	var repeat_practice: bool = run.practice
+	if repeat_practice:
+		var mission_number: int = run.mission
+		var spells: Array = run.spells.keys()
+		restart()
+		run.configure(mission_number, profile.stats())
+		run.start_boss_practice(spells)
+		return
 	if not repeat_practice and run.mode == "salvage":
 		start_contract(run.target_slot)
 		return
@@ -517,8 +527,6 @@ func replay() -> void:
 		start_campaign(run.mission)
 		return
 	restart()
-	if repeat_practice:
-		run.start_boss_practice()
 
 func _input(event: InputEvent) -> void:
 	# Release the stick even when a drag ends over a GUI button.
@@ -597,7 +605,7 @@ func _process(delta: float) -> void:
 	power_hud.update_run(run)
 	if in_field and attempt_id > 0:
 		checkpoint_wait += delta
-		if checkpoint_wait >= 10.0 or (run.phase in ["upgrade", "shrine", "pack", "build"] and last_checkpoint_key != run.phase + str(run.field.revision)):
+		if checkpoint_wait >= 10.0 or (run.phase in ["boss", "upgrade", "shrine", "pack", "build"] and last_checkpoint_key != run.phase + str(run.field.revision)):
 			save_checkpoint()
 			checkpoint_wait = 0.0
 	if not run.paused and run.phase in ["waves", "boss"]:
