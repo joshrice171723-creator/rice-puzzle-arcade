@@ -1,10 +1,12 @@
 extends Node2D
 
+const CombatEffects = preload("res://combat_effects.gd")
 const Presentation = preload("res://mission_presentation.gd")
 const GARAGE_FLOOR = preload("res://assets/mission-one/garage-yard.png")
 const GARAGE_ENEMIES = preload("res://assets/mission-one/enemies.png")
 const GARAGE_REGIONS = {"drifter": Rect2(15,223,617,566), "runner": Rect2(674,245,563,517), "spitter": Rect2(1245,246,519,516)}
 const Run = preload("res://run.gd")
+const Cards = preload("res://reward_cards.gd")
 const FieldUI = preload("res://field_ui.gd")
 const Profile = preload("res://profile.gd")
 const HavenUI = preload("res://haven_ui.gd")
@@ -21,7 +23,6 @@ const FLOOR = preload("res://assets/courtyard.png")
 const SHADOW = preload("res://assets/shadow.svg")
 const EXPERIENCE = preload("res://assets/experience.svg")
 const PROPS = preload("res://assets/field-props.png")
-const SPELL_ICONS = preload("res://assets/ability-icons.png")
 const PROP_RECTS := [Rect2(0, 0, 440, 455), Rect2(455, 0, 435, 455), Rect2(915, 45, 390, 400), Rect2(1350, 0, 420, 455), Rect2(0, 475, 500, 410), Rect2(500, 475, 430, 410), Rect2(940, 520, 430, 350), Rect2(1430, 450, 330, 435)]
 const INK := Color("101a32")
 const GOLD := Color("ffd27c")
@@ -565,18 +566,7 @@ func update_modal() -> void:
 				run.make_offers()
 			if not run.offer_back.is_empty():
 				PowerHUD.add_path(self, run.offers[0].id)
-			for index in run.offers.size():
-				var offer: Dictionary = run.offers[index]
-				var choice := make_button(offer.name, func(): run.choose_offer(index), modal_body)
-				if offer.id in Run.Content.SPELLS:
-					choice.icon = PowerHUD.texture_for(offer.id)
-					choice.expand_icon = true
-					choice.add_theme_constant_override("icon_max_width", 34)
-				var description := Label.new()
-				description.text = offer.description
-				description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				description.add_theme_font_size_override("font_size", 13)
-				modal_body.add_child(description)
+			Cards.upgrades(self)
 			if not run.offer_back.is_empty():
 				make_button("Back to upgrade choices", func(): run.return_to_offers(), modal_body, 40)
 		"victory", "defeat":
@@ -684,7 +674,9 @@ func polish_menu_modal(screen: String) -> void:
 
 func polish_menu_children(parent: Node) -> void:
 	for child in parent.get_children():
-		if child is Button:
+		if child.has_meta("reward_card"):
+			continue
+		if child is Button and not child.has_meta("reward_card_action"):
 			var primary: bool = child.text in ["Resume", "Finish expedition & bank rewards"] or (child.text == "Return to Base" and attempt_id <= 0)
 			MenuSkin.action(child, "gold" if primary else ("violet" if child.text.begins_with("Watch test video") else "blue"))
 		elif child is Label and child != modal_title:
@@ -928,14 +920,7 @@ func _draw() -> void:
 	else:
 		draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
 	Presentation.draw_ambience(self, run, world_offset, anim_time, reduced)
-	for zone in run.zones:
-		if zone.get("kind", "ground") == "collapse":
-			continue
-		var center: Vector2 = zone.pos + world_offset
-		draw_spell_icon("ground", center, Vector2(zone.radius * 2, zone.radius * 1.4), Color(1, 1, 1, 0.35))
-		draw_circle(center, zone.radius, Color(0.67, 0.5, 1, 0.09))
-		draw_arc(center, zone.radius, 0, TAU, 48, Color(0.8, 0.65, 1, 0.45), 2)
-		draw_arc(center, zone.radius * 0.8, anim_time, anim_time + TAU * zone.life / 4.0, 40, VIOLET, 2)
+	CombatEffects.draw_ground(self,run,world_offset,anim_time,reduced)
 	if not run.practice and run.benchmark_count == 0:
 		draw_field_sites()
 		draw_defenses()
@@ -1017,18 +1002,7 @@ func _draw() -> void:
 			var at: Vector2 = item.pos + world_offset - Vector2(20, 85 if item.boss else (52 if run.mission == 1 else 38))
 			draw_rect(Rect2(at, Vector2(40, 4)), INK)
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
-	for shot in run.shots:
-		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
-		var kind: String = shot.get("kind", "pistol")
-		if kind == "blade":
-			var axis: Vector2 = shot.velocity.normalized()
-			draw_colored_polygon(PackedVector2Array([at + axis * 15, at + axis.orthogonal() * 5, at - axis * 10, at - axis.orthogonal() * 5]), Color("cbd5ff"))
-		else:
-			draw_line(at - shot.velocity.normalized() * 13, at, Color("ff875e") if kind == "ember" else GOLD, 5 if kind == "ember" else 3, true)
-	if run.spells.has("wisp"):
-		for index in int(run.spell_mod("wisp", "count", 1)):
-			var wisp: Vector2 = Run.Magic.wisp_position(run, index) + world_offset - Vector2(0, 18)
-			draw_spell_icon("wisp", wisp, Vector2(32, 32))
+	CombatEffects.draw_projectiles(self,run,world_offset,anim_time,reduced)
 	if run.shield > 0:
 		draw_arc(run.player + world_offset - Vector2(0, 18), 30, 0, TAU, 32, Color("b5dfff"), 2)
 	if run.talents.slow_left > 0:
@@ -1039,28 +1013,18 @@ func _draw() -> void:
 		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
 		draw_circle(at, 6, Color("ff7181"))
 		draw_arc(at, 8, 0, TAU, 12, Color("ffe1b0"), 1)
+	CombatEffects.draw_effects(self,run,world_offset,anim_time,reduced)
 	for effect in run.effects:
+		if CombatEffects.handles_effect(effect.kind):
+			continue
 		var from: Vector2 = effect.from + world_offset
 		var to: Vector2 = effect.to + world_offset
-		var fade: float = effect.life / effect.duration * (0.35 if profile.data.settings.reduced_effects else 1.0)
+		var fade: float = effect.life / effect.duration * (0.35 if reduced else 1.0)
 		match effect.kind:
-			"chain": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.75, 0.6, 1, fade), 3)
-			"frost":
-				var radius: float = maxf(1, effect.from.distance_to(effect.to))
-				draw_arc(from, radius * (1.0 - fade), 0, TAU, 48, Color(0.6, 0.85, 1, fade), 4)
-				draw_spell_icon("frost", from, Vector2.ONE * (radius * 1.8 * (1 - fade)), Color(1, 1, 1, fade * 0.35))
-			"ember": draw_circle(from - Vector2(0, 18), 12 * (1.0 - fade), Color(1, 0.4, 0.2, fade))
 			"slam": draw_arc(from, 80, 0, TAU, 48, Color(1, 0.35, 0.4, fade), 5)
 			"turret": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(1, 0.82, 0.5, fade), 2)
 			"trap": draw_arc(from, 80 * (1.0 - fade), 0, TAU, 32, Color(1, 0.48, 0.25, fade), 5)
 			"summon": draw_arc(from, 110, 0, TAU, 32, Color(0.7, 0.5, 1, fade), 4)
-			"lance": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.9, 0.8, 0.6, fade), 6)
-			"gravity":
-				var radius: float = maxf(1, effect.from.distance_to(effect.to))
-				draw_arc(from, radius * fade, 0, TAU, 48, Color(0.65, 0.45, 1, fade), 4)
-				for ray in 6:
-					var axis := Vector2.from_angle(ray * TAU / 6 + anim_time)
-					draw_line(from + axis * 12, from + axis * radius * 0.8 * fade, Color(0.7, 0.6, 1, fade * 0.5), 2)
 	Presentation.draw_feedback(self, run, world_offset, reduced)
 	if run.pulse_flash > 0:
 		draw_arc(run.player + world_offset, 145 * (1.0 - run.pulse_flash / 0.35), 0, TAU, 64, VIOLET, 4, true)
@@ -1085,11 +1049,11 @@ func draw_field_sites() -> void:
 		if site.progress > 0 and not site.opened:
 			draw_arc(at, Run.Field.RADIUS, -PI / 2, -PI / 2 + TAU * site.progress / site.duration, 48, color, 4)
 		if site.kind == "cache":
-			draw_prop(3 if site.opened else 2, at, Vector2(65, 62))
+			draw_prop(3 if site.opened else 2, at, Vector2(56, 53))
 		elif site.kind == "shop":
-			draw_prop(0, at, Vector2(86, 90))
+			draw_prop(0, at, Vector2(132, 150))
 		else:
-			draw_prop(1, at, Vector2(86, 90), Color("858095") if run.field.relics.size() >= 3 else Color.WHITE)
+			draw_prop(1, at, Vector2(132, 150), Color("858095") if run.field.relics.size() >= 3 else Color.WHITE)
 		if site.cooldown > 0:
 			draw_arc(at, 34, -PI / 2, -PI / 2 + TAU * (1.0 - site.cooldown / 45.0), 32, Color("929bb4"), 2)
 	for drop in run.field.drops:
@@ -1127,8 +1091,3 @@ func draw_defenses() -> void:
 
 func draw_prop(index: int, position_value: Vector2, size_value: Vector2, tint: Color = Color.WHITE) -> void:
 	draw_texture_rect_region(PROPS, Rect2(position_value - Vector2(size_value.x / 2, size_value.y * 0.86), size_value), PROP_RECTS[index], tint)
-
-func draw_spell_icon(id: String, at: Vector2, size_value: Vector2, tint: Color = Color.WHITE) -> void:
-	var index := PowerHUD.ORDER.find(id)
-	var cell := Vector2(SPELL_ICONS.get_width() / 4.0, SPELL_ICONS.get_height() / 2.0)
-	draw_texture_rect_region(SPELL_ICONS, Rect2(at - size_value / 2, size_value), Rect2(Vector2(index % 4, index / 4) * cell, cell), tint)

@@ -1,4 +1,6 @@
 extends RefCounted
+const Cards = preload("res://reward_cards.gd")
+const TRAIT_COPY = {"vitality":"+10% max HP per rank.\nHeal added HP.", "aim":"+6% pistol damage per rank.", "reach":"+25% XP pickup reach per rank."}
 
 static func label(arena: Node, text_value: String, size_value: int = 14) -> Label:
 	var node := Label.new()
@@ -14,19 +16,17 @@ static func shrine(arena: Node) -> void:
 	arena.modal_title.text = site.name
 	label(arena, "%d Field Scrap • this run only" % field.scrap, 16)
 	if site.kind == "shop":
-		label(arena, "Buy traits for this attempt. You can buy several before leaving.")
+		label(arena, "Traits last for this expedition.")
+		var choices := Cards.row(arena.modal_body)
 		for id: String in field.TRAITS:
 			var cost: int = field.trait_cost(id)
-			var title: String = "%s %d/3 • %s" % [field.TRAITS[id].name, field.traits[id], "%d scrap" % cost if cost >= 0 else "MAX"]
-			var button: Button = arena.make_button(title, func(): arena.run.buy_trait(id), arena.modal_body)
-			button.disabled = cost < 0 or field.scrap < cost
-			label(arena, field.TRAITS[id].description, 13)
+			Cards.add(choices, field.TRAITS[id].name, TRAIT_COPY[id], Cards.icon(id), "Rank %d/3" % field.traits[id], "%d scrap" % cost if cost >= 0 else "MAX", func(): arena.run.buy_trait(id), cost < 0 or field.scrap < cost)
 	else:
-		label(arena, "Choose one relic. %d of 3 collected this run." % field.relics.size())
+		label(arena, "Choose one relic · %d/3 collected" % field.relics.size())
+		var choices := Cards.row(arena.modal_body)
 		for index in site.offers.size():
 			var id: String = site.offers[index]
-			arena.make_button(field.RELICS[id].name, func(): arena.run.choose_relic(index), arena.modal_body)
-			label(arena, field.RELICS[id].description)
+			Cards.add(choices, field.RELICS[id].name, field.RELICS[id].description, Cards.icon(id), "RELIC", "Take relic", func(): arena.run.choose_relic(index))
 		var cost: int = field.reroll_cost()
 		var button: Button = arena.make_button("Reroll • %d scrap" % cost if cost >= 0 else "Both rerolls used", func(): field.reroll(), arena.modal_body)
 		button.disabled = cost < 0 or field.scrap < cost

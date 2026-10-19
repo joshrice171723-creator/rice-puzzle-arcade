@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: transparent 3x3 game reward icon atlas for Nightfall shrine cards.
+Reference1ability-icons.png for magiccoloring/glow and painterlyfantasyquality, reference2menu-items.png forclean chunkyreadablesilhouettes andoriginalblue/goldmaterials. Produce SQUARE1536x1536 canvas split into EXACTLY3ROWS and3COLUMNS equallysized cells. EXACTLY9isolateddistincticons, onecenteredineachcell. Allcellsampletransparentpadding, objectsfitwithin central70%ofeachcell; NOframes, tiles, labels,text,bordersorbackground. TrueRGBAtransparencythroughoutoutsideobjects. Noeffectsbridgingcells. Crisp polished handpaintedfantasymobileRPGartreadableat70px, richblue/amber/violet/rubypalette, NOgreen.
+Row1left EMBERLEAF: single ambercopperglowingleaf, curlingpoint, tinyemberrim.
+Row1middle OBSIDIANHEART: darkfacetedstoneheart withbrightvioletcrystalcorevisiblethroughsplit, notanatomical.
+Row1right STORMFEATHER: icybluefeatherangleddiagonally withsmallcyanlightningarc, gracefulclearfeathersilhouette.
+Row2left WISPLANTERN: warmbrasshanginglantern containingasinglepale-blueghostflame withfriendlywispshape.
+Row2middle MOONSTONE: silvercrescentmooncradlingabluefacetedgem, elegantfewdetails.
+Row2right CINDERLENS: brassmagnifyinglenswithorangeemberburninginitsglass, shortdiagonalhandle.
+Row3left VITALITY: vibrant rubyheart mountedonsmall silverandblueshield, strongclearsilhouette.
+Row3middle STEADYAIM: brasscrosshairringaroundaredbullseye, tinybluegrips, singleiconnotweapon.
+Row3right LONGREACH: onebrassarmoredmagneticgauntletopenhandpullingthree tinybluecrystals towardfingers, shorthandswirlcontainedincell.
+All9iconscomparablevisualsizeandweight. Wideemptytransparentgapsbetweenicons. Noextraobjects, noextracells, nocaption.
