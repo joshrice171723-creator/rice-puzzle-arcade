@@ -21,7 +21,7 @@ func _initialize() -> void:
 	cleanup()
 	var p = Profile.new(PATH)
 	p.load_save()
-	check(p.open_cache("supply").is_empty() and p.data.inventory.size() == 6, "No key cannot create equipment")
+	check(p.open_cache("supply").is_empty() and p.data.inventory.size() == 8, "No key cannot create equipment")
 	var attempt: Dictionary = p.start_attempt(1)
 	var result: Dictionary = p.finish_attempt(attempt.id, {"victory": true})
 	check(result.get("keys") == 1 and p.data.cache_keys == 1, "First clear grants one persistent chest key")
@@ -29,7 +29,7 @@ func _initialize() -> void:
 	p.finish_attempt(attempt.id, {"victory": true})
 	check(p.data.cache_keys == 1, "Repeating a clear does not repeat first-clear keys")
 	var receipt: Dictionary = p.open_cache("armor")
-	check(receipt.item.slot in ["helmet", "body", "boots"] and p.data.cache_keys == 0 and p.data.cache_opened == 1, "Targeted locker consumes exactly one key and adds armor")
+	check(receipt.item.slot in ["helmet", "body", "boots", "pants"] and p.data.cache_keys == 0 and p.data.cache_opened == 1, "Targeted locker consumes exactly one key and adds armor")
 	check(p.data.inventory.back().id == receipt.item.id and p.valid(p.data), "Chest item is a valid owned inventory record")
 	p.data.cache_keys = 2
 	p.data.rare_misses = 9
@@ -37,7 +37,7 @@ func _initialize() -> void:
 	check(receipt.item.rarity in ["rare", "epic"] and receipt.item.slot == "weapon" and p.data.rare_misses == 0, "Tenth-opening guarantee follows the player across categories")
 	p.data.epic_misses = 29
 	receipt = p.open_cache("engineer")
-	check(receipt.item.rarity == "epic" and receipt.item.slot in ["charm", "gadget"] and p.data.epic_misses == 0 and p.data.rare_misses == 0, "Epic guarantee satisfies both counters and targeted slot")
+	check(receipt.item.rarity == "epic" and receipt.item.slot in ["charm", "gadget", "ring"] and p.data.epic_misses == 0 and p.data.rare_misses == 0, "Epic guarantee satisfies both counters and targeted slot")
 	check(receipt.item.affixes.size() == 2 and receipt.item.affixes[0] != receipt.item.affixes[1], "Epic gear receives two distinct eligible affixes")
 	var fresh = Profile.new(PATH)
 	check(fresh.load_save() and fresh.data.last_cache == p.data.last_cache and fresh.data.cache_opened == 3, "Receipt and guarantee counters survive relaunch")

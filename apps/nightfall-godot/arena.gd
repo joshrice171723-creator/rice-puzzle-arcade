@@ -287,6 +287,15 @@ func build_ui() -> void:
 	home.practice_requested.connect(begin_practice)
 	home.diagnostics_requested.connect(begin_diagnostics)
 	home.contract_requested.connect(start_contract)
+	home.ads_available = ad_bridge != null
+	home.shop_video_requested.connect(func(token: String):
+		if ad_bridge != null:
+			ad_bridge.showRewarded(token)
+		else:
+			home.shop_failed(token, "Video unavailable on this platform."))
+	home.shop_video_cancelled.connect(func(token: String):
+		if ad_bridge != null:
+			ad_bridge.cancelRewarded(token))
 	layer.add_child(home)
 	if testing:
 		home.hide()
@@ -411,15 +420,24 @@ func request_rescue() -> void:
 	last_screen = ""
 
 func earned_rescue(token: String) -> void:
+	if token.begins_with("shop-"):
+		home.shop_earned(token)
+		return
 	if reward_flow.earned(token, attempt_id, run):
 		save_checkpoint()
 		last_screen = ""
 
 func finished_rescue(token: String, _earned: bool) -> void:
+	if token.begins_with("shop-"):
+		home.shop_finished(token)
+		return
 	if reward_flow.finish(token):
 		last_screen = ""
 
 func failed_rescue(token: String, reason: String) -> void:
+	if token.begins_with("shop-"):
+		home.shop_failed(token, reason)
+		return
 	if reward_flow.fail(token, reason):
 		last_screen = ""
 
@@ -660,7 +678,7 @@ func _physics_process(delta: float) -> void:
 func _process(delta: float) -> void:
 	var in_field: bool = not home.visible
 	soundscape.apply_settings(profile.data.settings)
-	soundscape.tick(delta, run, home.visible, not reward_flow.pending.is_empty())
+	soundscape.tick(delta, run, home.visible, not reward_flow.pending.is_empty() or not home.shop_flow.pending.is_empty())
 	if run.health < previous_health and in_field and profile.data.settings.haptics and OS.get_name() == "Android":
 		Input.vibrate_handheld(35)
 	previous_health = run.health

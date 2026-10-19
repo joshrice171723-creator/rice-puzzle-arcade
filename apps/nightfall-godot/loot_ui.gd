@@ -22,7 +22,8 @@ static func show(home: Control) -> void:
 		home.text_line("Rare or better within %d • Epic within %d\nGuarantees are shared across all four chests." % [10 - data.rare_misses, 30 - data.epic_misses], 13, Color("ba92ff"))
 		for id: String in Loot.CATEGORIES:
 			var category: Dictionary = Loot.CATEGORIES[id]
-			var button: Button = home.button(category.name + " • 1 key\n" + ", ".join(category.slots).capitalize(), func():
+			var description: String = "All eight slots" if id == "supply" else ", ".join(category.slots).capitalize()
+			var button: Button = home.button(category.name + " • 1 key\n" + description, func():
 				var result: Dictionary = home.profile.open_cache(id)
 				home.cache_receipt = not result.is_empty()
 				home.message = "Equipment saved." if home.cache_receipt else home.profile.error
@@ -30,12 +31,15 @@ static func show(home: Control) -> void:
 			button.disabled = data.cache_keys <= 0 or not home.profile.can_change_loadout()
 			home.decorate_item_button(button, "chest")
 		home.text_line("Base odds: Common 55%, Uncommon 30%, Rare 13%, Epic 2%. Guarantees can raise the minimum rarity. All items start at level 1; zone level caps apply.", 12)
-	home.button("Back to equipment", func(): home.page = "gear"; home.selected_item = -1; home.rebuild(), null, 40)
+	home.button("Back to Shop", func(): home.page = "shop"; home.selected_item = -1; home.rebuild(), null, 40)
 
 static func rare_choice(home: Control) -> void:
 	home.text_line("YOUR OUTSKIRTS REWARD", 21, Color("ffd27c"))
 	home.text_line("Ten mastery medals earned a Rare equipment choice. Pick the slot your build needs. This is a guaranteed item, not a random chest.")
-	for slot in ["weapon", "helmet", "body", "boots", "gadget"]:
+	var choices := GridContainer.new()
+	choices.columns = 2
+	home.body.add_child(choices)
+	for slot in Content.SLOTS:
 		var name_value: String = Content.STARTER_NAMES[Content.SLOTS.find(slot)]
 		var button: Button = home.button("Rare " + name_value, func():
 			var item: Dictionary = home.profile.claim_rare_choice(slot)
@@ -43,7 +47,9 @@ static func rare_choice(home: Control) -> void:
 				home.page = "gear"
 				home.selected_item = item.id
 				home.message = "Your chosen equipment is saved."
-			home.rebuild())
+			home.rebuild(), choices, 54)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 12)
 		button.disabled = home.profile.data.rare_choices <= 0 or not home.profile.can_change_loadout()
 		home.decorate_item_button(button, slot)
 	home.button("Choose later", func(): home.page = "gear"; home.rebuild())
@@ -55,7 +61,7 @@ static func mission_rewards(home: Control) -> void:
 	home.text_line(Content.MISSIONS[mission - 1].name, 22, Color("ffd27c"))
 	home.text_line("EVERY CLEAR", 15, Color("ba92ff"))
 	home.text_line("%d credits • %d Parts\n%d Survivor XP • %d Class Mastery XP" % [base.credits, base.parts, base.survivor_xp, base.mastery_xp])
-	home.text_line("Guaranteed Uncommon Outrider Vest + 1 Breaker Plate." if mission == 5 else "35% chance of an extra equipment drop. All six slots can drop; Common or Uncommon.", 13)
+	home.text_line("Guaranteed Uncommon Outrider Vest + 1 Breaker Plate." if mission == 5 else "35% chance of an extra equipment drop. All eight slots can drop; Common or Uncommon.", 13)
 	home.text_line("FIRST CLEAR", 15, Color("ba92ff"))
 	home.text_line("Already claimed." if "clear" in medals else "%d gems + 1 supply key." % (40 if mission == 5 else 10))
 	home.text_line("EXTRA REWARDS", 15, Color("ba92ff"))

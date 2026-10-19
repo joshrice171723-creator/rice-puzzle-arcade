@@ -63,11 +63,11 @@ static func arcanum(home: Control) -> void:
 	home.button("Next ›", func(): home.guide_index = (home.guide_index + 1) % 8; home.rebuild(), controls).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 static func mastery(home: Control) -> void:
-	var id: String = home.profile.data["class"]
+	var id: String = home.inspected_class if not home.inspected_class.is_empty() else home.profile.data["class"]
 	var xp: int = home.profile.data.mastery[id]
 	var level: int = Haven.mastery_level(xp)
 	home.text_line(Haven.CLASSES[id].name.to_upper() + " MASTERY", 22, Color("ffd27c"))
-	home.text_line("Level %d/20 • selected class only" % level, 17, Color("ba92ff"))
+	home.text_line("Level %d/20 • permanent class progress" % level, 17, Color("ba92ff"))
 	var spent := level * (level + 1) * 50
 	if level < 20:
 		home.text_line("%d / %d XP toward the next mastery level" % [xp - spent, (level + 1) * 100], 13)

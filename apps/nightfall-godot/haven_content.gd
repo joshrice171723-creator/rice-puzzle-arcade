@@ -1,23 +1,26 @@
 extends RefCounted
 
-const SLOTS := ["weapon", "helmet", "body", "boots", "charm", "gadget"]
+const SLOTS := ["weapon", "helmet", "body", "boots", "charm", "gadget", "ring", "pants"]
+const SLOT_LABELS := {"weapon": "Weapon", "helmet": "Head", "body": "Chest", "boots": "Boots", "charm": "Pendant", "gadget": "Gadget", "ring": "Ring", "pants": "Pants"}
 const RARITIES := ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
 const RARITY_SCALE := [1.0, 1.04, 1.08, 1.12, 1.16, 1.20]
 const RARITY_COLORS := ["a4aaba", "92afc4", "78adff", "ba92ff", "ffd27c", "ed7997"]
-const STARTER_NAMES := ["Service Pistol", "Outrider Hood", "Outrider Vest", "Outrider Boots", "Beacon Pendant", "Field Medkit"]
+const STARTER_NAMES := ["Service Pistol", "Outrider Hood", "Outrider Vest", "Outrider Boots", "Beacon Pendant", "Field Medkit", "Beacon Ring", "Outrider Trousers"]
 const AFFIXES := {
 	"tempered": {"name": "Tempered", "description": "+3% this item's Power", "stat": "power", "value": 0.03, "slots": ["weapon"]},
-	"reinforced": {"name": "Reinforced", "description": "+4% this item's HP", "stat": "hp", "value": 0.04, "slots": ["helmet", "body", "boots", "charm"]},
-	"plated": {"name": "Plated", "description": "+4% this item's armor", "stat": "armor", "value": 0.04, "slots": ["helmet", "body", "boots"]},
+	"reinforced": {"name": "Reinforced", "description": "+4% this item's HP", "stat": "hp", "value": 0.04, "slots": ["helmet", "body", "boots", "charm", "ring", "pants"]},
+	"plated": {"name": "Plated", "description": "+4% this item's armor", "stat": "armor", "value": 0.04, "slots": ["helmet", "body", "boots", "pants"]},
 	"attuned": {"name": "Attuned", "description": "+2% spell cooldown reduction", "stat": "cooldown", "value": 0.02, "slots": SLOTS},
 	"seeking": {"name": "Seeking", "description": "+5% XP pickup reach", "stat": "pickup", "value": 0.05, "slots": SLOTS},
 	"lightweight": {"name": "Lightweight", "description": "+1% movement speed", "stat": "speed", "value": 0.01, "slots": SLOTS}}
 const BASE_STATS := {
 	"weapon": {"power": 40.0, "hp": 0.0, "armor": 0.0},
 	"helmet": {"power": 0.0, "hp": 20.0, "armor": 10.0},
-	"body": {"power": 0.0, "hp": 50.0, "armor": 20.0},
+	"body": {"power": 0.0, "hp": 40.0, "armor": 15.0},
 	"boots": {"power": 0.0, "hp": 10.0, "armor": 5.0},
-	"charm": {"power": 0.0, "hp": 10.0, "armor": 0.0},
+	"charm": {"power": 0.0, "hp": 5.0, "armor": 0.0},
+	"ring": {"power": 0.0, "hp": 5.0, "armor": 0.0},
+	"pants": {"power": 0.0, "hp": 10.0, "armor": 5.0},
 	"gadget": {"power": 0.0, "hp": 0.0, "armor": 0.0}}
 const CLASSES := {
 	"scavenger": {"name": "Scavenger", "description": "+5% speed, +15% XP reach. Every 12s, your next Dodge becomes a longer Phase Step.", "unlock": "Available", "ability": "Phase Step", "cooldown": 12.0},
@@ -32,7 +35,7 @@ const MISSIONS := [
 	{"name": "The Last Street", "boss": "The Breaker", "duration": 240.0, "health": 1200.0, "pressure": 1.25, "attacks": ["rush", "slam", "toss"], "intro": "Break the siege of the Outskirts beacon."}]
 const FACILITIES := {
 	"workshop": {"name": "Workshop", "description": "Upgrade and promote equipment. Rank 2 reduces upgrade credit costs by 10%.", "credits": 400, "parts": 12},
-	"quartermaster": {"name": "Quartermaster", "description": "Adds one backpack slot per rank. Protected slots stay at two.", "credits": 300, "parts": 10},
+	"quartermaster": {"name": "Storehouse", "description": "Rank 2 increases backpack capacity from 8 to 9. Protected slots stay at two.", "credits": 300, "parts": 10},
 	"infirmary": {"name": "Infirmary", "description": "Improves your once-per-run Field Medkit from 20% to 25% maximum HP.", "credits": 350, "parts": 12}}
 
 static func item_stats(item: Dictionary) -> Dictionary:

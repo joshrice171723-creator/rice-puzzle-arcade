@@ -1,0 +1,21 @@
+# Nightfall home assets — October 18, 2026
+
+Generated with built-in image_gen for the five-tab home implementation. Reference: `docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png`. Runtime assets are separate scenery and atlas textures, not baked UI screenshots. Originals remain in Codex generated_images. Atlas regions are selected at runtime. Text, prices and interactions are native Godot controls.
+
+## Base scenery
+
+Saved: `apps/nightfall-godot/assets/haven-base.png`
+
+Create a production game scenery illustration asset for Nightfall matching the supplied sharper Beaconbound reference. ONLY the Haven base diorama, no UI no words no icons no labels no border. Square image, entire compact isometric refuge fits within image with 5 percent padding. Workshop with cobalt tiled roof and warm amber forge on LEFT, ivory infirmary tent with heart emblem on RIGHT upper, wooden storehouse with cobalt roof and crates at lower RIGHT, small stone beacon tower with violet crystal at REAR center. Low stone courtyard, welcoming fire near front left, empty center-front place for a separately rendered character (NO characters or drones in this asset). Carefully cut faceted stones, crisp slender outlines, angular cel shaded illustration, restrained amber glow, original stylized mobile fantasy scavenging. Same buildings as reference, slightly less chunky. Deep midnight blue vignette background melting into #101c35 at edges. No green UI or text. No screen mockup. This will be displayed as a real game background behind interactive building hit areas and separately animated character.
+
+## Navigation, facility and equipment icons
+
+Saved: `apps/nightfall-godot/assets/haven-icons.png`
+
+Create a production transparent sprite atlas for Nightfall mobile game, matching the reference's sharper illustrated fantasy look. Exactly 12 separate icons, equal-size evenly spaced FOUR columns THREE rows, each completely isolated with transparent padding at least 12% inside its cell. Perfect regular grid, no borders, NO words NO letters NO numbers NO UI. Crisp angular cel-shaded original game objects, restrained highlights, navy cobalt violet ivory amber, no green. Row1 left to right: 1 gold and blue treasure chest for Shop, 2 armored blue vest for Gear, 3 parchment map with small compass for Expedition, 4 blue-roof beacon keep for Base. Row2 left to right: 5 fanned class crests (hood, hammer, violet shield) for Class, 6 brass ring with violet jewel equipment, 7 dark fitted pants with small brass knee plates equipment, 8 forge anvil with amber rune for Workshop. Row3 left to right: 9 cream infirmary tent with red heart emblem, 10 small wooden supply crate for Storehouse, 11 wooden training dummy with target, 12 violet spellbook for Arcanum. Keep every object centered in its own exact one-quarter-width by one-third-height cell, same object scale, no overlap. Sharper and slimmer than chunky rounded toy icons, still beautiful readable game art. Actual alpha background, no checkerboard.
+
+## Locked class previews
+
+Saved: `apps/nightfall-godot/assets/class-previews.png`
+
+Production sprite sheet for NIGHTFALL, two separate full-body character portraits, transparent background, exactly two equal square cells side by side, each character fully within their own cell with 12% padding all sides. Same illustrated 2.5D cel-shaded crisp angular fantasy scavenger style as supplied game reference, not realistic, small-screen clear silhouettes, restrained highlights, blue slate ivory brass violet no green. LEFT: Warden, sturdy adult protector with short dark beard, blue-gray salvage plate armor and ivory cloth, brass trim, strong boots, broad shoulders, original rune sword held down by his side, confident standing three-quarter front pose, NO permanent shield. RIGHT: Arcanist, adult woman silver hair, asymmetrical violet hood, layered cobalt practical robes, fitted boots and copper rune bracers, violet crystal staff, calm standing three-quarter front pose. About 4 heads tall with balanced hands and boots, slightly sharper than bulky chibi. Single full-body character each, not multiple poses. No UI, words, card borders, platforms, shadows outside their own cell, no backdrop, real alpha. These are locked class previews in a game menu.

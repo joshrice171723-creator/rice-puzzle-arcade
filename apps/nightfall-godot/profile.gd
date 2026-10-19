@@ -4,7 +4,8 @@ extends RefCounted
 const Content = preload("res://haven_content.gd")
 const Loot = preload("res://loot.gd")
 const Salvage = preload("res://salvage.gd")
-const VERSION := 1
+const VERSION := 2
+const SHOP_OFFERS := {"key": {"name": "Supply key", "cost": 25, "currency": "gems", "grant": "cache_keys", "amount": 1}, "parts": {"name": "10 Workshop Parts", "cost": 200, "currency": "credits", "grant": "parts", "amount": 10}}
 var path := "user://haven.json"
 var data: Dictionary = {}
 var error := ""
@@ -22,10 +23,11 @@ func fresh() -> Dictionary:
 		equipment[Content.SLOTS[index]] = index
 	return {"version": VERSION, "credits": 0, "parts": 0, "gems": 0, "survivor_xp": 0,
 		"mastery": {"scavenger": 0, "engineer": 0, "warden": 0, "arcanist": 0}, "class": "scavenger",
-		"inventory": items, "equipment": equipment, "next_item": 6, "missions": {}, "zone_claims": [],
+		"inventory": items, "equipment": equipment, "next_item": Content.SLOTS.size(), "missions": {}, "zone_claims": [],
 		"facilities": {"workshop": 1, "quartermaster": 1, "infirmary": 1},
 		"next_attempt": 1, "active_attempt": {}, "last_result": {}, "last_banked": 0,
 		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false, "seen_bosses": [],
+		"shop_day": "", "shop_videos": 0, "last_shop_reward": "",
 		"cache_keys": 0, "cache_opened": 0, "rare_misses": 0, "epic_misses": 0, "cache_seed": randi(), "last_cache": {}, "rare_choices": 0, "contract_clears": 0,
 		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false}}
 
@@ -60,6 +62,8 @@ func valid(candidate: Variant) -> bool:
 		if not candidate.settings.get(key) is bool:
 			return false
 	var ids: Array = []
+	if not candidate.shop_day is String or not candidate.last_shop_reward is String or not candidate.shop_videos is int or candidate.shop_videos < 0 or candidate.shop_videos > 2:
+		return false
 	for item in candidate.inventory:
 		if not item is Dictionary or not item.get("id") is float and not item.get("id") is int:
 			return false
@@ -105,18 +109,27 @@ func read_candidate(file_path: String) -> Variant:
 	if parser.parse(FileAccess.get_file_as_string(file_path)) != OK:
 		return null
 	var parsed: Variant = normalize_numbers(parser.data)
-	if parsed is Dictionary and parsed.get("version") == 1 and not parsed.has("settings"):
+	if parsed is Dictionary and parsed.get("version") in [1, VERSION] and not parsed.has("settings"):
 		parsed.settings = fresh().settings
-	if parsed is Dictionary and parsed.get("version") == 1:
+	if parsed is Dictionary and parsed.get("version") in [1, VERSION]:
 		var defaults := fresh()
 		if not parsed.has("seen_bosses"):
 			parsed.seen_bosses = []
 			for key in parsed.get("missions", {}):
 				if "clear" in parsed.missions[key]:
 					parsed.seen_bosses.append(int(key))
-		for key in ["cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "last_cache", "rare_choices", "contract_clears"]:
+		for key in ["cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "last_cache", "rare_choices", "contract_clears", "shop_day", "shop_videos", "last_shop_reward"]:
 			if not parsed.has(key):
 				parsed[key] = defaults[key]
+		if parsed.version == 1 and parsed.get("inventory") is Array and parsed.get("equipment") is Dictionary and parsed.get("next_item") is int:
+			# Append new slots without renumbering owned items or changing saved runs.
+			for slot in ["ring", "pants"]:
+				if not parsed.equipment.has(slot):
+					var item := Loot.equipment(slot, "common", parsed.next_item)
+					parsed.next_item += 1
+					parsed.inventory.append(item)
+					parsed.equipment[slot] = item.id
+			parsed.version = VERSION
 	return parsed
 
 func normalize_numbers(value: Variant) -> Variant:
@@ -445,7 +458,7 @@ func open_cache(category: String) -> Dictionary:
 	return data.last_cache.duplicate(true)
 
 func claim_rare_choice(slot: String) -> Dictionary:
-	if not can_change_loadout() or data.rare_choices <= 0 or slot not in ["weapon", "helmet", "body", "boots", "gadget"]:
+	if not can_change_loadout() or data.rare_choices <= 0 or slot not in Content.SLOTS:
 		return {}
 	var previous := data.duplicate(true)
 	var item := Loot.equipment(slot, "rare", int(data.next_item))
@@ -482,6 +495,40 @@ func saved_run() -> Dictionary:
 		return {}
 	var decoded: Variant = Marshalls.base64_to_variant(encoded, false)
 	return decoded if decoded is Dictionary else {}
+
+func purchase_supply(offer: String) -> bool:
+	if blocked or offer not in SHOP_OFFERS:
+		return false
+	var definition: Dictionary = SHOP_OFFERS[offer]
+	if data[definition.currency] < definition.cost:
+		error = "Not enough " + definition.currency + "."
+		return false
+	var previous := data.duplicate(true)
+	data[definition.currency] -= definition.cost
+	data[definition.grant] += definition.amount
+	return commit(previous)
+
+func shop_videos_left() -> int:
+	var today := Time.get_date_string_from_system(true)
+	return 2 - int(data.shop_videos) if data.shop_day == today else 2
+
+func grant_shop_video(token: String) -> bool:
+	# Called only by the token-matched earned callback, never by ad dismissal.
+	if blocked or token.is_empty():
+		return false
+	if data.last_shop_reward == token:
+		return true
+	if shop_videos_left() <= 0:
+		return false
+	var previous := data.duplicate(true)
+	var today := Time.get_date_string_from_system(true)
+	if data.shop_day != today:
+		data.shop_day = today
+		data.shop_videos = 0
+	data.shop_videos += 1
+	data.cache_keys += 1
+	data.last_shop_reward = token
+	return commit(previous)
 
 func set_setting(key: String, value: Variant) -> bool:
 	if blocked or key not in data.settings:

@@ -7,6 +7,19 @@ signal practice_requested(mission: int, build: String)
 signal diagnostics_requested
 signal contract_requested(slot: String)
 
+const Art = preload("res://haven_art.gd")
+const ShopReward = preload("res://shop_reward.gd")
+const TABS := [["shop", "Shop"], ["gear", "Gear"], ["mission", "Expedition"], ["haven", "Base"], ["class", "Class"]]
+const ZONES := ["Blackout Outskirts", "Freight Yard", "Silent Suburbs", "Flooded Market", "Ironworks", "Orchard County", "Coldwater Docks", "Whiteout Village", "Dead Signal", "Buried Transit", "Ashfall Quarry", "Quarantine Ward", "Glasshouse Labs", "Rustwater Refinery", "Rooftop District", "Broken Reservoir", "Hollow Bunker", "Storm Coast", "Nightfall Core", "Last Beacon"]
+signal shop_video_requested(token: String)
+signal shop_video_cancelled(token: String)
+var shop_flow = ShopReward.new()
+var ads_available := false
+var facility := "workshop"
+var inspected_class := ""
+var inventory_scroll := 0
+var inventory_sort := "Rarity"
+
 const Content = preload("res://haven_content.gd")
 const LootUI = preload("res://loot_ui.gd")
 const Preparation = preload("res://preparation_ui.gd")
@@ -16,12 +29,12 @@ const EQUIPMENT_ART = preload("res://assets/equipment-icons.png")
 var profile: RefCounted
 var page := "mission"
 var mission := 1
-var inventory_page := 0
 var selected_item := -1
 var confirmation := ""
 var message := ""
 var body: VBoxContainer
-var wallet: Label
+var frame_panel: PanelContainer
+var wallet: HBoxContainer
 var title: Label
 var navigation: HBoxContainer
 var status_label: Label
@@ -32,75 +45,158 @@ var training_build := "Balanced"
 var guide_index := 0
 
 func _ready() -> void:
+	# Godot Buttons need mouse emulation for native touch. Scope it to home
+	# so the existing combat joystick continues to receive its original events.
+	Input.emulate_mouse_from_touch = visible
+	visibility_changed.connect(func(): Input.emulate_mouse_from_touch = visible)
 	size = Vector2(430, 760)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	var shade := ColorRect.new()
-	shade.color = Color(0.025, 0.04, 0.09, 0.94)
-	shade.size = size
-	add_child(shade)
+	theme = Theme.new()
+	theme.default_font = Art.BODY_FONT
+	theme.default_font_size = 16
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	var background := Art.picture(self, Art.BACKDROP, Rect2(Vector2.ZERO, size))
+	background.stretch_mode = TextureRect.STRETCH_SCALE
+	Art.picture(self, Art.MOON, Rect2(12, 14, 29, 34))
 	var heading := Label.new()
-	heading.text = "NIGHTFALL"
-	heading.position = Vector2(24, 18)
-	heading.add_theme_font_size_override("font_size", 32)
-	heading.add_theme_color_override("font_color", Color("ffd27c"))
+	heading.text = "Nightfall"
+	heading.position = Vector2(44, 18)
+	heading.add_theme_font_override("font", Art.DISPLAY_FONT)
+	heading.add_theme_font_size_override("font_size", 21)
+	heading.add_theme_color_override("font_color", Color("e6efff"))
+	heading.add_theme_color_override("font_shadow_color", Color("203586"))
+	heading.add_theme_constant_override("shadow_offset_y", 2)
 	add_child(heading)
-	var subtitle := Label.new()
-	subtitle.text = "HAVEN  /  BEACONBOUND"
-	subtitle.position = Vector2(26, 56)
-	subtitle.add_theme_font_size_override("font_size", 12)
-	subtitle.add_theme_color_override("font_color", Color("b9a7de"))
-	add_child(subtitle)
-	var settings := button("Settings", func(): page = "settings"; message = ""; rebuild(), self, 40)
-	settings.position = Vector2(317, 22)
-	settings.size.x = 95
-	wallet = Label.new()
-	wallet.position = Vector2(24, 86)
-	wallet.add_theme_font_size_override("font_size", 15)
+	var settings := button("", func(): navigate("settings"), self, 36)
+	settings.position = Vector2(385, 14)
+	settings.size.x = 33
+	settings.icon = Art.item("parts")
+	settings.expand_icon = true
+	settings.add_theme_constant_override("icon_max_width", 24)
+	settings.tooltip_text = "Settings"
+	wallet = HBoxContainer.new()
+	wallet.position = Vector2(168, 15)
+	wallet.size = Vector2(211, 34)
+	wallet.add_theme_constant_override("separation", 3)
 	add_child(wallet)
 	var panel := PanelContainer.new()
-	panel.position = Vector2(18, 126)
-	panel.size = Vector2(394, 545)
-	panel.add_theme_stylebox_override("panel", style(Color("131e38"), Color("514774")))
+	frame_panel = panel
+	panel.position = Vector2(14, 80)
+	panel.size = Vector2(402, 578)
+	var panel_style := style(Color(0.02, 0.12, 0.35, 0.24), Color(0.30, 0.56, 0.95, 0.35))
+	panel.add_theme_stylebox_override("panel", panel_style)
 	add_child(panel)
 	body = VBoxContainer.new()
-	body.add_theme_constant_override("separation", 9)
+	body.add_theme_constant_override("separation", 7)
 	panel.add_child(body)
 	status_label = Label.new()
-	status_label.position = Vector2(25, 648)
-	status_label.size = Vector2(380, 38)
+	status_label.position = Vector2(18, 659)
+	status_label.size = Vector2(394, 31)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.max_lines_visible = 2
 	status_label.add_theme_font_size_override("font_size", 12)
 	status_label.add_theme_color_override("font_color", Color("ffd27c"))
 	add_child(status_label)
 	navigation = HBoxContainer.new()
-	navigation.position = Vector2(18, 691)
-	navigation.size = Vector2(394, 52)
-	navigation.add_theme_constant_override("separation", 5)
+	navigation.position = Vector2(10, 692)
+	navigation.size = Vector2(410, 64)
+	navigation.add_theme_constant_override("separation", 2)
 	add_child(navigation)
-	for entry in [["mission", "Venture"], ["gear", "Gear"], ["haven", "Base"], ["class", "Class"]]:
-		var tab := button(entry[1], func(): page = entry[0]; selected_item = -1; confirmation = ""; message = ""; rebuild(), navigation)
+	for entry in TABS:
+		var tab := button(entry[1], func(): navigate(entry[0]), navigation, 64)
+		tab.name = entry[0]
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab.add_theme_font_size_override("font_size", 13)
+		tab.icon = Art.icon(entry[0])
+		tab.expand_icon = true
+		tab.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tab.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		tab.add_theme_constant_override("icon_max_width", 43)
+		tab.add_theme_constant_override("h_separation", 2)
 	rebuild()
 
-func style(fill: Color, border: Color = Color("354568")) -> StyleBoxFlat:
+func navigate(destination: String) -> void:
+	if not shop_flow.pending.is_empty():
+		message = "Finish or cancel the current video request first."
+		status_label.text = message
+		return
+	page = destination
+	selected_item = -1
+	confirmation = ""
+	message = ""
+	rebuild()
+
+func active_tab() -> String:
+	if page in ["cache", "rare_choice", "shop"]:
+		return "shop"
+	if page in ["mission", "rewards", "contracts", "zones"]:
+		return "mission"
+	if page in ["class", "mastery"]:
+		return "class"
+	return "gear" if page == "gear" else "haven"
+
+func request_shop_video() -> void:
+	if not ads_available:
+		message = "Videos are available in the Android build when connected."
+		rebuild()
+		return
+	var token: String = shop_flow.begin(profile)
+	if token.is_empty():
+		return
+	rebuild()
+	shop_video_requested.emit(token)
+
+func shop_earned(token: String) -> void:
+	if token != shop_flow.pending:
+		return
+	shop_flow.reward(token, profile)
+	message = shop_flow.message
+	rebuild()
+
+func shop_finished(token: String) -> void:
+	if shop_flow.finish(token):
+		message = shop_flow.message
+		rebuild()
+
+func shop_failed(token: String, reason: String) -> void:
+	if shop_flow.fail(token, reason):
+		message = shop_flow.message
+		rebuild()
+
+func icon_button(label: String, art_id: String, action: Callable, parent: Node, height: int = 68) -> Button:
+	var node := button(label, action, parent, height)
+	node.icon = Art.icon(art_id)
+	node.expand_icon = true
+	node.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	node.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+	node.add_theme_constant_override("icon_max_width", 60)
+	node.add_theme_font_size_override("font_size", 14)
+	var face := style(Color("082c60"), Color("468ed5"))
+	face.set_content_margin_all(3)
+	node.add_theme_stylebox_override("normal", face)
+	node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return node
+
+func style(fill: Color, border: Color = Color("428ee0")) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = fill
 	box.border_color = border
 	box.set_border_width_all(1)
-	box.set_corner_radius_all(12)
-	box.set_content_margin_all(12)
+	box.set_corner_radius_all(5)
+	box.set_content_margin_all(8)
 	return box
 
 func button(text_value: String, action: Callable, parent: Node = null, height: int = 44) -> Button:
 	var node := Button.new()
 	node.text = text_value
+	node.clip_text = true
+	node.tooltip_text = text_value
 	node.custom_minimum_size.y = height
 	node.add_theme_font_size_override("font_size", 15)
 	node.add_theme_color_override("font_color", Color("f5e9d8"))
-	node.add_theme_stylebox_override("normal", style(Color("243456")))
-	node.add_theme_stylebox_override("hover", style(Color("344467"), Color("ffd27c")))
-	node.add_theme_stylebox_override("pressed", style(Color("46375f"), Color("ba92ff")))
+	node.add_theme_stylebox_override("normal", style(Color("123b79")))
+	node.add_theme_stylebox_override("hover", style(Color("2259a4"), Color("ffd27c")))
+	node.add_theme_stylebox_override("pressed", style(Color("453084"), Color("ba92ff")))
 	node.pressed.connect(action)
 	(parent if parent != null else body).add_child(node)
 	return node
@@ -111,11 +207,18 @@ func text_line(value: String, font_size: int = 14, color: Color = Color("d6daea"
 	node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	node.add_theme_font_size_override("font_size", font_size)
 	node.add_theme_color_override("font_color", color)
+	if font_size >= 21:
+		node.add_theme_font_override("font", Art.DISPLAY_FONT)
+		node.add_theme_color_override("font_color", Color("f3f5ff"))
+		node.add_theme_color_override("font_shadow_color", Color("102451"))
+		node.add_theme_constant_override("shadow_offset_y", 2)
 	body.add_child(node)
 	return node
 
 func item_texture(slot: String) -> AtlasTexture:
-	var index: int = (Content.SLOTS + ["chest", "key"]).find(slot)
+	if slot in Art.ITEM_NAMES:
+		return Art.item(slot)
+	var index: int = ["weapon", "helmet", "body", "boots", "charm", "gadget", "chest", "key"].find(slot)
 	var cell := Vector2(EQUIPMENT_ART.get_width() / 4.0, EQUIPMENT_ART.get_height() / 2.0)
 	var texture := AtlasTexture.new()
 	texture.atlas = EQUIPMENT_ART
@@ -147,9 +250,34 @@ func rebuild() -> void:
 	for child in body.get_children():
 		body.remove_child(child)
 		child.queue_free()
-	wallet.text = "%d credits   /   %d parts   /   %d gems" % [profile.data.credits, profile.data.parts, profile.data.gems]
+	frame_panel.size = Vector2(402, 578)
+	for child in wallet.get_children():
+		wallet.remove_child(child)
+		child.queue_free()
+	for currency in ["credits", "parts", "gems"]:
+		var chip := PanelContainer.new()
+		chip.custom_minimum_size = Vector2(68, 34)
+		var chip_style := style(Color("061e4c"), Color("285294"))
+		chip_style.set_content_margin_all(2)
+		chip.add_theme_stylebox_override("panel", chip_style)
+		chip.tooltip_text = "%s: %d" % [currency.capitalize(), profile.data[currency]]
+		wallet.add_child(chip)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 1)
+		chip.add_child(row)
+		var icon := Art.picture(row, Art.item(currency), Rect2(0, 0, 25, 28))
+		icon.custom_minimum_size = Vector2(25, 28)
+		var amount := Label.new()
+		amount.name = currency.capitalize() + "Amount"
+		var value: int = profile.data[currency]
+		amount.text = compact_amount(value)
+		amount.add_theme_font_size_override("font_size", 17)
+		row.add_child(amount)
 	match page:
 		"mission": mission_page()
+		"zones": zones_page()
+		"shop": shop_page()
+		"facility": facility_page()
 		"gear": gear_page()
 		"haven": haven_page()
 		"class": class_page()
@@ -162,71 +290,187 @@ func rebuild() -> void:
 		"arcanum": Preparation.arcanum(self)
 		"mastery": Preparation.mastery(self)
 	status_label.text = profile.error if not profile.error.is_empty() else message
+	if status_label.text.is_empty() and not profile.can_change_loadout() and page in ["gear", "class", "facility", "cache", "rare_choice"]:
+		status_label.text = "Finish your saved expedition to change equipment or upgrades."
 	for index in navigation.get_child_count():
 		var tab: Button = navigation.get_child(index)
-		tab.add_theme_color_override("font_color", Color("ffd27c") if ["mission", "gear", "haven", "class"][index] == page else Color("d6daea"))
+		tab.disabled = not shop_flow.pending.is_empty()
+		var selected: bool = TABS[index][0] == active_tab()
+		var tab_style := style(Color("394990") if selected else Color("072451"))
+		tab_style.set_content_margin_all(4)
+		tab_style.border_color = Color("ffcd4f") if selected else Color("3068b2")
+		tab_style.border_width_bottom = 3 if selected else 1
+		tab.add_theme_stylebox_override("normal", tab_style)
+		tab.add_theme_color_override("font_color", Color("ffd27c") if TABS[index][0] == active_tab() else Color("d6daea"))
 	queue_redraw()
 
+func compact_amount(value: int) -> String:
+	if value >= 1000000:
+		return "%.1fM" % (value / 1000000.0)
+	if value >= 10000:
+		return "%.0fK" % (value / 1000.0)
+	return str(value)
+
 func mission_page() -> void:
-	text_line("01  BLACKOUT OUTSKIRTS", 21, Color("ffd27c"))
-	text_line("%d / 15 mastery medals" % profile.total_medals(), 14, Color("ba92ff"))
-	var map := Control.new()
-	map.custom_minimum_size.y = 100
-	map.draw.connect(func():
-		map.draw_line(Vector2(22, 50), Vector2(327, 50), Color("5a4a75"), 3)
-		for index in 5:
-			var at := Vector2(26 + index * 75, 50)
-			var unlocked: bool = profile.mission_unlocked(index + 1)
-			map.draw_circle(at, 22, Color("614977") if index + 1 == mission else Color("263552"))
-			map.draw_arc(at, 23, 0, TAU, 32, Color("ffd27c") if unlocked else Color("596075"), 2)
-			map.draw_string(ThemeDB.fallback_font, at + Vector2(-5, 6), str(index + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("f5e9d8"))
-			if "clear" in profile.data.missions.get(str(index + 1), []):
-				map.draw_circle(at + Vector2(0, 34), 4, Color("ffd27c")))
-	body.add_child(map)
+	var top := HBoxContainer.new()
+	body.add_child(top)
+	var heading := Label.new()
+	heading.text = "Blackout Outskirts"
+	heading.add_theme_font_size_override("font_size", 20)
+	heading.add_theme_font_override("font", Art.DISPLAY_FONT)
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(heading)
+	var zones := button("Zones", func(): page = "zones"; rebuild(), top, 36)
+	zones.custom_minimum_size.x = 62
+	zones.add_theme_font_size_override("font_size", 12)
+	var stage := Control.new()
+	stage.custom_minimum_size.y = 221
+	body.add_child(stage)
+	Art.picture(stage, Art.OUTSKIRTS, Rect2(20, -5, 346, 226))
+	text_line("Zone 1 · %d / 15 mastery medals" % profile.total_medals(), 13, Color("ba92ff"))
+	var nodes := HBoxContainer.new()
+	nodes.add_theme_constant_override("separation", 5)
+	body.add_child(nodes)
+	for number in range(1, 6):
+		var medals: Array = profile.data.missions.get(str(number), [])
+		var node := button(str(number) + (" ◆" if "clear" in medals else ""), func(): mission = number; rebuild(), nodes, 44)
+		node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		node.add_theme_color_override("font_color", Color("ffd27c") if number == mission else Color("b8c5df"))
+		node.tooltip_text = Content.MISSIONS[number - 1].name
 	var definition: Dictionary = Content.MISSIONS[mission - 1]
-	text_line("%d. %s" % [mission, definition.name], 22)
-	text_line(definition.intro)
-	text_line("Survive %.0f minutes, then defeat %s.\nThe boss fight has no time limit." % [definition.duration / 60, definition.boss])
-	var medals: Array = profile.data.missions.get(str(mission), [])
-	text_line("%s Defeat the boss\n%s At most 8 damaging hits, no rescue\n%s Clear after opening 3 caches" % ["◆" if "clear" in medals else "◇", "◆" if "combat" in medals else "◇", "◆" if "scavenger" in medals else "◇"], 13)
-	var row := HBoxContainer.new()
-	body.add_child(row)
-	button("‹ Previous", func(): mission = maxi(1, mission - 1); rebuild(), row).disabled = mission == 1
-	button("Rewards", func(): page = "rewards"; rebuild(), row)
-	button("Next ›", func(): mission = mini(5, mission + 1); rebuild(), row).disabled = mission == 5
+	text_line("%d. %s" % [mission, definition.name], 21)
+	text_line("4 min survival · Defeat %s" % definition.boss, 13)
+	button("Rewards & mastery", func(): page = "rewards"; rebuild(), null, 32)
 	if not profile.data.active_attempt.is_empty():
-		button("Resume saved expedition", func(): resume_requested.emit())
-		button("End expedition & keep protected loot", func():
+		button("Resume expedition", func(): resume_requested.emit())
+		button("End expedition", func():
 			if confirmation == "abandon":
 				abandon_requested.emit()
 			else:
-				confirmation = "abandon"; message = "Tap again to abandon this expedition. Unprotected loot will be lost."; rebuild(), null, 40)
+				confirmation = "abandon"; message = "Tap End expedition again. Only protected loot returns."; rebuild(), null, 36)
 	else:
 		var unlocked: bool = profile.mission_unlocked(mission)
-		var start := button("Enter the Outskirts" if unlocked else "Clear the previous mission to unlock", func(): mission_requested.emit(mission), null, 50)
+		var start := button("Start expedition" if unlocked else "Clear the previous mission", func(): mission_requested.emit(mission), null, 48)
+		start.add_theme_stylebox_override("normal", style(Color("ffbe32"), Color("ffe38d")))
+		start.add_theme_color_override("font_color", Color("33244b"))
 		start.disabled = not unlocked or profile.blocked
-		var base := Content.clear_rewards(mission)
-		text_line("Clear: %d credits + %d parts. First clear adds gems and a key." % [base.credits, base.parts], 12)
+		var modes := HBoxContainer.new()
+		body.add_child(modes)
+		button("Salvage contracts", func(): page = "contracts"; rebuild(), modes, 38).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button("Boss training", func(): page = "training"; rebuild(), modes, 38).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+func zones_page() -> void:
+	text_line("Expedition zones", 24)
+	text_line("Blackout Outskirts is playable. Later zones are planned.", 13)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 5)
+	grid.add_theme_constant_override("v_separation", 4)
+	body.add_child(grid)
+	for index in ZONES.size():
+		var node := button("%02d  %s" % [index + 1, ZONES[index]], func(): page = "mission"; rebuild(), grid, 44)
+		node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		node.add_theme_font_size_override("font_size", 11)
+		node.disabled = index > 0
 
 func gear_page() -> void:
 	if selected_item >= 0:
 		item_page()
 		return
-	text_line("ARMORY", 22, Color("ffd27c"))
+	text_line("Equipment", 24)
+	var stage := Control.new()
+	stage.custom_minimum_size.y = 254
+	body.add_child(stage)
+	Art.pedestal(stage, Vector2(193, 236), 209)
+	Art.picture(stage, Art.hero(profile.data["class"]), Rect2(77, -8, 232, 253))
+	var columns := [["weapon", "ring", "charm", "gadget"], ["helmet", "body", "pants", "boots"]]
+	for column in 2:
+		for index in 4:
+			var slot: String = columns[column][index]
+			var item: Dictionary = profile.item_by_id(profile.data.equipment[slot])
+			var tile := equipment_tile(item, stage, Vector2(68, 59))
+			tile.position = Vector2(4 if column == 0 else 312, index * 64)
 	var stats: Dictionary = profile.stats()
-	text_line("%.0f HP   •   %.1f Power   •   %.0f Armor" % [stats.hp, stats.power, stats.armor], 16)
-	text_line("Choose equipment before entering. Upgrades persist; shrine traits and combat levels do not.")
-	button("Claim Rare equipment choice" if profile.data.rare_choices > 0 else "Supply chests • %d keys" % profile.data.cache_keys, func(): page = "rare_choice" if profile.data.rare_choices > 0 else "cache"; cache_receipt = false; rebuild(), null, 40)
-	var pages := maxi(1, ceili(profile.data.inventory.size() / 3.0))
-	inventory_page = clampi(inventory_page, 0, pages - 1)
-	for index in range(inventory_page * 3, mini(profile.data.inventory.size(), inventory_page * 3 + 3)):
-		var item: Dictionary = profile.data.inventory[index]
-		var equipped: bool = profile.data.equipment[item.slot] == item.id
-		var node := button("%s%s • Lv %d\n%s %s" % ["◆ " if equipped else "", item.name, item.level, item.rarity.capitalize(), item.slot], func(): selected_item = item.id; message = ""; rebuild(), null, 61)
-		decorate_item_button(node, item.slot)
-		node.add_theme_color_override("font_color", Color(Content.RARITY_COLORS[Content.RARITIES.find(item.rarity)]))
-	if pages > 1:
-		button("Next page • %d/%d" % [inventory_page + 1, pages], func(): inventory_page = (inventory_page + 1) % pages; rebuild(), null, 40)
+	var stats_row := HBoxContainer.new()
+	stats_row.custom_minimum_size.y = 36
+	body.add_child(stats_row)
+	for entry in [["Power", stats.power, Art.SWORD], ["HP", stats.hp, Art.item("hp")], ["Armor", stats.armor, Art.SHIELD]]:
+		var card := HBoxContainer.new()
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.tooltip_text = entry[0]
+		stats_row.add_child(card)
+		var icon := Art.picture(card, entry[2], Rect2(0, 0, 30, 32))
+		icon.custom_minimum_size = Vector2(30, 32)
+		var amount := Label.new()
+		amount.text = "%.0f" % entry[1]
+		amount.add_theme_font_size_override("font_size", 25)
+		card.add_child(amount)
+	var bar := HBoxContainer.new()
+	body.add_child(bar)
+	var label := Label.new()
+	label.text = "Inventory  ·  %d" % profile.data.inventory.size()
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 18)
+	bar.add_child(label)
+	var sort_button := button("Sort: " + inventory_sort, func():
+		inventory_sort = "Slot" if inventory_sort == "Rarity" else "Rarity"
+		inventory_scroll = 0
+		rebuild(), bar, 36)
+	sort_button.add_theme_font_size_override("font_size", 12)
+	sort_button.custom_minimum_size.x = 100
+	var scroll := ScrollContainer.new()
+	scroll.name = "InventoryScroll"
+	scroll.custom_minimum_size.y = 166
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	body.add_child(scroll)
+	var grid := GridContainer.new()
+	grid.name = "InventoryGrid"
+	grid.columns = 5
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 5)
+	grid.add_theme_constant_override("v_separation", 5)
+	scroll.add_child(grid)
+	var items: Array = profile.data.inventory.duplicate()
+	items.sort_custom(func(a: Dictionary, b: Dictionary):
+		var left: int = Content.RARITIES.find(a.rarity) if inventory_sort == "Rarity" else Content.SLOTS.find(a.slot)
+		var right: int = Content.RARITIES.find(b.rarity) if inventory_sort == "Rarity" else Content.SLOTS.find(b.slot)
+		return a.id < b.id if left == right else (left > right if inventory_sort == "Rarity" else left < right))
+	for item in items:
+		equipment_tile(item, grid, Vector2(66, 65)).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.set_deferred("scroll_vertical", inventory_scroll)
+	scroll.get_v_scroll_bar().value_changed.connect(func(value: float): inventory_scroll = int(value))
+
+func equipment_tile(item: Dictionary, parent: Node, dimensions: Vector2) -> Button:
+	var tile := button("", func(): selected_item = item.id; message = ""; rebuild(), parent, int(dimensions.y))
+	tile.custom_minimum_size = dimensions
+	tile.size = dimensions
+	tile.name = "Item%d" % item.id
+	tile.tooltip_text = "%s · %s · Level %d" % [item.name, Content.SLOT_LABELS[item.slot], item.level]
+	var rank: int = Content.RARITIES.find(item.rarity)
+	var color := Color(["73adf4", "55c4ee", "707aff", "bc66ff", "ffbd48", "ff668d"][rank])
+	var box := style(Color(["163c82", "104a77", "28369c", "50239e", "794817", "78294e"][rank]), color)
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(6)
+	box.shadow_color = Color(color, 0.18)
+	box.shadow_size = 2
+	box.set_content_margin_all(2)
+	tile.add_theme_stylebox_override("normal", box)
+	tile.icon = item_texture(item.slot)
+	tile.expand_icon = true
+	tile.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tile.add_theme_constant_override("icon_max_width", 57)
+	var caption := Label.new()
+	caption.text = ("◆ " if profile.data.equipment[item.slot] == item.id else "") + "Lv.%d" % item.level
+	caption.add_theme_font_size_override("font_size", 12)
+	caption.add_theme_color_override("font_outline_color", Color("0a1020"))
+	caption.add_theme_constant_override("outline_size", 3)
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caption.position = Vector2(4, dimensions.y - 16)
+	caption.size = Vector2(dimensions.x - 8, 15)
+	tile.add_child(caption)
+	return tile
 
 func item_page() -> void:
 	var item: Dictionary = profile.item_by_id(selected_item)
@@ -280,20 +524,65 @@ func item_page() -> void:
 	button("Back to equipment", func(): selected_item = -1; confirmation = ""; message = ""; rebuild())
 
 func haven_page() -> void:
-	text_line("REBUILD HAVEN", 22, Color("ffd27c"))
-	text_line("Spend scavenged materials on lasting improvements. No construction timers.")
-	for id: String in Content.FACILITIES:
-		var facility: Dictionary = Content.FACILITIES[id]
-		text_line("%s  •  Rank %d/2" % [facility.name, profile.data.facilities[id]], 17, Color("ba92ff"))
-		text_line(facility.description, 13)
-		var complete: bool = profile.data.facilities[id] >= 2
-		var node := button("Built" if complete else "Improve • %d credits + %d parts" % [facility.credits, facility.parts], func(): refresh(func(): return profile.upgrade_facility(id), "%s improved." % facility.name), null, 40)
-		node.disabled = complete or not profile.can_change_loadout() or profile.data.credits < facility.credits or profile.data.parts < facility.parts
-	var activities := HBoxContainer.new()
-	body.add_child(activities)
-	button("Training", func(): page = "training"; rebuild(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button("Contracts", func(): page = "contracts"; rebuild(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button("Arcanum", func(): page = "arcanum"; rebuild(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_line("Haven", 26)
+	var scene := Control.new()
+	scene.custom_minimum_size.y = 306
+	body.add_child(scene)
+	Art.picture(scene, Art.BASE, Rect2(0, -7, 386, 318))
+	var hero := Art.picture(scene, Art.hero(profile.data["class"]), Rect2(157, 166, 82, 110))
+	if not profile.data.settings.reduced_effects:
+		var idle := hero.create_tween().set_loops()
+		idle.tween_property(hero, "position:y", 164.0, 1.5)
+		idle.tween_property(hero, "position:y", 166.0, 1.5)
+	for entry in [["workshop", Vector2(93, 111)], ["infirmary", Vector2(306, 96)], ["quartermaster", Vector2(305, 233)]]:
+		var id: String = entry[0]
+		var node := button("II" if profile.data.facilities[id] == 2 else "I", func(): facility = id; page = "facility"; rebuild(), scene, 34)
+		node.position = entry[1]
+		node.size.x = 34
+		node.tooltip_text = Content.FACILITIES[id].name
+		node.add_theme_font_size_override("font_size", 20)
+		node.add_theme_font_override("font", Art.DISPLAY_FONT)
+		var plaque := style(Color(0.04, 0.08, 0.16, 0.78), Color("6c82a4"))
+		plaque.set_content_margin_all(4)
+		node.add_theme_stylebox_override("normal", plaque)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 5)
+	grid.add_theme_constant_override("v_separation", 5)
+	body.add_child(grid)
+	for entry in [["workshop", "Workshop"], ["infirmary", "Infirmary"], ["quartermaster", "Storehouse"], ["training", "Training"], ["arcanum", "Arcanum"], ["mission", "Expedition"]]:
+		var id: String = entry[0]
+		icon_button(entry[1], id, func():
+			if id in Content.FACILITIES:
+				facility = id
+				page = "facility"
+			else:
+				page = id
+			rebuild(), grid, 86)
+
+func facility_page() -> void:
+	var definition: Dictionary = Content.FACILITIES[facility]
+	text_line(definition.name, 25)
+	var art := Control.new()
+	art.custom_minimum_size.y = 165
+	body.add_child(art)
+	Art.picture(art, Art.icon(facility), Rect2(90, 0, 200, 160))
+	text_line("Rank %d / 2" % profile.data.facilities[facility], 18, Color("ffd27c"))
+	text_line(definition.description, 15)
+	var summary := "Upgrade costs: 100% → 90% credits; Parts unchanged."
+	if facility == "infirmary":
+		summary = "Medkit healing: 20% → 25% maximum HP. Once per run."
+	elif facility == "quartermaster":
+		summary = "Backpack: 8 → 9 slots. Secure stash: 2 slots."
+	text_line(summary, 14, Color("ba92ff"))
+	var complete: bool = profile.data.facilities[facility] >= 2
+	var improve := button("Fully upgraded" if complete else "Upgrade · %d credits + %d Parts" % [definition.credits, definition.parts], func(): refresh(func(): return profile.upgrade_facility(facility), definition.name + " improved."))
+	improve.disabled = complete or not profile.can_change_loadout() or profile.data.credits < definition.credits or profile.data.parts < definition.parts
+	if facility == "workshop":
+		button("Open equipment", func(): navigate("gear"))
+	elif facility == "quartermaster":
+		button("Find materials · Salvage contracts", func(): navigate("contracts"))
+	button("Back to Base", func(): navigate("haven"))
 
 func contracts_page() -> void:
 	text_line("SALVAGE CONTRACTS", 22, Color("ffd27c"))
@@ -310,19 +599,49 @@ func contracts_page() -> void:
 	start.disabled = not unlocked or not profile.can_change_loadout()
 	if not profile.data.active_attempt.is_empty():
 		text_line("Finish or resume your saved expedition before starting another.", 13)
-	button("Back to Haven", func(): page = "haven"; rebuild(), null, 40)
+	button("Back to Base", func(): page = "haven"; rebuild(), null, 40)
 
 func class_page() -> void:
-	button("Class mastery • view talents", func(): page = "mastery"; rebuild(), null, 44)
-	text_line("Survivor level %d / 40  •  %d earned XP" % [Content.survivor_level(profile.data.survivor_xp), profile.data.survivor_xp], 15)
-	for id: String in Content.CLASSES:
-		var info: Dictionary = Content.CLASSES[id]
-		var unlocked: bool = profile.class_unlocked(id)
-		var selected: bool = profile.data["class"] == id
-		text_line("%s%s  •  Mastery %d/20" % ["◆ " if selected else "", info.name, Content.mastery_level(profile.data.mastery[id])], 17, Color("ba92ff"))
-		text_line(info.description if unlocked else info.unlock, 13)
-		var node := button("Selected" if selected else ("Select %s" % info.name if unlocked else "Locked"), func(): refresh(func(): return profile.select_class(id), "Class changed."), null, 40)
-		node.disabled = selected or not unlocked or not profile.can_change_loadout()
+	var id: String = inspected_class if not inspected_class.is_empty() else profile.data["class"]
+	var info: Dictionary = Content.CLASSES[id]
+	var unlocked: bool = profile.class_unlocked(id)
+	text_line(info.name, 25)
+	var stage := Control.new()
+	stage.custom_minimum_size.y = 198
+	body.add_child(stage)
+	Art.pedestal(stage, Vector2(193, 179), 160)
+	Art.picture(stage, Art.hero(id), Rect2(90, 0, 204, 193))
+	var xp: int = profile.data.mastery[id]
+	var level: int = Content.mastery_level(xp)
+	text_line("Permanent mastery %d / 20" % level, 17, Color("ffd27c"))
+	var progress := ProgressBar.new()
+	progress.custom_minimum_size.y = 8
+	progress.show_percentage = false
+	progress.max_value = (level + 1) * 100
+	progress.value = xp - level * (level + 1) * 50
+	if level == 20:
+		progress.value = progress.max_value
+	progress.add_theme_stylebox_override("background", style(Color("0a1224")))
+	progress.add_theme_stylebox_override("fill", style(Color("8d6be8")))
+	body.add_child(progress)
+	text_line(info.description, 13)
+	var roster := HBoxContainer.new()
+	body.add_child(roster)
+	for class_id: String in Content.CLASSES:
+		var node := button(Content.CLASSES[class_id].name, func(): inspected_class = class_id; rebuild(), roster, 54)
+		node.add_theme_font_size_override("font_size", 12)
+		node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		node.icon = Art.hero(class_id)
+		node.expand_icon = true
+		node.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		node.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		node.add_theme_constant_override("icon_max_width", 27)
+		node.add_theme_color_override("font_color", Color("ffd27c") if class_id == id else Color("bcc5dc"))
+	var selected: bool = profile.data["class"] == id
+	var choose := button("Selected" if selected else ("Select " + info.name if unlocked else info.unlock), func(): refresh(func(): return profile.select_class(id), info.name + " selected."))
+	choose.disabled = selected or not unlocked or not profile.can_change_loadout()
+	button("Mastery talents · 5 / 10 / 15 / 20", func(): page = "mastery"; rebuild(), null, 40)
+	text_line("Survivor level %d / 40 · %d lifetime XP" % [Content.survivor_level(profile.data.survivor_xp), profile.data.survivor_xp], 12)
 
 func settings_page() -> void:
 	text_line("SETTINGS", 22, Color("ffd27c"))
@@ -340,3 +659,46 @@ func settings_page() -> void:
 	text_line("Reduced effects hides screen flashes and softens spell effects. Attack warnings remain visible.", 13)
 	button("Internal test tools & ad privacy", func(): diagnostics_requested.emit())
 	button("Back to Haven", func(): page = "haven"; message = ""; rebuild())
+func shop_page() -> void:
+	text_line("Shop", 25)
+	if not shop_flow.pending.is_empty():
+		item_portrait("chest", 110)
+		text_line(shop_flow.message, 16)
+		if shop_flow.earned and not shop_flow.granted:
+			button("Retry saving earned reward", func(): shop_earned(shop_flow.pending))
+		elif not shop_flow.earned:
+			button("Cancel loading", func(): shop_video_cancelled.emit(shop_flow.pending))
+		return
+	var card := Control.new()
+	card.custom_minimum_size.y = 105
+	body.add_child(card)
+	Art.picture(card, Art.icon("shop"), Rect2(4, 0, 100, 100))
+	var heading := Label.new()
+	heading.position = Vector2(115, 20)
+	heading.text = "Supply chests\nKeys · %d" % profile.data.cache_keys
+	heading.add_theme_font_size_override("font_size", 20)
+	card.add_child(heading)
+	button("Open chests", func(): page = "cache"; cache_receipt = false; rebuild())
+	var remaining: int = profile.shop_videos_left()
+	var video := button("Watch video · earn 1 supply key  (%d/2 left)" % remaining, request_shop_video)
+	video.disabled = remaining <= 0 or profile.blocked or not ads_available
+	video.tooltip_text = "Optional video. Reward on completion. Resets daily at 00:00 UTC."
+	text_line("Complete a video to claim your key.", 12, Color("a9b9d4"))
+	if not ads_available:
+		text_line("Video unavailable on this platform. Android supports test ads.", 12, Color("ba92ff"))
+	for id: String in profile.SHOP_OFFERS:
+		var offer: Dictionary = profile.SHOP_OFFERS[id]
+		var caption := "%s · %d" % [offer.name, offer.cost]
+		var buy := button(("Confirm: " if confirmation == id else "") + caption, func():
+			if confirmation == id:
+				refresh(func(): return profile.purchase_supply(id), offer.name + " added.")
+			else:
+				confirmation = id; message = "Tap again to confirm this purchase."; rebuild())
+		buy.disabled = profile.blocked or profile.data[offer.currency] < offer.cost
+		buy.icon = Art.item(offer.currency)
+		buy.expand_icon = true
+		buy.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		buy.add_theme_constant_override("icon_max_width", 27)
+		buy.tooltip_text = "%s: %d %s" % [offer.name, offer.cost, offer.currency]
+	if profile.data.rare_choices > 0:
+		button("Claim earned Rare equipment", func(): page = "rare_choice"; rebuild(), null, 36)

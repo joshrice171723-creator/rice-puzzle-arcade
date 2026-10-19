@@ -1,6 +1,6 @@
 # Nightfall Art Direction Review
 
-October 18, 2026. Joshua selected Direction B (Beaconbound): "i like B lets go with that style." Concept exploration only; no game code, assets in a runtime, or layouts have been implemented in this pass.
+October 18, 2026. Joshua selected Direction B (Beaconbound): "i like B lets go with that style." The original concept review is archived below. The current home implementation and its verification are documented in [HOME_PRODUCT_QA.md](HOME_PRODUCT_QA.md).
 
 ## Main design
 
@@ -79,7 +79,19 @@ The latest visual set covers proximity charging for the fast shop and slow Relic
 
 ![Mission preview and rescue](art-concepts/nightfall-b-mission-rescue.png)
 
-## Four destinations and sharper interface proposal — October 18
+## Home interface implementation — October 18, 2026
+
+The latest revision follows Joshua's comparison feedback: welcoming cobalt landscape, Nightfall crescent emblem and fantasy display type, upright menu portraits, saturated equipment art, rarity-colored frames, and icon-plus-number wallet balances. Gear retains five-column vertical scrolling. Base uses small building-rank badges instead of large text overlays; Expedition uses a zone diorama. Original concept boards remain references, not screenshots of the implementation. Exact prompts for the new production assets are in [MENU_POLISH_PROMPTS.md](art-concepts/MENU_POLISH_PROMPTS.md).
+
+The out-of-combat interface now uses five bottom tabs, left to right: **Shop, Gear, Expedition, Base, Class**. Expedition is centered and replaces the player-facing Venture label. Base's Expedition shortcut opens that same mission screen. This supersedes all older four-tab concept layouts below; their raster images are historical references.
+
+The implemented first pass uses native Godot controls, separate illustrated navigation/facility icons, an inhabited Haven diorama with the selected character, and the sharper blue/ivory/amber treatment. Gear has eight equipped slots and a five-column inventory that scrolls vertically while the hero and navigation remain fixed. Existing saves migrate without renumbering items or discarding active checkpoints. Warden and Arcanist have distinct preview portraits but remain locked behind future zone content.
+
+Shop supports supply chests, confirmed purchases using earned Gems or Credits, and optional rewarded-video supply keys. Real-money products are not configured or charged in this internal build. The Android bridge continues to use Google test ads. A finished ad without the earned callback grants nothing; earned keys are saved once, duplicate callbacks are ignored, and failed saves can be retried. See [home implementation and QA](HOME_PRODUCT_QA.md) for current verification and limitations.
+
+The scenery and icons are runtime assets rather than whole-screen mockups. Exact generation prompts and saved asset paths are in [HOME_ASSET_PROMPTS.md](art-concepts/HOME_ASSET_PROMPTS.md).
+
+## Earlier four destinations and sharper interface proposal — October 18
 
 The four individual screen concepts preserve the navigation and feature destinations below. Joshua then requested a less bulky, slightly sharper presentation. The Base/Gear refinement is the latest proposed visual treatment for all four screens, pending review: slimmer borders, restrained highlights, crisper illustrated silhouettes, smaller headings and navigation icons, and an amber active-tab underline instead of a large gold tile. Keep generous invisible touch targets (at least 44 logical pixels) and readable text; smaller artwork must not make controls harder to tap.
 

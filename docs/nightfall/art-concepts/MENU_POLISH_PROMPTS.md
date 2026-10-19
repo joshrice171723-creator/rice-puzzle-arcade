@@ -1,0 +1,21 @@
+# Nightfall concept-to-game menu assets
+
+## menu-outskirts.png
+
+Use case: stylized-concept. Production transparent isolated campaign-zone diorama for Nightfall's Expedition menu, matching the supplied approved menu reference artwork. A compact floating island of a deserted suburban street at night: a blue roof garage with warm amber lights, short cracked road, a battered abandoned delivery truck, broken brick fence, a little purple magic beacon and a few scattered salvage crates. Distinctive strong silhouette, generous 8% padding, no people, monsters, text, UI, frames, labels or surrounding landscape. Isometric three-quarter view. Clean sharp outlines, vibrant cobalt/amber/violet, welcoming stylized mobile fantasy RPG art, simple readable detail, not grim realistic or pixelated. A high quality large zone-selection illustration on genuine transparent background.
+
+Generated using the built-in image-generation tool. Reference: `nightfall-b-sharper-base-gear.png`. Originals are preserved in the Codex generated-images folder; production copies are in `apps/nightfall-godot/assets/`.
+
+## menu-heroes.png
+
+Use case: stylized-concept. Create a production transparent sprite sheet with TWO upright full-body menu character portraits in two equal-width cells side by side. Use the reference RIGHT equipment character as the EXACT stylistic and identity direction for LEFT character: youthful male scavenger, spiky dark purple hair, cobalt long coat, ivory scarf, brown boots, bronze shoulder armor, chunky glowing amber rune pistol raised beside his head. RIGHT character is a female engineer in same world and art style, copper goggles, cobalt mechanic coat, satchel and brass magical wrench. Both stand proudly, facing slightly toward viewer, feet visible, same scale, thick clean outlines, sharply shaded colorful polished mobile RPG illustration, welcoming heroic mood. Not a top-down gameplay sprite. Occupy 90% height in each half with 6% padding all sides. No pedestal, text, background, frames or shadows outside character. Reference is style only, deliver only the two portraits on genuine transparency.
+
+## menu-items.png
+
+Use case: stylized-concept. Production transparent game icon atlas matching the RIGHT equipment mockup in reference: vibrant, clean dark outlines, cobalt, amber gold, violet, ivory, glossy hand-painted cel-shaded mobile fantasy RPG. EXACTLY 12 separate icons in a strict FOUR COLUMN by THREE ROW grid, equally sized cells, each icon centered and filling 76% cell with transparent padding. No cards, frames, labels, numbers or background. Read left to right then top to bottom: row1 glowing orange rune pistol, blue ivory-edged hood, brown bronze chest armor, brown gold boots. Row2 orange sun pendant necklace, brown medical satchel with red heart, gold ring with purple gem, dark blue trousers with gold knee plates. Row3 faceted amber credit crystal, silver-blue mechanical gear parts, violet diamond gem currency, bright red heart HP icon. Keep simple, bright, recognizable at 40 pixels, faithfully match reference colorful items. All icons complete with zero overlap. Genuine transparent background.
+
+## menu-backdrop.png
+
+Use case: stylized-concept. Production portrait 430:760 ratio background artwork for Nightfall mobile RPG menus. Closely match the reference approved Nightfall blue mood, with rich welcoming luminous cobalt and deep royal blue, subtle violet glow, faint distant mountain and ruined castle silhouettes ONLY around edges and bottom. Large quiet clear blue center behind character and equipment icons, no focal subject. A few tiny twinkling stars, restrained magical blue particles. Top 10% dark midnight blue for header, main center softly glowing saturated cobalt. Bottom 10% midnight blue for navigation. NOT dark gray, not flat app panel. No UI, logos, lettering, buildings in foreground, characters, items or frames. Clean polished fantasy mobile game background, bright enough to be welcoming, crisp painterly art. Reference is art style only.
+
+Typography: Cinzel and Barlow Semi Condensed, distributed under the included SIL Open Font Licenses from the Google Fonts repository. Moon, sword, shield, and pedestal are native vector/UI artwork.

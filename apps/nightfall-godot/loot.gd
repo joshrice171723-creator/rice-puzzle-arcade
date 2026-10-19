@@ -2,10 +2,10 @@ extends RefCounted
 ## Equipment rewards use a separate deterministic stream from combat and offers.
 const Content = preload("res://haven_content.gd")
 const CATEGORIES := {
-	"supply": {"name": "Supply Crate", "slots": ["weapon", "helmet", "body", "boots", "charm", "gadget"]},
+	"supply": {"name": "Supply Crate", "slots": Content.SLOTS},
 	"weapons": {"name": "Weapons Cache", "slots": ["weapon"]},
-	"armor": {"name": "Armor Locker", "slots": ["helmet", "body", "boots"]},
-	"engineer": {"name": "Engineer's Case", "slots": ["charm", "gadget"]}}
+	"armor": {"name": "Armor Locker", "slots": ["helmet", "body", "boots", "pants"]},
+	"engineer": {"name": "Engineer's Case", "slots": ["charm", "gadget", "ring"]}}
 
 static func affixes(slot: String, rarity: String, identity: int) -> Array:
 	var count: int = [0, 1, 1, 2, 3, 3][Content.RARITIES.find(rarity)]

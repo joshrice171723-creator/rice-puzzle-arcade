@@ -26,7 +26,7 @@ func _initialize() -> void:
 	cleanup()
 	var p = Profile.new(PATH)
 	check(p.load_save() and p.valid(p.data), "Fresh profile is valid and saved")
-	check(p.data.inventory.size() == 6 and p.stats().hp == 210 and p.stats().armor == 35, "Starter loadout aggregates actual slot stats")
+	check(p.data.inventory.size() == 8 and p.stats().hp == 210 and p.stats().armor == 35, "Starter loadout aggregates actual slot stats")
 	check(p.mission_unlocked(1) and not p.mission_unlocked(2) and not p.mission_unlocked(6), "Campaign unlocks only valid completed prerequisites")
 	check(p.class_unlocked("scavenger") and not p.class_unlocked("engineer"), "Engineer starts locked")
 	check(not p.upgrade_item(0), "Insufficient upgrade funds do not mutate gear")

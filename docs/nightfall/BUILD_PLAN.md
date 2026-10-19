@@ -1,5 +1,7 @@
 # Nightfall Engineering and Delivery Plan
 
+Latest home delivery: [five-tab home product and QA](HOME_PRODUCT_QA.md). Shop, Gear, centered Expedition, Base and Class are now implemented in the Godot proof, including eight-slot migration, vertical inventory, facility entrances and rewarded-key handling. Production billing, zones 2–20, and physical-device acceptance remain separate work.
+
 October 18, 2026. Joshua subsequently authorized starting this plan with “ok start.” Implementation is proceeding through the milestones below. The isolated M0 proof and its remaining acceptance gaps are recorded in [engine proof verification](ENGINE_PROOF_QA.md). Production migration, purchases, and deployment are not implied by a successful prototype build.
 
 The October 18–19 feature session now implements the first five-mission zone's rules, eight automatic spell families with branching specializations/evolutions, proximity shrines, protected loot, field defenses, saved Haven equipment/facilities, earned chests, original audio and a separate Salvage Contracts mode. See the [feature session evidence](FEATURE_BUILD_SESSION.md) for implementation and automated checks. M1–M3 acceptance remains open: human combat feel, complete animation, deferred rendering defects, physical-device performance and actual rewarded-video delivery are separate from rule tests and exports. Existing rendering issues are deferred at Joshua's request in the [bug log](KNOWN_ISSUES.md).

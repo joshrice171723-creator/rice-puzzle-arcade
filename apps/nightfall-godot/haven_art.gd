@@ -1,0 +1,79 @@
+extends RefCounted
+const ICONS = preload("res://assets/haven-icons.png")
+const BASE = preload("res://assets/haven-base.png")
+const ACTORS = preload("res://assets/actors.png")
+const ENGINEER = preload("res://assets/engineer.png")
+const CLASSES = preload("res://assets/class-previews.png")
+const HEROES = preload("res://assets/menu-heroes.png")
+const ITEMS = preload("res://assets/menu-items.png")
+const BACKDROP = preload("res://assets/menu-backdrop.png")
+const OUTSKIRTS = preload("res://assets/menu-outskirts.png")
+const MOON = preload("res://assets/menu-moon.svg")
+const SWORD = preload("res://assets/menu-sword.svg")
+const SHIELD = preload("res://assets/menu-shield.svg")
+const DISPLAY_FONT = preload("res://assets/fonts/Cinzel.ttf")
+const BODY_FONT = preload("res://assets/fonts/BarlowSemiCondensed-SemiBold.ttf")
+const ITEM_NAMES := ["weapon", "helmet", "body", "boots", "charm", "gadget", "ring", "pants", "credits", "parts", "gems", "hp"]
+const NAMES := ["shop", "gear", "mission", "haven", "class", "ring", "pants", "workshop", "infirmary", "quartermaster", "training", "arcanum"]
+
+static func icon(id: String) -> AtlasTexture:
+	var index := maxi(0, NAMES.find(id))
+	var cell := Vector2(ICONS.get_width() / 4.0, ICONS.get_height() / 3.0)
+	var texture := AtlasTexture.new()
+	texture.atlas = ICONS
+	texture.region = Rect2(Vector2(index % 4, index / 4) * cell, cell)
+	if id == "ring":
+		texture.region.position.x += 38
+		texture.region.size.x -= 46
+	return texture
+
+static func hero(id: String) -> AtlasTexture:
+	var texture := AtlasTexture.new()
+	if id in ["warden", "arcanist"]:
+		texture.atlas = CLASSES
+		var cell := CLASSES.get_width() / 2.0
+		texture.region = Rect2((cell if id == "arcanist" else 0.0) + 8, 0, cell - 16, CLASSES.get_height())
+		return texture
+	texture.atlas = HEROES
+	var cell := HEROES.get_width() / 2.0
+	texture.region = Rect2(cell if id == "engineer" else 0.0, 0, cell, HEROES.get_height())
+	return texture
+
+static func item(id: String) -> AtlasTexture:
+	var index := ITEM_NAMES.find(id)
+	var cell := Vector2(ITEMS.get_width() / 4.0, ITEMS.get_height() / 3.0)
+	var texture := AtlasTexture.new()
+	texture.atlas = ITEMS
+	texture.region = Rect2(Vector2(index % 4, index / 4) * cell, cell)
+	return texture
+
+static func pedestal(parent: Node, center: Vector2, width: float) -> void:
+	var outline := PackedVector2Array()
+	var top := PackedVector2Array()
+	for index in 12:
+		var angle := TAU * index / 12.0
+		var point := Vector2(cos(angle) * width * 0.5, sin(angle) * width * 0.12)
+		top.append(center + point)
+		outline.append(center + point + Vector2(0, 12))
+	for data in [[outline, Color("193c80")], [top, Color("5681b7")]]:
+		var polygon := Polygon2D.new()
+		polygon.polygon = data[0]
+		polygon.color = data[1]
+		parent.add_child(polygon)
+	var edge := Line2D.new()
+	edge.points = top
+	edge.closed = true
+	edge.width = 1.5
+	edge.default_color = Color("a3c3f1")
+	parent.add_child(edge)
+
+static func picture(parent: Node, texture: Texture2D, rect: Rect2) -> TextureRect:
+	var node := TextureRect.new()
+	node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	node.texture = texture
+	node.position = rect.position
+	node.size = rect.size
+	node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(node)
+	return node
