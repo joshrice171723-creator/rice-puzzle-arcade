@@ -79,7 +79,7 @@ func update_run(run: RefCounted) -> void:
 		ranks[index].text = "—" if id.is_empty() else ("EVOLVED" if run.spells[id].get("evolved", false) else "◆".repeat(run.spells[id].rank) + "◇".repeat(3 - run.spells[id].rank))
 		var fraction := 0.0
 		if not id.is_empty() and Content.SPELLS[id].cooldown > 0:
-			var cooldown: float = Content.SPELLS[id].cooldown * (1.0 - minf(0.3, 0.06 * run.passive_rank("channel")))
+			var cooldown: float = run.spell_cooldown(id)
 			fraction = clampf(run.spells[id].wait / cooldown, 0, 1)
 		shades[index].position = Vector2(3, 3)
 		shades[index].size = Vector2(46, 36 * fraction)

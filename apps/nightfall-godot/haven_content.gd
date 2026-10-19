@@ -5,6 +5,13 @@ const RARITIES := ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
 const RARITY_SCALE := [1.0, 1.04, 1.08, 1.12, 1.16, 1.20]
 const RARITY_COLORS := ["a4aaba", "92afc4", "78adff", "ba92ff", "ffd27c", "ed7997"]
 const STARTER_NAMES := ["Service Pistol", "Outrider Hood", "Outrider Vest", "Outrider Boots", "Beacon Pendant", "Field Medkit"]
+const AFFIXES := {
+	"tempered": {"name": "Tempered", "description": "+3% this item's Power", "stat": "power", "value": 0.03, "slots": ["weapon"]},
+	"reinforced": {"name": "Reinforced", "description": "+4% this item's HP", "stat": "hp", "value": 0.04, "slots": ["helmet", "body", "boots", "charm"]},
+	"plated": {"name": "Plated", "description": "+4% this item's armor", "stat": "armor", "value": 0.04, "slots": ["helmet", "body", "boots"]},
+	"attuned": {"name": "Attuned", "description": "+2% spell cooldown reduction", "stat": "cooldown", "value": 0.02, "slots": SLOTS},
+	"seeking": {"name": "Seeking", "description": "+5% XP pickup reach", "stat": "pickup", "value": 0.05, "slots": SLOTS},
+	"lightweight": {"name": "Lightweight", "description": "+1% movement speed", "stat": "speed", "value": 0.01, "slots": SLOTS}}
 const BASE_STATS := {
 	"weapon": {"power": 40.0, "hp": 0.0, "armor": 0.0},
 	"helmet": {"power": 0.0, "hp": 20.0, "armor": 10.0},
@@ -34,6 +41,9 @@ static func item_stats(item: Dictionary) -> Dictionary:
 	var multiplier: float = (1.0 + 0.05 * (item.level - 1)) * RARITY_SCALE[maxi(0, rank)]
 	for stat: String in stats:
 		stats[stat] *= multiplier
+		for affix: String in item.get("affixes", []):
+			if AFFIXES.has(affix) and AFFIXES[affix].stat == stat:
+				stats[stat] *= 1.0 + AFFIXES[affix].value
 	return stats
 
 static func survivor_level(xp: int) -> int:
@@ -43,6 +53,11 @@ static func survivor_level(xp: int) -> int:
 		remaining -= level * 120
 		level += 1
 	return level
+
+static func clear_rewards(mission: int) -> Dictionary:
+	var scale := 1.5 if mission == 5 else 1.0
+	return {"credits": roundi(165 * scale), "parts": roundi(3 * scale),
+		"survivor_xp": roundi(85 * scale), "mastery_xp": roundi(45 * scale)}
 
 static func mastery_level(xp: int) -> int:
 	var level := 0

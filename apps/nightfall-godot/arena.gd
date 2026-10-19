@@ -69,6 +69,7 @@ var power_hud: Control
 var power_view := false
 var power_page := "Attacks"
 var was_paused := false
+var boss_warning: Label
 
 func _ready() -> void:
 	if not testing:
@@ -202,6 +203,15 @@ func build_ui() -> void:
 	field_status.add_theme_font_size_override("font_size", 13)
 	field_status.add_theme_color_override("font_color", GOLD)
 	layer.add_child(field_status)
+	boss_warning = Label.new()
+	boss_warning.position = Vector2(15, 275)
+	boss_warning.size = Vector2(400, 28)
+	boss_warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_warning.add_theme_font_size_override("font_size", 18)
+	boss_warning.add_theme_color_override("font_color", GOLD)
+	boss_warning.add_theme_color_override("font_outline_color", INK)
+	boss_warning.add_theme_constant_override("outline_size", 6)
+	layer.add_child(boss_warning)
 	var footer := Label.new()
 	footer.text = "NIGHTFALL  •  BLACKOUT OUTSKIRTS"
 	footer.position = Vector2(14, 738)
@@ -444,6 +454,8 @@ func update_modal() -> void:
 			modal_body.add_child(result)
 			if not reward_receipt.is_empty():
 				FieldUI.label(self, "Banked: %d credits • %d parts • %d gems\n+%d Survivor XP • +%d Mastery XP" % [reward_receipt.credits, reward_receipt.parts, reward_receipt.gems, reward_receipt.survivor_xp, reward_receipt.mastery_xp])
+				if reward_receipt.get("keys", 0) > 0:
+					FieldUI.label(self, "+%d supply key • open a chest in your armory" % reward_receipt.keys)
 				if not reward_receipt.new_medals.is_empty():
 					FieldUI.label(self, "New medals: " + ", ".join(reward_receipt.new_medals))
 				if not reward_receipt.gear.is_empty():
@@ -572,6 +584,8 @@ func _process(delta: float) -> void:
 	xp_bar.max_value = run.level * 5
 	xp_bar.value = run.xp
 	var remaining := maxi(0, int(ceil(run.duration - run.elapsed)))
+	boss_warning.visible = in_field and run.phase == "waves" and remaining <= 10 and not modal.visible and run.benchmark_count == 0
+	boss_warning.text = "BOSS ARRIVES IN %d" % remaining
 	var time_text := "%02d:%02d" % [remaining / 60, remaining % 60]
 	if run.phase == "boss":
 		time_text = run.boss_name.to_upper()

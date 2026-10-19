@@ -70,6 +70,8 @@ var passives: Dictionary = {}
 var offer_rng := RandomNumberGenerator.new()
 var zones: Array[Dictionary] = []
 var wisp_hits: Dictionary = {}
+var permanent_cooldown := 0.0
+var reinforcements_spawned := 0
 
 const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
 const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
@@ -98,6 +100,7 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	class_id = stats["class"]
 	blueprints.assign(stats.get("blueprints", ["barricade", "trap"]))
 	mastery_level = stats.get("mastery", 0)
+	permanent_cooldown = clampf(stats.get("cooldown", 0.0), 0, 0.15)
 
 func snapshot() -> Dictionary:
 	var values := {}
@@ -108,7 +111,8 @@ func snapshot() -> Dictionary:
 		exploration[key] = field.get(key)
 	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
-		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate()}
+		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
+		"reinforcements_spawned": reinforcements_spawned}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -138,6 +142,8 @@ func restore(saved: Dictionary) -> bool:
 	offer_rng.state = saved.get("offer_rng", offer_rng.state)
 	zones.assign(saved.get("zones", []))
 	wisp_hits = saved.get("wisp_hits", {}).duplicate()
+	permanent_cooldown = saved.get("permanent_cooldown", 0.0)
+	reinforcements_spawned = saved.get("reinforcements_spawned", 0)
 	paused = true
 	return true
 
@@ -240,6 +246,9 @@ func passive_rank(id: String) -> int:
 
 func spell_scale() -> float:
 	return spell_multiplier * (1.0 + 0.06 * passive_rank("focus")) * (1.08 if "cinder" in field.relics else 1.0)
+
+func spell_cooldown(id: String) -> float:
+	return Content.SPELLS[id].cooldown * (1.0 - minf(0.3, permanent_cooldown + 0.06 * passive_rank("channel")))
 
 func buy_trait(id: String) -> bool:
 	if paused or phase != "shrine":
@@ -409,7 +418,7 @@ func spell_offer(id: String, current_rank: int = 0) -> Dictionary:
 	if rank == 3 and Content.EVOLUTIONS.has(id) and passive_rank(Content.EVOLUTIONS[id].pair) > 0:
 		return {"id": id, "name": Content.EVOLUTIONS[id].name + " • Evolve", "description": Content.EVOLUTIONS[id].description}
 	return {"id": id, "name": "%s  •  Rank %d/3" % [info.name, rank],
-		"description": "%s\n%s • %s" % [detail, "Learn" if rank == 1 else "Upgrade", "continuous orbit" if id == "wisp" else "every %.1fs" % (info.cooldown * (1.0 - minf(0.3, 0.06 * passive_rank("channel"))))]}
+		"description": "%s\n%s • %s" % [detail, "Learn" if rank == 1 else "Upgrade", "continuous orbit" if id == "wisp" else "every %.1fs" % spell_cooldown(id)]}
 
 func choose_offer(index: int) -> void:
 	if paused or phase != "upgrade" or index < 0 or index >= offers.size():
@@ -529,9 +538,13 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 				"spit": hostile_projectile(pos, pos.direction_to(enemy.target), 12.0)
 				"summon":
 					for count in 4:
+						if reinforcements_spawned >= 24 or enemies.filter(func(e: Dictionary): return e.hp > 0 and e.get("reinforcement", false)).size() >= 6:
+							break
 						var previous_count := enemies.size()
 						spawn_enemy(false, "drifter")
 						if enemies.size() > previous_count:
+							reinforcements_spawned += 1
+							enemies.back().reinforcement = true
 							var summon_pos := clamp_position(pos + Vector2.from_angle(count * PI / 2) * 110)
 							if summon_pos.distance_to(player) >= 80:
 								enemies.back().pos = summon_pos
@@ -601,7 +614,7 @@ func tick(delta: float, direction: Vector2) -> void:
 			continue
 		spells[id].wait = maxf(0, spells[id].wait - delta)
 		if spells[id].wait == 0 and cast_spell(id):
-			spells[id].wait = Content.SPELLS[id].cooldown * (1.0 - minf(0.3, 0.06 * passive_rank("channel")))
+			spells[id].wait = spell_cooldown(id)
 	Magic.tick(self, delta)
 	if fire_wait <= 0.0 and not enemies.is_empty() and shots.size() < MAX_SHOTS:
 		var nearest: Dictionary = enemies[0]
@@ -657,6 +670,8 @@ func tick(delta: float, direction: Vector2) -> void:
 		enemies.remove_at(i)
 	if health <= 0.0:
 		phase = "defeat"
+	elif phase == "victory":
+		field.collect_drops(player, 160.0)
 	if phase not in ["waves", "boss"]:
 		return
 	for i in range(pickups.size() - 1, -1, -1):

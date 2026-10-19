@@ -32,7 +32,7 @@ func verify() -> void:
 	arena.home.show()
 	for viewport in [Vector2i(320, 568), Vector2i(390, 844), Vector2i(430, 760)]:
 		root.size = viewport
-		for page in ["mission", "gear", "haven", "class", "settings"]:
+		for page in ["mission", "gear", "haven", "class", "settings", "cache", "rare_choice", "rewards"]:
 			arena.home.page = page
 			arena.home.rebuild()
 			await settle()
@@ -45,6 +45,21 @@ func verify() -> void:
 			arena.home.rebuild()
 			await settle()
 			check(arena.home.body.get_global_rect().end.y <= arena.home.navigation.position.y, "Equipment detail fits above navigation")
+		arena.home.selected_item = -1
+		var epic: Dictionary = arena.profile.Loot.equipment("helmet", "epic", 99)
+		arena.profile.data.inventory.append(epic)
+		arena.home.selected_item = 99
+		arena.home.rebuild()
+		await settle()
+		check(arena.home.body.get_global_rect().end.y <= arena.home.navigation.position.y, "Unequipped Epic detail and comparison fit the phone")
+		arena.profile.data.inventory.pop_back()
+		arena.home.page = "cache"
+		arena.home.cache_receipt = true
+		arena.profile.data.last_cache = {"category": "armor", "item": epic}
+		arena.home.rebuild()
+		await settle()
+		check(arena.home.body.get_global_rect().end.y <= arena.home.navigation.position.y, "Chest receipt fits without scrolling")
+		arena.home.cache_receipt = false
 		arena.home.selected_item = -1
 		arena.home.hide()
 		arena.run.paused = false

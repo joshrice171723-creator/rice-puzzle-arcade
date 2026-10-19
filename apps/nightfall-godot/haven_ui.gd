@@ -7,8 +7,10 @@ signal practice_requested
 signal diagnostics_requested
 
 const Content = preload("res://haven_content.gd")
+const LootUI = preload("res://loot_ui.gd")
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
+const EQUIPMENT_ART = preload("res://assets/equipment-icons.png")
 var profile: RefCounted
 var page := "mission"
 var mission := 1
@@ -21,6 +23,7 @@ var wallet: Label
 var title: Label
 var navigation: HBoxContainer
 var status_label: Label
+var cache_receipt := false
 
 func _ready() -> void:
 	size = Vector2(430, 760)
@@ -105,6 +108,28 @@ func text_line(value: String, font_size: int = 14, color: Color = Color("d6daea"
 	body.add_child(node)
 	return node
 
+func item_texture(slot: String) -> AtlasTexture:
+	var index: int = (Content.SLOTS + ["chest", "key"]).find(slot)
+	var cell := Vector2(EQUIPMENT_ART.get_width() / 4.0, EQUIPMENT_ART.get_height() / 2.0)
+	var texture := AtlasTexture.new()
+	texture.atlas = EQUIPMENT_ART
+	texture.region = Rect2(Vector2(index % 4, index / 4) * cell, cell)
+	return texture
+
+func decorate_item_button(node: Button, slot: String) -> void:
+	node.icon = item_texture(slot)
+	node.expand_icon = true
+	node.add_theme_constant_override("icon_max_width", 44)
+	node.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+func item_portrait(slot: String, height: float = 84) -> void:
+	var portrait := TextureRect.new()
+	portrait.texture = item_texture(slot)
+	portrait.custom_minimum_size.y = height
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	body.add_child(portrait)
+
 func refresh(action: Callable, success: String) -> void:
 	message = success if action.call() else (profile.error if not profile.error.is_empty() else "Not enough resources, or this upgrade is already complete.")
 	confirmation = ""
@@ -123,6 +148,9 @@ func rebuild() -> void:
 		"haven": haven_page()
 		"class": class_page()
 		"settings": settings_page()
+		"cache": LootUI.show(self)
+		"rewards": LootUI.mission_rewards(self)
+		"rare_choice": LootUI.rare_choice(self)
 	status_label.text = profile.error if not profile.error.is_empty() else message
 	for index in navigation.get_child_count():
 		var tab: Button = navigation.get_child(index)
@@ -150,10 +178,11 @@ func mission_page() -> void:
 	text_line(definition.intro)
 	text_line("Survive %.0f minutes, then defeat %s.\nThe boss fight has no time limit." % [definition.duration / 60, definition.boss])
 	var medals: Array = profile.data.missions.get(str(mission), [])
-	text_line("%s Defeat the boss\n%s Clear with 8 or fewer damaging hits\n%s Clear after opening 3 caches" % ["◆" if "clear" in medals else "◇", "◆" if "combat" in medals else "◇", "◆" if "scavenger" in medals else "◇"], 13)
+	text_line("%s Defeat the boss\n%s At most 8 damaging hits, no rescue\n%s Clear after opening 3 caches" % ["◆" if "clear" in medals else "◇", "◆" if "combat" in medals else "◇", "◆" if "scavenger" in medals else "◇"], 13)
 	var row := HBoxContainer.new()
 	body.add_child(row)
 	button("‹ Previous", func(): mission = maxi(1, mission - 1); rebuild(), row).disabled = mission == 1
+	button("Rewards", func(): page = "rewards"; rebuild(), row)
 	button("Next ›", func(): mission = mini(5, mission + 1); rebuild(), row).disabled = mission == 5
 	if not profile.data.active_attempt.is_empty():
 		button("Resume saved expedition", func(): resume_requested.emit())
@@ -166,7 +195,8 @@ func mission_page() -> void:
 		var unlocked: bool = profile.mission_unlocked(mission)
 		var start := button("Enter the Outskirts" if unlocked else "Clear the previous mission to unlock", func(): mission_requested.emit(mission), null, 50)
 		start.disabled = not unlocked or profile.blocked
-		text_line("Clear: %d credits + %d parts. First clear adds gems." % [248 if mission == 5 else 165, 5 if mission == 5 else 3], 12)
+		var base := Content.clear_rewards(mission)
+		text_line("Clear: %d credits + %d parts. First clear adds gems and a key." % [base.credits, base.parts], 12)
 
 func gear_page() -> void:
 	if selected_item >= 0:
@@ -176,12 +206,14 @@ func gear_page() -> void:
 	var stats: Dictionary = profile.stats()
 	text_line("%.0f HP   •   %.1f Power   •   %.0f Armor" % [stats.hp, stats.power, stats.armor], 16)
 	text_line("Choose equipment before entering. Upgrades persist; shrine traits and combat levels do not.")
-	var pages := maxi(1, ceili(profile.data.inventory.size() / 4.0))
+	button("Claim Rare equipment choice" if profile.data.rare_choices > 0 else "Supply chests • %d keys" % profile.data.cache_keys, func(): page = "rare_choice" if profile.data.rare_choices > 0 else "cache"; cache_receipt = false; rebuild(), null, 40)
+	var pages := maxi(1, ceili(profile.data.inventory.size() / 3.0))
 	inventory_page = clampi(inventory_page, 0, pages - 1)
-	for index in range(inventory_page * 4, mini(profile.data.inventory.size(), inventory_page * 4 + 4)):
+	for index in range(inventory_page * 3, mini(profile.data.inventory.size(), inventory_page * 3 + 3)):
 		var item: Dictionary = profile.data.inventory[index]
 		var equipped: bool = profile.data.equipment[item.slot] == item.id
 		var node := button("%s%s • Lv %d\n%s %s" % ["◆ " if equipped else "", item.name, item.level, item.rarity.capitalize(), item.slot], func(): selected_item = item.id; message = ""; rebuild(), null, 61)
+		decorate_item_button(node, item.slot)
 		node.add_theme_color_override("font_color", Color(Content.RARITY_COLORS[Content.RARITIES.find(item.rarity)]))
 	if pages > 1:
 		button("Next page • %d/%d" % [inventory_page + 1, pages], func(): inventory_page = (inventory_page + 1) % pages; rebuild(), null, 40)
@@ -192,10 +224,30 @@ func item_page() -> void:
 		selected_item = -1
 		gear_page()
 		return
-	text_line(item.name, 24, Color(Content.RARITY_COLORS[Content.RARITIES.find(item.rarity)]))
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	body.add_child(header)
+	var icon := TextureRect.new()
+	icon.texture = item_texture(item.slot)
+	icon.custom_minimum_size = Vector2(64, 64)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	header.add_child(icon)
+	var name_label := Label.new()
+	name_label.text = item.name
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_color_override("font_color", Color(Content.RARITY_COLORS[Content.RARITIES.find(item.rarity)]))
+	header.add_child(name_label)
 	text_line("%s %s  •  Level %d/5" % [item.rarity.capitalize(), item.slot.capitalize(), item.level])
 	var stats: Dictionary = Content.item_stats(item)
 	text_line("Power %.1f   HP %.0f   Armor %.1f" % [stats.power, stats.hp, stats.armor], 16)
+	for affix in item.get("affixes", []):
+		text_line(Content.AFFIXES[affix].description, 13, Color("ba92ff"))
+	if profile.data.equipment[item.slot] != item.id:
+		var current: Dictionary = Content.item_stats(profile.item_by_id(profile.data.equipment[item.slot]))
+		text_line("Compared with equipped: Power %+.1f / HP %+.0f / Armor %+.1f" % [stats.power - current.power, stats.hp - current.hp, stats.armor - current.armor], 12)
 	if item.slot == "gadget":
 		text_line("Once per expedition: automatically restore 20% maximum HP when a nonlethal hit leaves you at 25% HP or lower. Infirmary II raises this to 25%.")
 	elif item.name.begins_with("Outrider"):

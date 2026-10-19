@@ -2,6 +2,7 @@ extends RefCounted
 ## Local, versioned Haven profile. A failed write rolls the transaction back.
 
 const Content = preload("res://haven_content.gd")
+const Loot = preload("res://loot.gd")
 const VERSION := 1
 var path := "user://haven.json"
 var data: Dictionary = {}
@@ -24,6 +25,7 @@ func fresh() -> Dictionary:
 		"facilities": {"workshop": 1, "quartermaster": 1, "infirmary": 1},
 		"next_attempt": 1, "active_attempt": {}, "last_result": {}, "last_banked": 0,
 		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false,
+		"cache_keys": 0, "cache_opened": 0, "rare_misses": 0, "epic_misses": 0, "cache_seed": randi(), "last_cache": {}, "rare_choices": 0,
 		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false}}
 
 func valid(candidate: Variant) -> bool:
@@ -33,12 +35,14 @@ func valid(candidate: Variant) -> bool:
 	for key: String in defaults:
 		if not candidate.has(key):
 			return false
-	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates"]:
+	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates", "cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "rare_choices"]:
 		if not (candidate[key] is int or candidate[key] is float) or candidate[key] < 0 or candidate[key] != floor(candidate[key]):
 			return false
 	if candidate["class"] not in Content.CLASSES or not candidate.inventory is Array or not candidate.equipment is Dictionary or not candidate.missions is Dictionary or not candidate.facilities is Dictionary or not candidate.mastery is Dictionary:
 		return false
 	if not candidate.active_attempt is Dictionary or not candidate.last_result is Dictionary or not candidate.zone_claims is Array or not candidate.cosmetics is Array or not candidate.tutorial_seen is bool:
+		return false
+	if not candidate.last_cache is Dictionary or candidate.rare_misses > 9 or candidate.epic_misses > 29:
 		return false
 	if not candidate.settings is Dictionary:
 		return false
@@ -57,6 +61,13 @@ func valid(candidate: Variant) -> bool:
 			return false
 		if not item.get("name") is String or not (item.get("level") is int or item.get("level") is float) or item.level < 1 or item.level > 30:
 			return false
+		if not item.get("affixes", []) is Array or item.get("affixes", []).size() > [0, 1, 1, 2, 3, 3][Content.RARITIES.find(item.rarity)]:
+			return false
+		var seen_affixes: Array = []
+		for affix in item.get("affixes", []):
+			if affix not in Content.AFFIXES or affix in seen_affixes or item.slot not in Content.AFFIXES[affix].slots:
+				return false
+			seen_affixes.append(affix)
 		ids.append(item.id)
 	for slot: String in Content.SLOTS:
 		if not candidate.equipment.has(slot):
@@ -90,6 +101,11 @@ func read_candidate(file_path: String) -> Variant:
 	var parsed: Variant = normalize_numbers(parser.data)
 	if parsed is Dictionary and parsed.get("version") == 1 and not parsed.has("settings"):
 		parsed.settings = fresh().settings
+	if parsed is Dictionary and parsed.get("version") == 1:
+		var defaults := fresh()
+		for key in ["cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "last_cache", "rare_choices"]:
+			if not parsed.has(key):
+				parsed[key] = defaults[key]
 	return parsed
 
 func normalize_numbers(value: Variant) -> Variant:
@@ -223,6 +239,7 @@ func promote(id: int) -> bool:
 	data.credits -= cost.credits
 	data.parts -= cost.parts
 	item_by_id(id).rarity = cost.rarity
+	item_by_id(id).affixes = Loot.affixes(item_by_id(id).slot, cost.rarity, id)
 	return commit(previous)
 
 func upgrade_facility(id: String) -> bool:
@@ -251,7 +268,7 @@ func stats() -> Dictionary:
 	var result := {"hp": 120.0 + 4.0 * (Content.survivor_level(data.survivor_xp) - 1), "power": 0.0, "armor": 0.0,
 		"speed": 1.05 if data["class"] == "scavenger" else 1.0, "pickup": 1.15 if data["class"] == "scavenger" else 1.0,
 		"capacity": 8 + int(data.facilities.quartermaster) - 1, "secure": 2,
-		"medkit": 0.25 if data.facilities.infirmary >= 2 else 0.20, "class": data["class"]}
+		"medkit": 0.25 if data.facilities.infirmary >= 2 else 0.20, "class": data["class"], "cooldown": 0.0}
 	result.blueprints = ["barricade", "trap"]
 	if "clear" in data.missions.get("1", []):
 		result.blueprints.append("turret")
@@ -264,12 +281,18 @@ func stats() -> Dictionary:
 		var values := Content.item_stats(item)
 		for stat in ["hp", "power", "armor"]:
 			result[stat] += values[stat]
+		for id: String in item.get("affixes", []):
+			var affix: Dictionary = Content.AFFIXES[id]
+			if affix.stat in ["speed", "pickup", "cooldown"]:
+				result[affix.stat] += affix.value
 		if item.name.begins_with("Outrider") and Content.RARITIES.find(item.rarity) >= 2:
 			outrider += 1
 	if outrider >= 2:
 		result.pickup += 0.15
 	if outrider >= 3:
 		result.secure += 1
+	result.speed = minf(result.speed, 1.15)
+	result.cooldown = minf(result.cooldown, 0.15)
 	return result
 
 func mission_unlocked(mission: int) -> bool:
@@ -295,21 +318,19 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 	var mission: int = attempt.mission
 	var victory: bool = outcome.get("victory", false)
 	var reward := {"victory": victory, "mission": mission, "credits": int(outcome.get("credits", 0)), "parts": 0, "gems": 0,
-		"survivor_xp": int(outcome.get("survivor_xp", 0)), "mastery_xp": int(outcome.get("mastery_xp", 0)), "gear": [], "new_medals": [], "lost": int(outcome.get("lost", 0))}
+		"survivor_xp": int(outcome.get("survivor_xp", 0)), "mastery_xp": int(outcome.get("mastery_xp", 0)), "gear": [], "new_medals": [], "lost": int(outcome.get("lost", 0)), "keys": 0}
 	for loot in outcome.get("loot", []):
 		if loot.kind == "parts":
 			reward.parts += int(loot.amount)
 		elif loot.kind == "gear":
-			var item := {"id": int(data.next_item), "slot": loot.slot, "name": loot.name, "rarity": loot.rarity, "level": 1}
+			var item := Loot.equipment(loot.slot, loot.rarity, int(data.next_item))
 			data.next_item += 1
 			data.inventory.append(item)
 			reward.gear.append(item.name)
 	if victory:
-		var scale := 1.5 if mission == 5 else 1.0
-		reward.credits += roundi(165 * scale)
-		reward.parts += roundi(3 * scale)
-		reward.survivor_xp += roundi(85 * scale)
-		reward.mastery_xp += roundi(45 * scale)
+		var base := Content.clear_rewards(mission)
+		for key in base:
+			reward[key] += base[key]
 		var earned: Array = ["clear"]
 		if outcome.get("damage_taken", 999) <= 8 and not outcome.get("rescued", false):
 			earned.append("combat")
@@ -318,6 +339,7 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 		var medals: Array = data.missions.get(str(mission), [])
 		if "clear" not in medals:
 			reward.gems += 40 if mission == 5 else 10
+			reward.keys += 1
 		for medal in earned:
 			if medal not in medals:
 				medals.append(medal)
@@ -325,9 +347,18 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 				if medal != "clear":
 					reward.credits += 55
 		data.missions[str(mission)] = medals
+		var boss_rng := RandomNumberGenerator.new()
+		boss_rng.seed = int(attempt.seed) + 47777
+		if mission < 5 and boss_rng.randf() < 0.35:
+			var slot: String = Content.SLOTS[boss_rng.randi_range(0, Content.SLOTS.size() - 1)]
+			var rarity := "uncommon" if boss_rng.randf() < 0.3 else "common"
+			var item := Loot.equipment(slot, rarity, int(data.next_item))
+			data.next_item += 1
+			data.inventory.append(item)
+			reward.gear.append(rarity.capitalize() + " " + item.name)
 		if mission == 5:
 			data.breaker_plates += 1
-			var item := {"id": int(data.next_item), "slot": "body", "name": "Outrider Vest", "rarity": "uncommon", "level": 1}
+			var item := Loot.equipment("body", "uncommon", int(data.next_item))
 			data.next_item += 1
 			data.inventory.append(item)
 			reward.gear.append(item.name)
@@ -339,16 +370,15 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 					reward.credits += 495
 				elif milestone == 10:
 					reward.parts += 20
-					var item := {"id": int(data.next_item), "slot": "weapon", "name": "Service Pistol", "rarity": "rare", "level": 1}
-					data.next_item += 1
-					data.inventory.append(item)
-					reward.gear.append("Rare Service Pistol")
+					data.rare_choices += 1
+					reward.gear.append("Rare equipment choice • claim in your armory")
 				else:
 					reward.gems += 35
 					data.cosmetics.append("Garage Lantern")
 	data.credits += reward.credits
 	data.parts += reward.parts
 	data.gems += reward.gems
+	data.cache_keys += reward.keys
 	data.survivor_xp += reward.survivor_xp
 	data.mastery[attempt["class"]] += reward.mastery_xp
 	data.last_banked = id
@@ -357,6 +387,35 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 	if not commit(previous):
 		return {}
 	return reward.duplicate(true)
+
+func open_cache(category: String) -> Dictionary:
+	if not can_change_loadout() or category not in Loot.CATEGORIES or data.cache_keys <= 0:
+		return {}
+	var previous := data.duplicate(true)
+	var roll := Loot.roll(category, int(data.cache_seed) + int(data.cache_opened) * 104729,
+		int(data.rare_misses), int(data.epic_misses), int(data.next_item))
+	data.cache_keys -= 1
+	data.cache_opened += 1
+	data.rare_misses = roll.rare_misses
+	data.epic_misses = roll.epic_misses
+	data.next_item += 1
+	data.inventory.append(roll.item)
+	data.last_cache = {"category": category, "item": roll.item.duplicate(true)}
+	if not commit(previous):
+		return {}
+	return data.last_cache.duplicate(true)
+
+func claim_rare_choice(slot: String) -> Dictionary:
+	if not can_change_loadout() or data.rare_choices <= 0 or slot not in ["weapon", "helmet", "body", "boots", "gadget"]:
+		return {}
+	var previous := data.duplicate(true)
+	var item := Loot.equipment(slot, "rare", int(data.next_item))
+	data.next_item += 1
+	data.rare_choices -= 1
+	data.inventory.append(item)
+	if not commit(previous):
+		return {}
+	return item.duplicate(true)
 
 func total_medals() -> int:
 	var count := 0

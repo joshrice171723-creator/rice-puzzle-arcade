@@ -17,6 +17,7 @@ if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/magic_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/field_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/profile_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/loot_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/defenses_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/reward_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/ui_test.gd')

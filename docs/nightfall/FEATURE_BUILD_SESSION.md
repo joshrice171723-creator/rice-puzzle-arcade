@@ -41,3 +41,11 @@ Google's [rewarded-ad documentation](https://developers.google.com/admob/android
 - Eight attacks: Ember Bolt, Frost Ring, Chain Spark, Orbiting Wisp, Stone Lance, Consecrated Ground, Spectral Blades, Gravity Knot. Three attack slots, three passive slots, bounded ranks, five paired evolutions, separate offer RNG, checkpointed area and orbit state.
 - Upper-left artwork strip with rank diamonds, evolved label and cooldown shading; paused Attacks/Passives/Relics inspection pages. Original transparent eight-icon atlas, also used in world effects.
 - 54 new automatic-combat checks, 51 populated phone HUD checks; full current suite 740 checks passing. Static rendered fixture: `artifacts/nightfall-godot/ability-hud.png`. No manual gameplay.
+
+## Loot and preparation
+
+- First campaign clears grant earned chest keys. Supply, Weapons, Armor and Engineer categories share rare-within-10 / epic-within-30 guarantees. Base odds are shown; no paid chest flow or real-money wallet is enabled.
+- Common through Epic equipment now has bounded, slot-appropriate affixes. Actual Power, HP, armor, movement, pickup and spell cooldown use these bonuses; movement and cooldown remain capped.
+- Original item artwork, comparison stats, saved chest receipts, transactional opening, mission reward previews and a selectable Rare ten-medal reward.
+- Missions 1–4 have a separate seeded 35% equipment roll; mission 5 keeps its guaranteed Uncommon vest. First-clear and repeat rewards stay distinct.
+- Ten-second boss warning, nearby drop collection on victory, six living / twenty-four total Caller reinforcement limits.

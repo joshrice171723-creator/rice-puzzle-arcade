@@ -94,6 +94,18 @@ func _initialize() -> void:
 	check(r.enemies.size() == 5, "Porchcaller summons four bounded ordinary enemies")
 	for enemy in r.enemies:
 		check(enemy.pos.distance_to(r.player) >= 80, "Summoned enemies cannot appear on top of the player")
+	for cast in 12:
+		boss.attack = "summon"
+		boss.tell = 0.01
+		r.tick_enemy(boss, 0.02)
+	check(r.enemies.size() == 7 and r.reinforcements_spawned == 6, "Caller has at most six living reinforcements")
+	for cast in 12:
+		for enemy in r.enemies:
+			if not enemy.boss:
+				enemy.hp = 0
+		boss.tell = 0.01
+		r.tick_enemy(boss, 0.02)
+	check(r.reinforcements_spawned == 24, "Total summoned rewards are bounded even in a prolonged boss fight")
 	var copy = Run.new()
 	check(copy.restore(r.snapshot()), "Defense-capable run snapshot restores")
 	print("Nightfall defenses and bosses: %d checks, %d failures" % [checks, failures])

@@ -50,11 +50,7 @@ func available(site: Dictionary) -> bool:
 func tick(delta: float, position: Vector2) -> bool:
 	if active_site >= 0:
 		return false
-	for i in range(drops.size() - 1, -1, -1):
-		if position.distance_to(drops[i].pos) < 36.0:
-			credits += drops[i].credits
-			scrap += drops[i].scrap
-			drops.remove_at(i)
+	collect_drops(position, 36.0)
 	for index in sites.size():
 		var site := sites[index]
 		site.cooldown = maxf(0, site.cooldown - delta)
@@ -81,6 +77,13 @@ func tick(delta: float, position: Vector2) -> bool:
 		revision += 1
 		return true
 	return false
+
+func collect_drops(position: Vector2, radius: float) -> void:
+	for i in range(drops.size() - 1, -1, -1):
+		if position.distance_to(drops[i].pos) <= radius:
+			credits += drops[i].credits
+			scrap += drops[i].scrap
+			drops.remove_at(i)
 
 func add_drop(position: Vector2, credit_value: int, scrap_value: int) -> void:
 	# Merge nearby coins before applying a hard bound; never create hundreds of objects.
