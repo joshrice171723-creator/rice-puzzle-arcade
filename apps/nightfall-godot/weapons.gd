@@ -49,8 +49,12 @@ static func fire(run: RefCounted, target: Dictionary) -> bool:
 		var direction := aim.rotated((index - (int(spec.count) - 1) * 0.5) * 0.15)
 		var shot := {"pos":run.player, "velocity":direction * float(spec.speed), "direction":direction,
 			"life":float(spec.range) / maxf(1.0, spec.speed), "kind":run.weapon_id, "basic":true,
-			"elemental":spec.elemental, "damage":run.damage * run.field.damage_multiplier() * float(spec.scale),
+			"elemental":spec.elemental, "damage":run.damage * run.field.damage_multiplier() * float(spec.scale)*(1+run.talent_effects.basic_damage),
 			"pierce":int(spec.pierce) + run.passive_rank("pierce"), "hits":[]}
+		# Render-only launch data. Collision still starts at player feet with the same velocity.
+		shot.visual_launch = {"origin":run.player,"aim":aim,"class_id":run.class_id,
+			"face":-1.0 if aim.x < 0 else 1.0,"clock":run.elapsed,
+			"contact_distance":maxf(0.0,run.player.distance_to(target.pos)-(32.0 if target.get("boss",false) else 17.0))}
 		if run.weapon_id == "sabre":
 			shot.life = 0.24
 			shot.delay = 0.10

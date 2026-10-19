@@ -31,6 +31,11 @@ static func cost(home: Control, parent: Node, values: Dictionary) -> void:
 	MenuSkin.cost_row(parent, home.profile, values)
 
 static func item_tile(home: Control, parent: Node, item: Dictionary, height: int = 72) -> Button:
+	if item.is_empty():
+		var empty: Button = home.button("Empty",func(): pass,parent,height)
+		empty.disabled = true
+		empty.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		return empty
 	var node: Button = home.button("Lv.%d" % item.level, func(): pass, parent, height)
 	node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	node.icon = home.item_texture(item.slot, item)
@@ -54,6 +59,7 @@ static func item_tile(home: Control, parent: Node, item: Dictionary, height: int
 	disabled.modulate_color = Color("8b99b3")
 	node.add_theme_stylebox_override("disabled", disabled)
 	node.tooltip_text = "%s · %s · Level %d" % [item.name, item.rarity.capitalize(), item.level]
+	node.tooltip_text += "\n" + home.profile.equipment_requirement_reason(item)
 	return node
 
 static func item_heading(home: Control, parent: Node, item: Dictionary, subtitle: String) -> void:

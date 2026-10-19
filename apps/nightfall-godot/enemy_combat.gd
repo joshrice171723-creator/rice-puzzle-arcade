@@ -46,7 +46,7 @@ static func tick(run: RefCounted, enemy: Dictionary, delta: float) -> void:
 		var goal: Vector2 = run.player if blocker.is_empty() else blocker.pos
 		var distance := pos.distance_to(goal)
 		var attack := next_attack(run, enemy) if blocker.is_empty() else "swipe"
-		var reach := 275.0 if enemy.kind == "spitter" else (58.0 if enemy.kind == "runner" else 38.0)
+		var reach := 300.0 if enemy.kind == "hexer" else (275.0 if enemy.kind == "spitter" else (72.0 if enemy.kind == "bulwark" else (58.0 if enemy.kind == "runner" else 38.0)))
 		if enemy.boss:
 			reach = 110.0 if attack == "slam" else 420.0
 		if not blocker.is_empty():
@@ -59,14 +59,14 @@ static func tick(run: RefCounted, enemy: Dictionary, delta: float) -> void:
 			enemy.attack = attack
 			if blocker.is_empty():
 				enemy.cycle += 1
-			enemy.windup = (1.15 if run.mission == 1 else (0.8 if run.mission == 2 else 0.95)) if enemy.boss else (0.65 if attack == "spit" else (0.34 if attack == "pounce" else 0.42))
+			enemy.windup = (1.15 if run.mission == 1 else (0.8 if run.mission == 2 else 0.95)) if enemy.boss else (1.0 if attack == "hex" else (0.85 if attack == "cleave" else (0.65 if attack == "spit" else (0.34 if attack == "pounce" else 0.42))))
 			enemy.tell = enemy.windup
 		else:
 			enemy.forward = pos.direction_to(goal)
 			enemy.face = -1.0 if enemy.forward.x < 0 else 1.0
 			var slow := (0.9 if enemy.boss else 0.6) if enemy.chill > 0 else 1.0
 			var direction: Vector2 = enemy.forward
-			if enemy.kind == "spitter":
+			if enemy.kind in ["spitter","hexer"]:
 				if distance < 130:
 					direction = -direction
 				elif distance <= 210:
@@ -87,7 +87,7 @@ static func next_attack(run: RefCounted, enemy: Dictionary) -> String:
 				if option != "slam":
 					return option
 		return next
-	return "spit" if enemy.kind == "spitter" else ("pounce" if enemy.kind == "runner" else "swipe")
+	return {"spitter":"spit","runner":"pounce","bulwark":"cleave","hexer":"hex"}.get(enemy.kind,"swipe")
 
 static func strike(run: RefCounted, enemy: Dictionary) -> void:
 	var pos: Vector2 = enemy.pos
@@ -115,6 +115,16 @@ static func strike(run: RefCounted, enemy: Dictionary) -> void:
 					run.hurt(enemy.contact)
 			run.add_vfx("enemy_swipe", pos, enemy.forward, 0.26)
 			enemy.recover = 0.55
+		"cleave":
+			var offset: Vector2 = run.player-pos
+			if offset.length() <= 80 and (offset.length()<10 or offset.normalized().dot(enemy.forward)>0.15):
+				run.hurt(enemy.contact)
+			run.add_vfx("enemy_cleave",pos,enemy.forward,0.55)
+			enemy.recover = 0.95
+		"hex":
+			for angle in [-0.28,0.0,0.28]:
+				run.hostile_projectile(pos,pos.direction_to(enemy.target).rotated(angle),9.0*enemy.get("damage_scale",1.0),145.0,0.0,"hex")
+			enemy.recover = 0.75
 		"slam":
 			run.add_effect("slam", enemy.target, enemy.target, 0.65)
 			if run.player.distance_to(enemy.target) <= 80:
@@ -125,7 +135,7 @@ static func strike(run: RefCounted, enemy: Dictionary) -> void:
 				run.hostile_projectile(pos, pos.direction_to(enemy.target).rotated(angle), 16.0, 190.0, 0.0, "rubble")
 			enemy.recover = 0.55
 		"spit":
-			run.hostile_projectile(pos, pos.direction_to(enemy.target), 12.0, 170.0, 2.0, "spit")
+			run.hostile_projectile(pos, pos.direction_to(enemy.target), 12.0*enemy.get("damage_scale",1.0), 170.0, 2.0, "spit")
 			enemy.recover = 0.45
 		"summon":
 			for count in 4:
@@ -142,6 +152,6 @@ static func strike(run: RefCounted, enemy: Dictionary) -> void:
 					run.add_vfx("spawn", run.enemies.back().pos, Vector2.UP, 0.55)
 			run.add_effect("summon", pos, pos, 0.8)
 			enemy.recover = 0.75
-	enemy.attack_wait = (1.6 if enemy.hp < enemy.max_hp * 0.5 else 2.4) if enemy.boss else (3.4 if enemy.kind == "spitter" else 1.15)
+	enemy.attack_wait = (1.6 if enemy.hp < enemy.max_hp * 0.5 else 2.4) if enemy.boss else (4.2 if enemy.kind == "hexer" else (2.2 if enemy.kind == "bulwark" else (3.4 if enemy.kind == "spitter" else 1.15)))
 	if run.mission == 5 and enemy.attack == "rush" and enemy.hp < enemy.max_hp * 0.5:
 		enemy.attack_wait = 1.8

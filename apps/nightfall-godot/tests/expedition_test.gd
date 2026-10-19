@@ -70,6 +70,13 @@ func journey() -> void:
 	var restored = Profile.new(PATH)
 	check(restored.load_save() and restored.saved_run().rescued, "Earned rescue is durable before video closure")
 	arena.run.paused = false
+	# Earn enough actual damage XP to qualify for the level-two weapon bought below.
+	# The fixture keeps its rescue/transaction journey deterministic without full wave AI.
+	for index in ceili(arena.run.Training.threshold(3)/2.4):
+		arena.run.spawn_enemy()
+		var training_target: Dictionary = arena.run.enemies.back()
+		arena.run.damage_enemy(training_target,training_target.hp,arena.run.player)
+		arena.run.enemies.erase(training_target)
 	arena.run.phase = "victory"
 	arena.run.field.caches_opened = 3
 	arena.run.damage_taken = 2
@@ -108,7 +115,7 @@ func journey() -> void:
 	arena.show_haven()
 	arena.abandon_campaign()
 	check(arena.profile.data.active_attempt.is_empty() and arena.profile.data.last_result.parts == 5 and arena.profile.data.last_result.lost == 1, "Abandon banks protected loot and loses unsecured gear exactly once")
-	check(arena.profile.data.last_result.combat_xp == pending_xp, "Ending saved expedition banks all recovered combat XP")
+	check(arena.run.Training.STATS.all(func(stat: String): return is_equal_approx(arena.profile.data.last_result.combat_xp[stat],pending_xp[stat])), "Ending saved expedition banks all recovered combat XP")
 	arena.queue_free()
 	await process_frame
 	cleanup()

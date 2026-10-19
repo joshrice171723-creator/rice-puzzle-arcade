@@ -1,0 +1,764 @@
+{
+  "status": "calculated legal route examples, not optimized builds or runtime simulation",
+  "rows_by_index": [
+    0,
+    1,
+    1,
+    2,
+    2,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6
+  ],
+  "parent_rule": "any full parent",
+  "gates_count": "points in earlier visual rows across branches",
+  "examples": [
+    {
+      "class": "scavenger",
+      "budget": 1,
+      "allocation": {
+        "precision_sure_shot": 1
+      },
+      "effects": {
+        "basic_damage": 0.02
+      },
+      "branch_points": [
+        {
+          "branch": "Precision",
+          "points": 1
+        },
+        {
+          "branch": "Scavenge",
+          "points": 0
+        },
+        {
+          "branch": "Mobility",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "scavenger",
+      "budget": 25,
+      "allocation": {
+        "precision_sure_shot": 5,
+        "blades": 1,
+        "precision_spectral_edge": 5,
+        "lance": 1,
+        "precision_needlepoint": 5,
+        "precision_quick_blades": 4,
+        "precision_lance_drill": 4
+      },
+      "effects": {
+        "basic_damage": 0.1,
+        "spell_damage_by_id": {
+          "blades": 0.2,
+          "lance": 0.2
+        },
+        "spell_cooldown_by_id": {
+          "blades": 0.08,
+          "lance": 0.08
+        }
+      },
+      "branch_points": [
+        {
+          "branch": "Precision",
+          "points": 25
+        },
+        {
+          "branch": "Scavenge",
+          "points": 0
+        },
+        {
+          "branch": "Mobility",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "scavenger",
+      "budget": 50,
+      "allocation": {
+        "precision_sure_shot": 5,
+        "blades": 1,
+        "precision_spectral_edge": 5,
+        "lance": 1,
+        "precision_needlepoint": 5,
+        "precision_quick_blades": 4,
+        "precision_lance_drill": 4,
+        "precision_measured_fire": 4,
+        "mobility_light_foot": 5,
+        "mobility_rolling_escape": 3,
+        "precision_phase_rhythm": 4,
+        "precision_braced_aim": 3,
+        "precision_conductive_shot": 3,
+        "precision_quick_relay": 3
+      },
+      "effects": {
+        "basic_damage": 0.16,
+        "spell_damage_by_id": {
+          "blades": 0.2,
+          "lance": 0.2,
+          "chain": 0.15000000000000002
+        },
+        "spell_cooldown_by_id": {
+          "blades": 0.08,
+          "lance": 0.08,
+          "chain": 0.09
+        },
+        "class_cooldown": 0.08,
+        "armor": 6,
+        "speed": 0.05,
+        "dodge_cooldown": 0.06
+      },
+      "branch_points": [
+        {
+          "branch": "Precision",
+          "points": 42
+        },
+        {
+          "branch": "Scavenge",
+          "points": 0
+        },
+        {
+          "branch": "Mobility",
+          "points": 8
+        }
+      ]
+    },
+    {
+      "class": "scavenger",
+      "budget": 99,
+      "allocation": {
+        "precision_sure_shot": 5,
+        "blades": 1,
+        "precision_spectral_edge": 5,
+        "lance": 1,
+        "precision_needlepoint": 5,
+        "precision_quick_blades": 4,
+        "precision_lance_drill": 4,
+        "precision_measured_fire": 4,
+        "mobility_light_foot": 5,
+        "mobility_rolling_escape": 5,
+        "precision_phase_rhythm": 4,
+        "precision_braced_aim": 3,
+        "precision_conductive_shot": 3,
+        "precision_quick_relay": 3,
+        "mobility_phase_practice": 5,
+        "gravity": 1,
+        "mobility_clearing_knot": 4,
+        "precision_storm_followthrough": 3,
+        "precision_deadeye": 2,
+        "mobility_knot_rhythm": 4,
+        "mobility_winter_shelter": 4,
+        "mobility_cold_wake": 4,
+        "mobility_winter_rhythm": 3,
+        "mobility_second_wind": 3,
+        "mobility_unburdened": 3,
+        "mobility_covering_turret": 3,
+        "mobility_emergency_dressings": 2,
+        "scavenge_trail_finder": 5,
+        "scavenge_practiced_hands": 1
+      },
+      "effects": {
+        "basic_damage": 0.2,
+        "spell_damage_by_id": {
+          "blades": 0.2,
+          "lance": 0.2,
+          "chain": 0.24000000000000002,
+          "gravity": 0.16,
+          "frost": 0.16
+        },
+        "spell_cooldown_by_id": {
+          "blades": 0.08,
+          "lance": 0.08,
+          "chain": 0.09,
+          "gravity": 0.08,
+          "frost": 0.09
+        },
+        "class_cooldown": 0.18,
+        "armor": 6,
+        "pickup": 0.2,
+        "interact_speed": 0.03,
+        "speed": 0.08,
+        "dodge_cooldown": 0.17500000000000002,
+        "shield": 0.1,
+        "structure_damage": 0.12,
+        "medkit": 0.01
+      },
+      "branch_points": [
+        {
+          "branch": "Precision",
+          "points": 47
+        },
+        {
+          "branch": "Scavenge",
+          "points": 6
+        },
+        {
+          "branch": "Mobility",
+          "points": 46
+        }
+      ]
+    },
+    {
+      "class": "engineer",
+      "budget": 1,
+      "allocation": {
+        "machines_calibrated_turrets": 1
+      },
+      "effects": {
+        "structure_damage": 0.03
+      },
+      "branch_points": [
+        {
+          "branch": "Machines",
+          "points": 1
+        },
+        {
+          "branch": "Energy",
+          "points": 0
+        },
+        {
+          "branch": "Fortification",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "engineer",
+      "budget": 25,
+      "allocation": {
+        "machines_calibrated_turrets": 5,
+        "machines_reinforced_chassis": 5,
+        "machines_sidearm_drills": 5,
+        "machines_service_tools": 4,
+        "blades": 1,
+        "machines_spectral_cutters": 4,
+        "machines_drive_calibration": 1
+      },
+      "effects": {
+        "structure_damage": 0.16499999999999998,
+        "structure_hp": 0.2,
+        "basic_damage": 0.1,
+        "repair": 0.16,
+        "spell_damage_by_id": {
+          "blades": 0.16
+        }
+      },
+      "branch_points": [
+        {
+          "branch": "Machines",
+          "points": 25
+        },
+        {
+          "branch": "Energy",
+          "points": 0
+        },
+        {
+          "branch": "Fortification",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "engineer",
+      "budget": 50,
+      "allocation": {
+        "machines_calibrated_turrets": 5,
+        "machines_reinforced_chassis": 5,
+        "machines_sidearm_drills": 5,
+        "machines_service_tools": 4,
+        "blades": 1,
+        "machines_spectral_cutters": 4,
+        "machines_drive_calibration": 4,
+        "fortification_worksite_resolve": 5,
+        "fortification_plate_harness": 3,
+        "lance": 1,
+        "machines_piledriver": 4,
+        "machines_redundant_bracing": 3,
+        "machines_cutter_timing": 3,
+        "machines_piston_timing": 3
+      },
+      "effects": {
+        "structure_damage": 0.21,
+        "structure_hp": 0.29000000000000004,
+        "basic_damage": 0.1,
+        "repair": 0.16,
+        "spell_damage_by_id": {
+          "blades": 0.16,
+          "lance": 0.16
+        },
+        "spell_cooldown_by_id": {
+          "blades": 0.09,
+          "lance": 0.09
+        },
+        "hp": 0.1,
+        "armor": 6
+      },
+      "branch_points": [
+        {
+          "branch": "Machines",
+          "points": 42
+        },
+        {
+          "branch": "Energy",
+          "points": 0
+        },
+        {
+          "branch": "Fortification",
+          "points": 8
+        }
+      ]
+    },
+    {
+      "class": "engineer",
+      "budget": 99,
+      "allocation": {
+        "machines_calibrated_turrets": 5,
+        "machines_reinforced_chassis": 5,
+        "machines_sidearm_drills": 5,
+        "machines_service_tools": 4,
+        "blades": 1,
+        "machines_spectral_cutters": 4,
+        "machines_drive_calibration": 4,
+        "fortification_worksite_resolve": 5,
+        "fortification_plate_harness": 5,
+        "lance": 1,
+        "machines_piledriver": 4,
+        "machines_redundant_bracing": 3,
+        "machines_cutter_timing": 3,
+        "machines_piston_timing": 3,
+        "fortification_shield_lattice": 5,
+        "fortification_rapid_setup": 4,
+        "machines_precision_repairs": 3,
+        "machines_siege_calibration": 2,
+        "ground": 1,
+        "fortification_anchored_ground": 4,
+        "fortification_ground_cycling": 4,
+        "fortification_exit_route": 4,
+        "fortification_enduring_crew": 3,
+        "fortification_riveted_plates": 3,
+        "fortification_field_triage": 3,
+        "fortification_supply_sweep": 3,
+        "fortification_layered_lattice": 2,
+        "energy_swarm_cycling": 5,
+        "energy_charged_relay": 1
+      },
+      "effects": {
+        "structure_damage": 0.25,
+        "structure_hp": 0.29000000000000004,
+        "basic_damage": 0.1,
+        "repair": 0.28,
+        "spell_damage_by_id": {
+          "blades": 0.16,
+          "lance": 0.16,
+          "chain": 0.04,
+          "ground": 0.16
+        },
+        "spell_cooldown_by_id": {
+          "blades": 0.09,
+          "lance": 0.09,
+          "ground": 0.08
+        },
+        "class_cooldown": 0.1,
+        "hp": 0.16,
+        "armor": 16,
+        "shield": 0.18,
+        "interact_speed": 0.16,
+        "dodge_cooldown": 0.12,
+        "medkit": 0.03,
+        "pickup": 0.15000000000000002
+      },
+      "branch_points": [
+        {
+          "branch": "Machines",
+          "points": 47
+        },
+        {
+          "branch": "Energy",
+          "points": 6
+        },
+        {
+          "branch": "Fortification",
+          "points": 46
+        }
+      ]
+    },
+    {
+      "class": "warden",
+      "budget": 1,
+      "allocation": {
+        "guard_iron_guard": 1
+      },
+      "effects": {
+        "armor": 2
+      },
+      "branch_points": [
+        {
+          "branch": "Guard",
+          "points": 1
+        },
+        {
+          "branch": "Retribution",
+          "points": 0
+        },
+        {
+          "branch": "Sanctuary",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "warden",
+      "budget": 25,
+      "allocation": {
+        "guard_iron_guard": 5,
+        "guard_stalwart": 5,
+        "guard_deep_aegis": 5,
+        "guard_aegis_vigil": 4,
+        "guard_defensive_works": 4,
+        "guard_layered_aegis": 2
+      },
+      "effects": {
+        "armor": 10,
+        "hp": 0.1,
+        "shield": 0.14,
+        "class_cooldown": 0.12,
+        "structure_hp": 0.2
+      },
+      "branch_points": [
+        {
+          "branch": "Guard",
+          "points": 25
+        },
+        {
+          "branch": "Retribution",
+          "points": 0
+        },
+        {
+          "branch": "Sanctuary",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "warden",
+      "budget": 50,
+      "allocation": {
+        "guard_iron_guard": 5,
+        "guard_stalwart": 5,
+        "guard_deep_aegis": 5,
+        "guard_aegis_vigil": 4,
+        "guard_defensive_works": 4,
+        "guard_layered_aegis": 4,
+        "sanctuary_hallowed_ground": 5,
+        "sanctuary_sanctuary_rhythm": 5,
+        "guard_winter_wall": 4,
+        "guard_tempered_guard": 3,
+        "guard_winter_vigil": 3,
+        "guard_unbroken": 3
+      },
+      "effects": {
+        "armor": 16,
+        "hp": 0.16,
+        "shield": 0.18,
+        "class_cooldown": 0.12,
+        "structure_hp": 0.2,
+        "spell_damage_by_id": {
+          "frost": 0.16,
+          "ground": 0.2
+        },
+        "spell_cooldown_by_id": {
+          "frost": 0.09,
+          "ground": 0.1
+        }
+      },
+      "branch_points": [
+        {
+          "branch": "Guard",
+          "points": 40
+        },
+        {
+          "branch": "Retribution",
+          "points": 0
+        },
+        {
+          "branch": "Sanctuary",
+          "points": 10
+        }
+      ]
+    },
+    {
+      "class": "warden",
+      "budget": 99,
+      "allocation": {
+        "guard_iron_guard": 5,
+        "guard_stalwart": 5,
+        "guard_deep_aegis": 5,
+        "guard_aegis_vigil": 4,
+        "guard_defensive_works": 4,
+        "guard_layered_aegis": 4,
+        "sanctuary_hallowed_ground": 5,
+        "sanctuary_sanctuary_rhythm": 5,
+        "guard_winter_wall": 4,
+        "guard_tempered_guard": 3,
+        "guard_winter_vigil": 3,
+        "guard_unbroken": 3,
+        "sanctuary_healing_stores": 5,
+        "sanctuary_pilgrim_s_reach": 4,
+        "sanctuary_mending_works": 4,
+        "guard_resolute_step": 3,
+        "guard_constant_vigil": 2,
+        "wisp": 1,
+        "sanctuary_guardian_wisp": 4,
+        "sanctuary_quiet_focus": 4,
+        "sanctuary_sheltered_works": 3,
+        "ember": 1,
+        "sanctuary_vigil_flame": 3,
+        "sanctuary_vigil_rhythm": 3,
+        "sanctuary_sacred_routine": 3,
+        "sanctuary_pilgrim_s_pace": 2,
+        "retribution_firm_hand": 5,
+        "retribution_judgment_lance": 2
+      },
+      "effects": {
+        "armor": 16,
+        "hp": 0.16,
+        "shield": 0.18,
+        "class_cooldown": 0.18,
+        "structure_hp": 0.29000000000000004,
+        "spell_damage_by_id": {
+          "frost": 0.16,
+          "lance": 0.08,
+          "ground": 0.2,
+          "wisp": 0.2,
+          "ember": 0.15000000000000002
+        },
+        "spell_cooldown_by_id": {
+          "frost": 0.09,
+          "ground": 0.1,
+          "ember": 0.09
+        },
+        "dodge_cooldown": 0.12,
+        "basic_damage": 0.1,
+        "medkit": 0.05,
+        "pickup": 0.2,
+        "repair": 0.2,
+        "cooldown": 0.04,
+        "interact_speed": 0.15000000000000002,
+        "speed": 0.04
+      },
+      "branch_points": [
+        {
+          "branch": "Guard",
+          "points": 45
+        },
+        {
+          "branch": "Retribution",
+          "points": 7
+        },
+        {
+          "branch": "Sanctuary",
+          "points": 47
+        }
+      ]
+    },
+    {
+      "class": "arcanist",
+      "budget": 1,
+      "allocation": {
+        "fire_kindled_ember": 1
+      },
+      "effects": {
+        "spell_damage_by_id": {
+          "ember": 0.04
+        }
+      },
+      "branch_points": [
+        {
+          "branch": "Fire",
+          "points": 1
+        },
+        {
+          "branch": "Frost",
+          "points": 0
+        },
+        {
+          "branch": "Arcane",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "arcanist",
+      "budget": 25,
+      "allocation": {
+        "fire_kindled_ember": 5,
+        "fire_ember_rhythm": 5,
+        "fire_wand_practice": 5,
+        "fire_heat_hardened": 4,
+        "chain": 1,
+        "fire_conductive_sparks": 4,
+        "fire_focused_flame": 1
+      },
+      "effects": {
+        "spell_damage_by_id": {
+          "ember": 0.2,
+          "chain": 0.16
+        },
+        "spell_cooldown_by_id": {
+          "ember": 0.1
+        },
+        "basic_damage": 0.1,
+        "hp": 0.08,
+        "spell_damage": 0.02
+      },
+      "branch_points": [
+        {
+          "branch": "Fire",
+          "points": 25
+        },
+        {
+          "branch": "Frost",
+          "points": 0
+        },
+        {
+          "branch": "Arcane",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "arcanist",
+      "budget": 50,
+      "allocation": {
+        "fire_kindled_ember": 5,
+        "fire_ember_rhythm": 5,
+        "fire_wand_practice": 5,
+        "fire_heat_hardened": 4,
+        "chain": 1,
+        "fire_conductive_sparks": 4,
+        "fire_focused_flame": 4,
+        "frost_deep_frost": 5,
+        "frost_frost_rhythm": 4,
+        "fire_spark_rhythm": 4,
+        "fire_ember_salves": 3,
+        "fire_furnace_works": 3,
+        "fire_deep_combustion": 3
+      },
+      "effects": {
+        "spell_damage_by_id": {
+          "ember": 0.23,
+          "chain": 0.16,
+          "frost": 0.2
+        },
+        "spell_cooldown_by_id": {
+          "ember": 0.1,
+          "chain": 0.08,
+          "frost": 0.08
+        },
+        "basic_damage": 0.1,
+        "hp": 0.08,
+        "spell_damage": 0.08,
+        "medkit": 0.03,
+        "structure_damage": 0.15000000000000002
+      },
+      "branch_points": [
+        {
+          "branch": "Fire",
+          "points": 41
+        },
+        {
+          "branch": "Frost",
+          "points": 9
+        },
+        {
+          "branch": "Arcane",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "class": "arcanist",
+      "budget": 99,
+      "allocation": {
+        "fire_kindled_ember": 5,
+        "fire_ember_rhythm": 5,
+        "fire_wand_practice": 5,
+        "fire_heat_hardened": 4,
+        "chain": 1,
+        "fire_conductive_sparks": 4,
+        "fire_focused_flame": 4,
+        "frost_deep_frost": 5,
+        "frost_frost_rhythm": 5,
+        "fire_spark_rhythm": 4,
+        "fire_ember_salves": 3,
+        "fire_furnace_works": 3,
+        "fire_deep_combustion": 3,
+        "frost_crystalline_shield": 5,
+        "lance": 1,
+        "frost_glacial_lance": 4,
+        "fire_pulse_ignition": 3,
+        "fire_blazing_focus": 2,
+        "frost_rime_armor": 4,
+        "ground": 1,
+        "frost_frozen_ground": 4,
+        "frost_lance_rhythm": 4,
+        "frost_ground_rhythm": 3,
+        "frost_winter_endurance": 3,
+        "frost_gliding_escape": 3,
+        "frost_cold_repairs": 3,
+        "frost_perfected_crystal": 2,
+        "arcane_arcane_channels": 5,
+        "arcane_empowered_wisp": 1
+      },
+      "effects": {
+        "spell_damage_by_id": {
+          "ember": 0.23,
+          "chain": 0.16,
+          "frost": 0.2,
+          "lance": 0.16,
+          "ground": 0.16,
+          "wisp": 0.04
+        },
+        "spell_cooldown_by_id": {
+          "ember": 0.1,
+          "chain": 0.08,
+          "frost": 0.1,
+          "lance": 0.08,
+          "ground": 0.09
+        },
+        "basic_damage": 0.1,
+        "hp": 0.14,
+        "spell_damage": 0.12,
+        "medkit": 0.03,
+        "structure_damage": 0.15000000000000002,
+        "class_cooldown": 0.06,
+        "shield": 0.19,
+        "armor": 8,
+        "dodge_cooldown": 0.12,
+        "repair": 0.15000000000000002,
+        "cooldown": 0.05
+      },
+      "branch_points": [
+        {
+          "branch": "Fire",
+          "points": 46
+        },
+        {
+          "branch": "Frost",
+          "points": 47
+        },
+        {
+          "branch": "Arcane",
+          "points": 6
+        }
+      ]
+    }
+  ]
+}

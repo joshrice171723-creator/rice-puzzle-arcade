@@ -44,7 +44,7 @@ static func cast(run: RefCounted, id: String, scale: float, target: Dictionary) 
 
 			run.zones.append({"kind":"gravity_pull", "pos":center, "life":0.6, "dps":0.0,
 				"pull":run.spell_mod(id,"pull",80.0), "radius":radius,
-				"damage":8 * run.spell_scale() if run.spells[id].get("evolved",false) else 0.0})
+				"damage":8 * run.spell_scale(id) if run.spells[id].get("evolved",false) else 0.0})
 			run.add_effect("gravity", center, center + Vector2(radius, 0), 0.6)
 		_:
 			return false
@@ -76,7 +76,7 @@ static func tick(run: RefCounted, delta: float) -> void:
 	run.zones = run.zones.filter(func(zone: Dictionary): return zone.life > 0)
 	if not run.spells.has("wisp"):
 		return
-	var scale: float = (1.0 + 0.25 * (run.spells.wisp.rank - 1)) * run.spell_scale() * run.spell_mod("wisp", "damage")
+	var scale: float = (1.0 + 0.25 * (run.spells.wisp.rank - 1)) * run.spell_scale("wisp") * run.spell_mod("wisp", "damage")
 	var alive: Array[int] = []
 	for enemy in run.enemies:
 		if enemy.hp <= 0:

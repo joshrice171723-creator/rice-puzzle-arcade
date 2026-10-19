@@ -43,7 +43,7 @@ func verify() -> void:
 		check(not arena.metrics.visible, "Debug and wave text do not clutter normal combat")
 		for control in [arena.hud_root, arena.power_hud, arena.pause_button, arena.pack_button, arena.build_button, arena.dodge_button]:
 			check(root.get_visible_rect().encloses(control.get_global_rect()), "Combat controls remain inside the phone screen")
-		for position in [Vector2(135, 135), Vector2(600, 600), Vector2(1065, 1065)]:
+		for position in [arena.run.BOUNDS.position, arena.run.World.CENTER, arena.run.BOUNDS.end]:
 			arena.run.player = position
 			await settle()
 			var health_rect: Rect2 = arena.health_bar.get_global_rect()

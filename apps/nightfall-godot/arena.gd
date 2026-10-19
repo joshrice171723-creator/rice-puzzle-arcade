@@ -3,6 +3,7 @@ extends Node2D
 const Shapes = preload("res://draw_shapes.gd")
 const CombatEffects = preload("res://combat_effects.gd")
 const WorldArt = preload("res://world_art.gd")
+const Neighborhood = preload("res://neighborhood.gd")
 const EnemyMotion = preload("res://enemy_motion.gd")
 const CombatVFX = preload("res://combat_vfx.gd")
 const HeroCast = preload("res://hero_cast.gd")
@@ -36,7 +37,7 @@ var moving := false
 var anim_time := 0.0
 var hero_stride := 0.0
 var hero_move_blend := 0.0
-var hero_last_position := Vector2(600,600)
+var hero_last_position := Run.World.CENTER
 var hud: Label
 var hud_root: Control
 var level_label: Label
@@ -141,7 +142,7 @@ func _ready() -> void:
 		add_child(vfx_preview)
 
 func _notification(what: int) -> void:
-	if vfx_preview != null:
+	if testing or vfx_preview != null:
 		return # Automated debug recording owns its explicit pause/resume stage.
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
 		if is_instance_valid(soundscape):
@@ -779,7 +780,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if run.paused or run.phase not in ["waves", "boss"]:
 		return
 	if event is InputEventScreenTouch:
-		if event.pressed and event.position.x < 230 and event.position.y > 220 and touch_id == -1:
+		if event.pressed and touch_id == -1 and not mouse_stick:
 			touch_id = event.index
 			stick_origin = event.position
 		elif not event.pressed and event.index == touch_id:
@@ -787,7 +788,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag and event.index == touch_id:
 		stick = ((event.position - stick_origin) / 50.0).limit_length()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed and event.position.x < 230 and event.position.y > 220:
+		if event.pressed and touch_id == -1:
 			mouse_stick = true
 			stick_origin = event.position
 		elif not event.pressed:
@@ -837,7 +838,7 @@ func _process(delta: float) -> void:
 		if travel < 30:
 			hero_stride += travel*TAU/36.0
 	hero_last_position = run.player
-	world_offset = Vector2(215, 400) - run.player.clamp(Vector2(215, 240), Vector2(985, 920))
+	world_offset = Vector2(215,400)-run.player.clamp(Vector2(215,400),Run.World.SIZE-Vector2(215,360))
 	health_bar.value = run.health
 	health_bar.max_value = run.max_health()
 	# Reapply compact geometry after the controls inherit their live theme.
@@ -845,7 +846,7 @@ func _process(delta: float) -> void:
 	xp_bar.size = Vector2(398, 9)
 	boss_bar.size = Vector2(398, 6)
 	health_bar.position = run.player + world_offset - Vector2(23, 80)
-	health_bar.visible = in_field and not modal.visible
+	health_bar.visible = in_field and not modal.visible and profile.data.settings.get("health_bars",true)
 	pack_button.visible = in_field and not run.practice and run.benchmark_count == 0
 	build_button.visible = pack_button.visible
 	pack_button.text = "PACK %d/%d" % [run.field.bag.size(), run.field.capacity]
@@ -877,7 +878,7 @@ func _process(delta: float) -> void:
 	level_label.text = "Lv. %d" % run.level
 	credit_count.text = str(run.field.credits)
 	kill_count.text = str(run.kills)
-	boss_bar.visible = run.boss_id >= 0 and run.phase not in ["victory", "defeat"]
+	boss_bar.visible = run.boss_id >= 0 and run.phase not in ["victory", "defeat"] and profile.data.settings.get("health_bars",true)
 	for enemy in run.enemies:
 		if enemy.boss:
 			boss_bar.max_value = enemy.max_hp
@@ -944,7 +945,7 @@ func finish_report() -> void:
 
 func visible_world(position_value: Vector2) -> bool:
 	# Includes tall altar tops, shadows, and hit labels beyond the viewport edge.
-	return Rect2(-150,-100,730,1040).has_point(position_value+world_offset)
+	return Rect2(-350,-100,1130,1230).has_point(position_value+world_offset)
 
 func _draw() -> void:
 	var draw_started := Time.get_ticks_usec()
@@ -953,16 +954,15 @@ func _draw() -> void:
 	var reduced: bool = profile.data.settings.reduced_effects
 	set_meta("actor_meshes", [])
 	var cleared_at := Time.get_ticks_usec()
-	if run.mission == 1 and run.mode == "campaign" and run.benchmark_count == 0:
-		WorldArt.draw_floor(self,world_offset)
-	else:
-		draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
+	WorldArt.draw_floor(self,world_offset)
 	Presentation.draw_ambience(self, run, world_offset, anim_time, reduced)
 	var terrain_at := Time.get_ticks_usec()
 	CombatEffects.draw_ground(self,run,world_offset,anim_time,reduced)
 	CombatEffects.Ember.draw_ground(self,run,world_offset,reduced)
 	var ground_fx_at := Time.get_ticks_usec()
 	if not run.practice and run.benchmark_count == 0:
+		for entry: Dictionary in Neighborhood.entries():
+			if visible_world(entry.pos): WorldArt.draw_scenery_ground(self,entry,world_offset)
 		draw_field_sites()
 		draw_defenses()
 	if run.mode == "salvage":
@@ -991,16 +991,19 @@ func _draw() -> void:
 		if visible_world(shot.pos):
 			actors.append({"pos":shot.pos,"shot":shot})
 	if not run.practice and run.benchmark_count == 0:
+		for entry: Dictionary in Neighborhood.entries():
+			if visible_world(entry.pos):
+				actors.append({"pos":entry.pos,"sort_y":entry.footprint.end.y,"scenery":entry})
 		for site in run.field.sites:
 			if not visible_world(site.pos):
 				continue
 			var visual: Dictionary = site.duplicate()
 			visual.exhausted = site.kind == "relic" and run.field.relics.size() >= 3
-			actors.append({"pos":site.pos,"site":visual})
-	actors.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.pos.y < b.pos.y)
+			actors.append({"pos":site.pos,"sort_y":WorldArt.site_sort_y(site),"site":visual})
+	actors.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.get("sort_y",a.pos.y) < b.get("sort_y",b.pos.y))
 	# Consecutive shared textures batch; per-actor polygons/transforms do not.
 	for item in actors:
-		if item.has("site") or item.has("shot"):
+		if item.has("site") or item.has("shot") or item.has("scenery"):
 			continue
 		var scale_value := 1.0 if item.has("player") else (1.7 if item.boss else 0.8)
 		var size := Vector2(34, 12.92) * scale_value
@@ -1008,9 +1011,11 @@ func _draw() -> void:
 	Presentation.draw_player_ground(self, run, world_offset, anim_time, reduced)
 	CombatEffects.draw_wisps(self,run,world_offset,anim_time,reduced,false)
 	for item in actors:
-		if item.has("shot") or item.has("site") or item.has("player"):
+		if item.has("shot") or item.has("site") or item.has("player") or item.has("scenery"):
 			EnemyMotion.flush(self)
-		if item.has("shot"):
+		if item.has("scenery"):
+			WorldArt.draw_scenery_body(self,item.scenery,world_offset)
+		elif item.has("shot"):
 			CombatEffects.draw_shot(self,item.shot,world_offset,anim_time,reduced)
 		elif item.has("site"):
 			WorldArt.draw_site_body(self,item.site,world_offset,anim_time,reduced)
@@ -1040,7 +1045,7 @@ func _draw() -> void:
 			draw_polyline(PackedVector2Array([mark + Vector2(-5, 0), mark + Vector2(0, -5), mark + Vector2(5, 0)]), GOLD, 2)
 		elif item.kind == "spitter" and run.mission != 1:
 			draw_arc(mark, 5, 0, TAU, 12, Color("adceff"), 2)
-		if visible_world(item.pos) and (item.hp < item.max_hp or item.boss):
+		if visible_world(item.pos) and profile.data.settings.get("health_bars",true):
 			var at: Vector2 = item.pos + world_offset - Vector2(20, EnemyMotion.body_height(item,run.mission)+5)
 			draw_rect(Rect2(at, Vector2(40, 4)), INK)
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
@@ -1052,14 +1057,14 @@ func _draw() -> void:
 		draw_string(ThemeDB.fallback_font, at + Vector2(-20, 24), "SLOWED", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("ddd3ff"))
 
 	var spells_done := Time.get_ticks_usec()
-	Presentation.draw_feedback(self, run, world_offset, reduced)
+	Presentation.draw_feedback(self, run, world_offset, reduced,profile.data.settings.get("damage_numbers",true))
 
 	if run.hurt_wait > 0.55 and not profile.data.settings.reduced_effects:
 		draw_rect(Rect2(0, 0, 430, 760), Color(0.7, 0.05, 0.15, 0.08))
-	var origin := stick_origin if touch_id >= 0 or mouse_stick else Vector2(88, 650)
-	Shapes.circle(self,origin,48,Color(0.04,0.05,0.1,0.6))
-	Shapes.ring(self,origin,48,2,Color(0.8,0.8,0.95,0.25))
-	Shapes.circle(self,origin+stick*32,22,Color(0.55,0.58,0.72,0.55))
+	if touch_id >= 0 or mouse_stick:
+		Shapes.circle(self,stick_origin,48,Color(0.04,0.05,0.1,0.45))
+		Shapes.ring(self,stick_origin,48,2,Color(0.8,0.8,0.95,0.3))
+		Shapes.circle(self,stick_origin+stick*32,22,Color(0.55,0.68,0.85,0.6))
 
 	var finished_draw := Time.get_ticks_usec()
 	draw_cpu_ms = (finished_draw-draw_started)/1000.0
@@ -1071,6 +1076,8 @@ func draw_field_sites() -> void:
 			continue
 		var visual: Dictionary = site.duplicate()
 		visual.exhausted = site.kind == "relic" and run.field.relics.size() >= 3
+		visual.radius = Run.Field.interaction_radius(site)
+		visual.interaction_offset = Run.Field.interaction_center(site)-site.pos
 		WorldArt.draw_site_ground(self,visual,world_offset,anim_time,profile.data.settings.reduced_effects)
 	for drop in run.field.drops:
 		if not visible_world(drop.pos):
@@ -1097,7 +1104,7 @@ func draw_defenses() -> void:
 				draw_prop(7, at, Vector2(52, 70))
 		if structure.repair_left > 0:
 			draw_arc(at, 28, anim_time, anim_time + PI * 1.5, 24, Color("acd6ff"), 2)
-		if structure.hp < structure.max_hp:
+		if profile.data.settings.get("health_bars",true):
 			draw_rect(Rect2(at - Vector2(20, 50), Vector2(40, 4)), INK)
 			draw_rect(Rect2(at - Vector2(20, 50), Vector2(40 * structure.hp / structure.max_hp, 4)), GOLD)
 	if run.phase == "build":

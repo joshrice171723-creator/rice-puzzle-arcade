@@ -170,15 +170,16 @@ static func settings(home: Control) -> void:
 			button.name = key + str(roundi(level*100))
 	var preferences := MenuSkin.panel(column, "panel", 10)
 	MenuSkin.label(preferences, "Comfort", 21, Color("ffe2a0"))
-	for entry in [["haptics","Vibration"],["reduced_effects","Reduced effects"]]:
+	for entry in [["haptics","Vibration"],["reduced_effects","Reduced effects"],["damage_numbers","Damage numbers"],["health_bars","Health bars"]]:
 		var key: String = entry[0]
-		var enabled: bool = home.profile.data.settings[key]
+		var enabled: bool = home.profile.data.settings.get(key,true)
 		var row := HBoxContainer.new()
 		preferences.add_child(row)
 		var label := MenuSkin.label(row, entry[1], 16)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		var toggle := action(home, "On" if enabled else "Off", func(): home.refresh(func(): return home.profile.set_setting(key, not enabled), "Preference saved."), row, "violet" if enabled else "blue", 40)
+		toggle.name = "Setting_"+key
 		toggle.size_flags_horizontal = Control.SIZE_SHRINK_END
 		toggle.custom_minimum_size.x = 80
 		if key == "reduced_effects":
@@ -202,7 +203,9 @@ static func zones(home: Control) -> void:
 		if "clear" in home.profile.data.missions.get(str(mission), []):
 			clears += 1
 	MenuSkin.label(current, "%d / 5 missions cleared" % clears, 13, Color("dbe7ff"), true)
-	action(home, "Enter Outskirts", func(): home.navigate("mission"), current, "gold", 44)
+	action(home, "Enter Outskirts", func():
+		home.zone_index = 0
+		home.navigate("mission"), current, "gold", 44)
 	MenuSkin.label(column, "THE ROAD AHEAD", 14, Color("c5b3f4"), true)
 	var grid := GridContainer.new()
 	grid.columns = 2

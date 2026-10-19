@@ -155,6 +155,14 @@ static func show_item(home: Control) -> void:
 		stats_column.add_child(stat_row)
 		label(stat_row, text, 18, Color("30334d")).add_theme_font_override("font", MenuSkin.DISPLAY)
 	var equipped: bool = home.profile.data.equipment[item.slot] == item.id
+	var eligible: bool = home.profile.equipment_eligible(item)
+	var requirement_text: String = home.profile.equipment_requirement_reason(item)
+	var requirement_label := label(content,requirement_text + (" · Met" if eligible else " · Train this class to equip"),14,Color("b9dcff") if eligible else Color("ffca88"))
+	requirement_label.name = "ItemRequirement"
+	if equipped and not eligible:
+		label(content,"Inactive for this class. Kept in inventory; an eligible alternative is selected before the next expedition.",13,Color("ffca88"))
+	if item.get("training_item",false):
+		label(content,"Training weapon · Always level 1. Cannot upgrade, merge or salvage.",13)
 	var set_id := Content.set_id(item)
 	if not set_id.is_empty():
 		var definition: Dictionary = Content.SETS[set_id]
@@ -164,7 +172,7 @@ static func show_item(home: Control) -> void:
 			set_lines.append("%d pieces (%d/%d) · %s%s" % [threshold, mini(count, threshold), threshold, definition.two if threshold == 2 else definition.three, " · Active" if count >= threshold else ""])
 		section(home, content, "%s set · %d Rare+ pieces" % [definition.name, count], set_lines)
 	else:
-		section(home, content, "Equipment effect", ["Once per expedition: restore %d%% maximum HP when a nonlethal hit leaves you at 25%% HP or below." % (25 if home.profile.data.facilities.infirmary == 2 else 20)] if item.slot == "gadget" else [Content.SLOT_LABELS[item.slot] + " · " + ("Currently equipped" if equipped else "Ready to equip")])
+		section(home, content, "Equipment effect", ["Once per expedition: restore %d%% maximum HP when a nonlethal hit leaves you at 25%% HP or below." % (25 if home.profile.data.facilities.infirmary == 2 else 20)] if item.slot == "gadget" else [Content.SLOT_LABELS[item.slot] + " · " + ("Needs class training" if not eligible else ("Currently equipped" if equipped else "Ready to equip"))])
 	if item.slot == "weapon":
 		var weapons = preload("res://weapons.gd")
 		var attack: Dictionary = weapons.TYPES[weapons.family(item)]
@@ -187,7 +195,7 @@ static func show_item(home: Control) -> void:
 	lock_button.add_theme_font_size_override("font_size", 12)
 	lock_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var merge: Button = home.button("Merge copies", func(): home.merge_donors = []; home.page = "merge"; home.confirmation = ""; home.rebuild(), manage, 44)
-	merge.disabled = rank >= Content.RARITIES.find(Content.MERGE_MAX_RARITY) or not home.profile.can_change_loadout()
+	merge.disabled = item.get("training_item",false) or rank >= Content.RARITIES.find(Content.MERGE_MAX_RARITY) or not home.profile.can_change_loadout()
 	merge.add_theme_font_size_override("font_size", 12)
 	merge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var substat_button: Button = home.button("Substats", func(): home.page = "substats"; home.confirmation = ""; home.selected_affix = ""; home.rebuild(), manage, 44)
@@ -212,7 +220,7 @@ static func show_item(home: Control) -> void:
 	cost_strip.add_theme_stylebox_override("panel", cost_face)
 	overlay.add_child(cost_strip)
 	if cost.is_empty():
-		label(cost_strip, "Level cap reached · Level 5 / 5", 15)
+		label(cost_strip, "Training weapon · Level 1" if item.get("training_item",false) else "Level cap reached · Level 5 / 5", 15)
 	else:
 		var costs := MenuSkin.cost_row(cost_strip, home.profile, cost)
 		costs.add_theme_constant_override("separation", 12)
@@ -235,10 +243,16 @@ static func show_item(home: Control) -> void:
 	overlay.add_child(actions)
 	var equip: Button = home.button("Equipped" if equipped else "Equip", func(): home.refresh(func(): return home.profile.equip(item.id), "Equipment changed."), actions, 60)
 	equip.name = "EquipItem"
-	equip.disabled = equipped or not home.profile.can_change_loadout()
+	equip.disabled = equipped or not eligible or not home.profile.can_change_loadout()
 	var upgrade: Button = home.button("Upgrade", func(): home.refresh(func(): return home.profile.upgrade_item(item.id), "Equipment upgraded."), actions, 60)
 	upgrade.name = "UpgradeItem"
-	upgrade.disabled = cost.is_empty() or not home.profile.can_change_loadout() or home.profile.data.credits < cost.get("credits", 0) or home.profile.data.parts < cost.get("parts", 0)
+	var next_item: Dictionary = item.duplicate(true)
+	next_item.level += 1
+	var upgrade_eligible: bool = not equipped or home.profile.equipment_eligible(next_item)
+	upgrade.disabled = not upgrade_eligible or cost.is_empty() or not home.profile.can_change_loadout() or home.profile.data.credits < cost.get("credits", 0) or home.profile.data.parts < cost.get("parts", 0)
+	if equipped and not upgrade_eligible and not cost.is_empty():
+		upgrade.tooltip_text = home.profile.equipment_requirement_reason(next_item)
+		label(content,"Next upgrade: " + upgrade.tooltip_text,13,Color("ffca88"))
 	var quick_cost: Dictionary = home.profile.quick_upgrade_cost(item.id) if home.profile.has_method("quick_upgrade_cost") else {}
 	var quick: Button = home.button("Confirm\nUpgrade" if home.confirmation == "quick_upgrade" else "Quick\nUpgrade", func():
 		if home.confirmation == "quick_upgrade":

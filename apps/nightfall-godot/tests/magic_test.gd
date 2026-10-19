@@ -31,7 +31,7 @@ func _initialize() -> void:
 	var enemy := target(run, Vector2(80, 0))
 	for frame in 60:
 		run.tick(1.0 / 60, Vector2.ZERO)
-	check(run.dodge_left == 0 and run.class_wait == 0 and run.player == Vector2(600, 600), "Scavenger never dodges or moves without input")
+	check(run.dodge_left == 0 and run.class_wait == 0 and run.player == Run.World.CENTER, "Scavenger never dodges or moves without input")
 	check(run.dodge() and run.dodge_left == 0.30 and run.class_wait == 12, "Phase Step automatically enhances requested Dodge")
 	run.dodge_wait = 0
 	check(run.dodge() and run.dodge_left == 0.18, "Normal dodge remains usable while Phase Step recharges")

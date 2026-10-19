@@ -1,5 +1,7 @@
 # Permanent combat progression balance
 
+**Revision notice:** the subsequent [survival pacing and class progression contract](SURVIVAL_PACING_BALANCE.md) supersedes this document's reference-divided-by-six thresholds, 24/240 enemy XP budgets, shared progression ownership, 98-point maximum and nine-point class-tree capacity. The revision chooses a custom curve totaling 211,706 XP at 99, 2.4/24 enemy XP, separate class tracks, one starting talent point plus 98 level gains, and ranked trees with more than 99 points of choices. Keep this initial document for its historical derivation and original assumptions; its 60,000 XP/hour timeline is not a forecast for the revised system.
+
 Design contract agreed for the October 19, 2026 implementation. Mathematical examples below are calculations, not measured playtime. Runtime and save acceptance must be established by the implementation checks. This document does not claim that future campaign balance tables are already playable.
 
 ## Scope and existing systems

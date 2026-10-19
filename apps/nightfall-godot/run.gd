@@ -5,6 +5,7 @@ const Weapons = preload("res://weapons.gd")
 const Projectiles = preload("res://combat_projectiles.gd")
 const EnemyCombat = preload("res://enemy_combat.gd")
 const Training = preload("res://combat_progression.gd")
+const TalentEffects = preload("res://talent_effects.gd")
 const DURATION := 240.0
 const Content = preload("res://combat_content.gd")
 const Field = preload("res://field.gd")
@@ -15,9 +16,10 @@ const Salvage = preload("res://salvage.gd")
 const Talents = preload("res://class_talents.gd")
 const MAX_ENEMIES := 120
 const MAX_SHOTS := 64
-const BOUNDS := Rect2(135, 135, 930, 930)
+const World = preload("res://world_geometry.gd")
+const BOUNDS := World.BOUNDS
 var rng := RandomNumberGenerator.new()
-var player := Vector2(600, 600)
+var player := World.CENTER
 var facing := Vector2.RIGHT
 var health := 120.0
 var elapsed := 0.0
@@ -60,6 +62,7 @@ var survivor_xp := 0
 var mastery_xp := 0
 var combat_xp := Training.fresh()
 var training_style := "accurate"
+var talent_effects := TalentEffects.normalized({})
 var training_bonuses := Training.bonuses(Training.fresh())
 var mission := 0
 var duration := DURATION
@@ -109,6 +112,7 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	duration = definition.duration
 	boss_name = definition.boss
 	training_style = stats.get("training_style", "accurate")
+	talent_effects = TalentEffects.normalized(stats.get("talent_effects",{}))
 	training_bonuses = stats.get("training_bonuses", Training.bonuses(Training.fresh())).duplicate()
 	base_health = stats.hp
 	health = max_health()
@@ -149,14 +153,19 @@ func snapshot() -> Dictionary:
 	var exploration := {}
 	for key in FIELD_KEYS:
 		exploration[key] = field.get(key)
-	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
+	return {"version": 1, "world_version": 2, "exp_curve": 2, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
 		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
-		"combat_xp": combat_xp.duplicate(), "training_style": training_style, "training_bonuses": training_bonuses.duplicate(),
+		"talent_effects":talent_effects.duplicate(true), "combat_xp": combat_xp.duplicate(), "training_style": training_style, "training_bonuses": training_bonuses.duplicate(),
 		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "target_weapon": target_weapon, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus, "weapon": weapon_id, "pickup_xp": experience_values}
 
 func restore(saved: Dictionary) -> bool:
+	saved = saved.duplicate(true)
+	if saved.get("exp_curve",1) < 2 and saved.get("combat_xp") is Dictionary:
+		for stat in Training.STATS:
+			if saved.combat_xp.get(stat) is float or saved.combat_xp.get(stat) is int:
+				saved.combat_xp[stat] = minf(Training.MAX_XP,float(saved.combat_xp[stat])*0.1)
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
 		return false
 	if not Training.valid(saved.get("combat_xp", Training.fresh())) or saved.get("training_style", "accurate") not in Training.STYLES:
@@ -217,18 +226,35 @@ func restore(saved: Dictionary) -> bool:
 	equipment_spell_bonus = clampf(saved.get("equipment_spell_bonus", 0.0), 0, 0.03)
 	combat_xp = saved.get("combat_xp", Training.fresh()).duplicate()
 	training_style = saved.get("training_style", "accurate")
+	talent_effects = TalentEffects.normalized(saved.get("talent_effects",{}))
 	training_bonuses = saved.get("training_bonuses", Training.bonuses(Training.fresh())).duplicate()
 	weapon_id = saved.get("weapon", "pistol")
 	pickup_xp.assign(saved.get("pickup_xp", []))
 	sync_pickup_values()
+	if saved.get("world_version",1) < 2:
+		migrate_world()
 	paused = true
 	vfx_events.clear()
 	return true
 
+func migrate_world() -> void:
+	player *= 2.0
+	for collection in [enemies, shots, hostile_shots, field.sites, field.drops, defenses.structures, zones]:
+		for item: Dictionary in collection:
+			for key in ["pos","target"]:
+				if item.get(key) is Vector2: item[key] *= 2.0
+	for effect: Dictionary in effects:
+		for key in ["from","to"]:
+			if effect.get(key) is Vector2: effect[key] *= 2.0
+	for index in pickups.size(): pickups[index] *= 2.0
+	player = move_body(player,player,10)
+	for enemy: Dictionary in enemies:
+		enemy.pos = move_body(enemy.pos,enemy.pos,24 if enemy.boss else 13)
+
 func result() -> Dictionary:
 	var won := phase == "victory"
 	var loot: Array = field.banked_loot(won)
-	return {"victory": won, "credits": field.credits, "survivor_xp": survivor_xp,
+	return {"exp_curve": 2, "victory": won, "credits": field.credits, "survivor_xp": survivor_xp,
 		"kills": kills, "seconds": elapsed, "progress_eligible": not practice and benchmark_count == 0,
 		"combat_xp": combat_xp.duplicate() if not practice and benchmark_count == 0 else Training.fresh(),
 		"mastery_xp": mastery_xp, "loot": loot, "damage_taken": damage_taken,
@@ -263,7 +289,7 @@ func class_ability() -> bool:
 		"warden":
 			if nearest_enemy(player, 120).is_empty() and not hostile_shots.any(func(s: Dictionary): return s.pos.distance_to(player) < 100):
 				return false
-			shield = max_health() * 0.2
+			shield = minf(max_health()*0.3,max_health()*0.2*(1+talent_effects.shield))
 			shield_left = 4.0
 			add_vfx("aegis", player, facing, 0.6)
 		"arcanist":
@@ -275,13 +301,13 @@ func class_ability() -> bool:
 			pulse_flash = 0.65
 			add_vfx("rift_pulse", player, facing, 0.65)
 		"engineer":
-			if not defenses.repair_nearest(player, 1.0 + 0.1 * passive_rank("mechanic"), mastery_level):
+			if not defenses.repair_nearest(player, (1.0 + 0.1 * passive_rank("mechanic"))*(1+talent_effects.repair), mastery_level):
 				return false
 		_:
 			return false
 	add_vfx("class_cast", player, facing, 0.30)
 	ability_notice = Haven.CLASSES[class_id].ability
-	class_wait = Haven.CLASSES[class_id].cooldown
+	class_wait = Haven.CLASSES[class_id].cooldown*(1-talent_effects.class_cooldown)
 	return true
 
 func open_build() -> void:
@@ -307,6 +333,8 @@ func place_structure(kind: String) -> bool:
 	if not defenses.can_place(kind, position, field.sites, player):
 		return false
 	defenses.place(kind, position, spell_multiplier * 40.0, class_id == "engineer")
+	defenses.structures.back().hp *= 1+talent_effects.structure_hp
+	defenses.structures.back().max_hp = defenses.structures.back().hp
 	defenses.structures.back().paid_cost = build_cost(kind)
 	field.scrap -= build_cost(kind)
 	field.revision += 1
@@ -330,10 +358,10 @@ func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: 
 	if enemy.hp <= 0 or not is_finite(amount) or amount <= 0:
 		return
 	var mitigation := 1.0
-	if mission == 4 and enemy.boss and not elemental:
+	if (mission == 4 and enemy.boss or enemy.kind == "bulwark") and not elemental:
 		var forward: Vector2 = enemy.get("forward", Vector2.RIGHT)
 		if (source - enemy.pos).normalized().dot(forward) > 0.3:
-			mitigation = 0.5
+			mitigation = 0.5 if enemy.boss else 0.75
 	var dealt := minf(enemy.hp, amount * mitigation * (1.0 + training_bonuses.magic if elemental else 1.0 + training_bonuses.physical))
 	var remaining: float = enemy.get("reward_hp", enemy.hp)
 	var eligible := minf(dealt, remaining)
@@ -346,13 +374,13 @@ func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: 
 			enemy.hit_push = (enemy.pos - source).normalized() * (2.0 if enemy.boss else 4.0)
 		var combined := false
 		for event in feedback:
-			if event.kind == "hit" and event.get("enemy_id", -1) == enemy.id and event.life > 0.42:
+			if event.kind == "hit" and event.get("enemy_id", -1) == enemy.id and event.duration-event.life < 0.16:
 				event.amount += dealt
 				event.critical = event.critical or critical
 				combined = true
 				break
 		if not combined:
-			add_feedback("hit", enemy.pos - Vector2(0, 18), (enemy.pos - source).normalized(), dealt, elemental, critical)
+			add_feedback("hit", enemy.pos - Vector2(0, 60 if enemy.boss else 34), (enemy.pos - source).normalized(), dealt, elemental, critical)
 			feedback.back().enemy_id = enemy.id
 	if not practice and benchmark_count == 0:
 		Training.award(combat_xp, training_style, eligible, enemy.max_hp, enemy.boss)
@@ -362,7 +390,7 @@ func add_feedback(kind: String, pos: Vector2, direction: Vector2 = Vector2.ZERO,
 		return
 	if feedback.size() >= 48:
 		feedback.pop_front()
-	var lifetime := 0.62 if kind == "hit" else (0.42 if kind == "death" else 0.22)
+	var lifetime := 0.78 if kind in ["hit","hero_damage"] else (0.42 if kind == "death" else 0.22)
 	feedback.append({"kind": kind, "pos": pos, "direction": direction, "amount": amount, "elemental": elemental, "critical": critical, "life": lifetime, "duration": lifetime})
 
 func separate_enemies(delta: float) -> void:
@@ -402,11 +430,12 @@ func max_health() -> float:
 func passive_rank(id: String) -> int:
 	return int(passives.get(id, 0))
 
-func spell_scale() -> float:
-	return spell_multiplier * (1.0 + equipment_spell_bonus) * (1.0 + 0.06 * passive_rank("focus")) * (1.08 if "cinder" in field.relics else 1.0)
+func spell_scale(id: String = "") -> float:
+	var talent_bonus: float = minf(0.35,talent_effects.spell_damage+talent_effects.spell_damage_by_id.get(id,0.0))
+	return (1+talent_bonus)*spell_multiplier * (1.0 + equipment_spell_bonus) * (1.0 + 0.06 * passive_rank("focus")) * (1.08 if "cinder" in field.relics else 1.0)
 
 func spell_cooldown(id: String) -> float:
-	return Content.SPELLS[id].cooldown * (1.0 - minf(0.3, permanent_cooldown + 0.06 * passive_rank("channel")))
+	return Content.SPELLS[id].cooldown * (1.0 - minf(0.3, permanent_cooldown + 0.06 * passive_rank("channel")+talent_effects.spell_cooldown_by_id.get(id,0.0)))
 
 func spell_mod(id: String, key: String, fallback: float = 1.0) -> float:
 	var branch: String = spells.get(id, {}).get("branch", "")
@@ -467,17 +496,19 @@ func spawn_enemy(boss: bool = false, kind: String = "drifter") -> void:
 	if enemies.size() >= MAX_ENEMIES:
 		return
 	var angle := rng.randf_range(0.0, TAU)
-	var pos := clamp_position(player + Vector2.from_angle(angle) * 330.0)
+	var pos := clamp_position(player + Vector2.from_angle(angle) * rng.randf_range(330.0,420.0))
 	if pos.distance_to(player) < 180.0:
-		pos = clamp_position(Vector2(1200, 1200) - player)
+		pos = clamp_position(World.SIZE - player)
+	pos = move_body(pos,pos,24 if boss else 13)
 	if boss:
 		kind = "breaker"
 	var stats: Dictionary = Content.ENEMIES[kind]
-	var hp: float = stats.hp
+	var growth := Content.pressure_at(elapsed,duration) if not boss and not practice and benchmark_count == 0 else {"hp":1.0,"speed":1.0,"damage":1.0}
+	var hp: float = stats.hp*growth.hp
 	if boss and mission > 0:
 		hp = Haven.MISSIONS[mission - 1].health
 	enemies.append({"id": next_id, "pos": pos, "hp": hp, "max_hp": hp,
-		"reward_hp": hp, "speed": stats.speed, "boss": boss, "kind": kind, "contact": stats.contact,
+		"reward_hp": hp, "speed": stats.speed*growth.speed, "damage_scale": growth.damage, "boss": boss, "kind": kind, "contact": stats.contact*growth.damage,
 		"tell": 0.0, "attack_wait": 2.0, "target": pos, "face": 1.0,
 		"forward": Vector2.LEFT, "windup": 0.95,
 		"attack": "", "cycle": 0, "rush_left": 0.0, "rush_direction": Vector2.ZERO,
@@ -514,13 +545,13 @@ func set_benchmark(count: int) -> void:
 func dodge() -> bool:
 	if paused or phase not in ["waves", "boss"] or dodge_wait > 0.0:
 		return false
-	dodge_wait = 3.0 * (0.85 if "feather" in field.relics else 1.0)
+	dodge_wait = 3.0 * (0.85 if "feather" in field.relics else 1.0)*(1-talent_effects.dodge_cooldown)
 	dodge_left = 0.18
 	add_feedback("dodge", player, facing)
 	add_vfx("dodge", player, facing, 0.32)
 	if class_id == "scavenger" and class_wait <= 0:
 		dodge_left = 0.30
-		class_wait = Haven.CLASSES.scavenger.cooldown
+		class_wait = Haven.CLASSES.scavenger.cooldown*(1-talent_effects.class_cooldown)
 		ability_notice = "Phase Step"
 		talents.phase_step(self)
 	return true
@@ -594,7 +625,7 @@ func make_offers() -> void:
 func spell_offer(id: String, current_rank: int = 0) -> Dictionary:
 	var rank := current_rank if current_rank > 0 else (int(spells[id].rank) + 1 if spells.has(id) else 1)
 	var info: Dictionary = Content.SPELLS[id]
-	var scale: float = (1.0 + 0.25 * (rank - 1)) * spell_scale() * spell_mod(id, "damage") * (1.0 + training_bonuses.magic)
+	var scale: float = (1.0 + 0.25 * (rank - 1)) * spell_scale(id) * spell_mod(id, "damage") * (1.0 + training_bonuses.magic)
 	var detail := ""
 	match id:
 		"ember": detail = "%d bolt(s), each %.0f impact + %.0f burn over 2s." % [int(spell_mod(id, "count", 1)), 36 * scale, 12 * scale * spell_mod(id, "burn") / spell_mod(id, "damage")]
@@ -676,7 +707,7 @@ func cast_spell(id: String) -> bool:
 	if target.is_empty():
 		return false
 	var cast_direction := player.direction_to(target.pos)
-	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * spell_scale() * spell_mod(id, "damage")
+	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * spell_scale(id) * spell_mod(id, "damage")
 	match id:
 		"ember":
 			var count := int(spell_mod(id, "count"))
@@ -691,7 +722,7 @@ func cast_spell(id: String) -> bool:
 					"life": 0.85, "kind": "ember", "damage": 36.0 * multiplier,
 					"burn_dps": 6.0 * multiplier * spell_mod(id, "burn") / spell_mod(id, "damage"),
 					"pierce": int(spell_mod(id, "pierce", 0)), "hits": [],
-					"splash": 8.0 * spell_scale() if spells[id].get("evolved", false) else 0.0})
+					"splash": 8.0 * spell_scale("ember") if spells[id].get("evolved", false) else 0.0})
 		"frost":
 			for enemy in enemies:
 				if enemy.hp > 0 and player.distance_to(enemy.pos) <= spell_mod(id, "radius", 150.0):
@@ -699,7 +730,7 @@ func cast_spell(id: String) -> bool:
 					enemy.chill = maxf(enemy.chill, 1.5 if enemy.boss else 3.0)
 			add_effect("frost", player, player + Vector2(spell_mod(id, "radius", 150.0), 0), 0.45)
 			if spells[id].get("evolved", false):
-				shield = maxf(shield, max_health() * 0.08)
+				shield = minf(max_health()*0.3,maxf(shield,max_health()*0.08*(1+talent_effects.shield)))
 				shield_left = maxf(shield_left, 3.0)
 		"chain":
 			var hit: Array[int] = []
@@ -759,10 +790,10 @@ func tick(delta: float, direction: Vector2) -> void:
 	if direction.length_squared() > 0.01:
 		facing = direction.normalized()
 	var move := facing if dodge_left > 0.0 else direction.limit_length()
-	var speed := 125.0 * minf(1.3, speed_multiplier * (1.0 + 0.05 * passive_rank("fleet"))) * (0.95 if "obsidian" in field.relics else 1.0)
+	var speed := World.HERO_SPEED * minf(1.3, speed_multiplier * (1.0 + 0.05 * passive_rank("fleet"))) * (0.95 if "obsidian" in field.relics else 1.0)
 	if talents.slow_left > 0:
 		speed *= 0.8
-	player = move_body(player,player + move * (520.0 if dodge_left > 0.0 else speed) * delta,10)
+	player = move_body(player,player + move * (World.DODGE_SPEED if dodge_left > 0.0 else speed) * delta,10)
 	if benchmark_count == 0 and phase == "waves" and elapsed >= duration:
 		if mode == "salvage":
 			phase = "defeat"
@@ -778,8 +809,12 @@ func tick(delta: float, direction: Vector2) -> void:
 	elif phase == "waves" and spawn_wait <= 0.0:
 		var wave := Content.wave_at(elapsed * (1.6 if mode == "salvage" else 1.0))
 		var roll := rng.randf()
-		spawn_enemy(false, "runner" if roll < wave.runner else ("spitter" if roll < wave.runner + wave.spitter else "drifter"))
-		spawn_wait = wave.interval / (1.1 if mode == "salvage" else (Haven.MISSIONS[mission - 1].pressure if mission > 0 else 1.0))
+		var kind := Content.enemy_at(wave,roll)
+		if enemies.size() < 120:
+			spawn_enemy(false,kind)
+		var pressure: float = 1.1 if mode == "salvage" else (Haven.MISSIONS[mission - 1].pressure if mission > 0 else 1.0)
+		spawn_wait = Content.spawn_interval(elapsed,duration,pressure)
+		if enemies.size() >= 96: spawn_wait *= 1.5
 	for effect in effects:
 		effect.life -= delta
 	effects = effects.filter(func(effect: Dictionary) -> bool: return effect.life > 0)
@@ -808,7 +843,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		if enemy.hp > 0.0:
 			continue
 		add_feedback("death", enemy.pos - Vector2(0, 12))
-		add_vfx("enemy_death", enemy.pos, enemy.get("hit_push", Vector2.RIGHT), 0.48)
+		add_vfx("enemy_death", enemy.pos, enemy.get("hit_push", Vector2.RIGHT), 0.95)
 		vfx_events.back().enemy = {"kind":enemy.kind,"boss":enemy.boss,"face":enemy.face,"id":enemy.id,"motion":enemy.get("motion",0.0),"moving":enemy.get("moving",false),"attack":enemy.attack,"attack_anim":enemy.get("attack_anim",0.0),"tell":enemy.tell,"windup":enemy.windup,"rush_left":enemy.rush_left}
 		kills += 1
 		if not practice and benchmark_count == 0:
@@ -839,7 +874,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		phase = "upgrade"
 		make_offers()
 	if phase in ["waves", "boss"] and not practice and benchmark_count == 0:
-		if field.tick(delta, player):
+		if field.tick(delta, player,1+talent_effects.interact_speed):
 			phase = "shrine"
 		if mode == "salvage":
 			Salvage.tick(self, delta)
@@ -855,6 +890,7 @@ func hurt(amount: float) -> void:
 	shield -= absorbed
 	health = maxf(0.0, health - (reduced - absorbed))
 	if reduced > absorbed:
+		add_feedback("hero_damage",player-Vector2(0,45),Vector2.UP,reduced-absorbed)
 		damage_taken += 1
 		last_damage_at = elapsed
 	hurt_wait = 0.8

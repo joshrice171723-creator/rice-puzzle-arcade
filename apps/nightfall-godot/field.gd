@@ -14,6 +14,13 @@ const RELICS := {
 	"cinder": {"name": "Cinder Lens", "description": "+8% spell damage. Your pickup reach is 10% smaller."}}
 const TRAIT_COSTS := [30, 45, 65]
 const RADIUS := 60.0
+const SHRINE_RADIUS := 145.0
+
+static func interaction_center(site: Dictionary) -> Vector2:
+	return site.pos + (Vector2.ZERO if site.kind == "cache" else Vector2(0,70))
+
+static func interaction_radius(site: Dictionary) -> float:
+	return RADIUS if site.kind == "cache" else SHRINE_RADIUS
 const Content = preload("res://haven_content.gd")
 var rng := RandomNumberGenerator.new()
 var sites: Array[Dictionary] = []
@@ -41,21 +48,21 @@ func _init(seed_value: int = 41) -> void:
 		["cache", Vector2(810, 350), "Abandoned Tool Chest", 1.5],
 		["cache", Vector2(320, 900), "Outrider's Pack", 1.5],
 		["cache", Vector2(920, 620), "Sealed Supply Crate", 1.5]]:
-		sites.append({"kind": entry[0], "pos": entry[1], "name": entry[2], "duration": entry[3],
+		sites.append({"kind": entry[0], "pos": entry[1]*2.0, "name": entry[2], "duration": entry[3],
 			"progress": 0.0, "away": 0.0, "cooldown": 0.0, "opened": false,
 			"must_leave": false, "offers": [], "rerolls": 0})
 
 func available(site: Dictionary) -> bool:
 	return not site.opened and site.cooldown <= 0.0 and not site.must_leave and not (site.kind == "relic" and relics.size() >= 3)
 
-func tick(delta: float, position: Vector2) -> bool:
+func tick(delta: float, position: Vector2, charge_speed: float = 1.0) -> bool:
 	if active_site >= 0:
 		return false
 	collect_drops(position, 36.0)
 	for index in sites.size():
 		var site := sites[index]
 		site.cooldown = maxf(0, site.cooldown - delta)
-		var close := position.distance_to(site.pos) <= RADIUS
+		var close := position.distance_to(interaction_center(site)) <= interaction_radius(site)
 		if not close:
 			site.must_leave = false
 			site.away += delta
@@ -65,7 +72,7 @@ func tick(delta: float, position: Vector2) -> bool:
 		if not available(site):
 			continue
 		site.away = 0.0
-		site.progress = minf(site.duration, site.progress + delta)
+		site.progress = minf(site.duration, site.progress + delta*clampf(charge_speed,1.0,1.25))
 		if site.progress < site.duration:
 			continue
 		if site.kind == "cache":

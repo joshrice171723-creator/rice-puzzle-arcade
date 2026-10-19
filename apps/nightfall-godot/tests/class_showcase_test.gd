@@ -42,11 +42,18 @@ func run() -> void:
 	home.find_child("OpenClassSkills",true,false).pressed.emit()
 	check(home.page == "talents","Class opens the dedicated talent preview")
 	for id in ["scavenger","warden","arcanist","engineer"]:
-		home.find_child("TalentClass_"+id,true,false).pressed.emit()
+		home.inspected_class=id
+		home.tree_ability=""
+		home.rebuild()
 		await process_frame
-		check(home.inspected_class == id and home.active_tab() == "class","Talent preview follows inspected class")
-		check(home.find_child("TalentConstellation",true,false).get_child_count() > 8,"Talent preview contains ability nodes and prerequisite connections")
-		check(arena.profile.data == before,"Talent preview does not change equipment, XP or unlocks")
+		for branch in 3:
+			home.find_child("TalentBranch_"+str(branch),true,false).pressed.emit()
+			await process_frame
+			check(home.inspected_class == id and home.active_tab() == "class","Talent preview follows inspected class")
+			check(home.find_child("TalentPath",true,false).get_child_count()>15,"Talent preview has branching nodes and prerequisite arrows")
+			check(arena.profile.data==before,"Preview paths do not change equipment,XP or unlocks")
+	home.tree_ability="gravity"
+	home.rebuild()
 	home.find_child("TalentNode_gravity",true,false).pressed.emit()
 	home.find_child("TalentPreviewOpenTree",true,false).pressed.emit()
 	check(home.page == "skills" and home.tree_ability == "gravity","Preview opens the selected ability in the real skill tree")

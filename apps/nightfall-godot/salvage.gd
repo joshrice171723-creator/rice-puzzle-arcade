@@ -2,7 +2,7 @@ extends RefCounted
 ## Optional material run. Campaign victory rules never call this objective.
 const DURATION := 180.0
 const BEACON_READY := 90.0
-const EXIT := Vector2(600, 600)
+const EXIT := preload("res://world_geometry.gd").CENTER
 const RADIUS := 60.0
 const CHARGE := 3.0
 const REWARDS := {"credits": 80, "parts": 2, "survivor_xp": 45, "mastery_xp": 25}

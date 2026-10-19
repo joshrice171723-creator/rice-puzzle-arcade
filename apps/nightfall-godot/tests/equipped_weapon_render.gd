@@ -8,22 +8,33 @@ var viewport: SubViewport
 class Board extends Node2D:
 	var age := 0.07
 	var face := 1.0
+	var sequence := false
 	func _draw() -> void:
 		draw_rect(Rect2(0,0,1200,920),Color("101c36"))
 		var font := ThemeDB.fallback_font
-		for row in 4:
+		for index in get_child_count():
+			get_child(index).visible = not sequence or index < 18
+		for row in (3 if sequence else 4):
 			var character: String = ["scavenger","engineer","warden","arcanist"][row]
-			for col in 5:
-				var weapon: String = ["pistol","scattergun","crossbow","wand","sabre"][col]
+			for col in (6 if sequence else 5):
+				var weapon: String = "pistol" if sequence else ["pistol","scattergun","crossbow","wand","sabre"][col]
+				var shown_age := age
+				if sequence:
+					weapon = ["pistol","scattergun","crossbow"][row]
+					character = "scavenger"
+					shown_age = [0.0,0.02,0.05,0.10,0.16,0.24][col]
 				var origin := Vector2(col*240+120,row*230+200)
-				draw_string(font,Vector2(col*240+20,row*230+24),character+" / "+weapon,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("b7d4f5"))
+				if sequence:
+					origin.x = col*200+90
+				draw_string(font,Vector2(col*(200 if sequence else 240)+20,row*230+24),weapon+" / %.2fs" % shown_age if sequence else character+" / "+weapon,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("b7d4f5"))
 				# Child canvases preserve the same draw transforms as the arena.
-				var probe: Node2D = get_child(row*5+col)
+				var probe: Node2D = get_child(row*(6 if sequence else 5)+col)
 				probe.position = origin
 				probe.scale = Vector2.ONE*2.1
 				probe.set_meta("character",character)
 				probe.set_meta("weapon",weapon)
-				probe.set_meta("age",age)
+				probe.set_meta("age",shown_age)
+				probe.set_meta("moving",not sequence)
 				probe.set_meta("face",face)
 				probe.queue_redraw()
 class Actor extends Node2D:
@@ -31,7 +42,7 @@ class Actor extends Node2D:
 		var weapon: String = get_meta("weapon","pistol")
 		var face: float = get_meta("face",1.0)
 		var age: float = get_meta("age",0.07)
-		Hero.draw_motion(self,Vector2.ZERO,Vector2.ZERO,face,age,age*9,0.7,age,0,false,false,get_meta("character","scavenger"),0,weapon,weapon,Vector2(face,0),age)
+		Hero.draw_motion(self,Vector2.ZERO,Vector2.ZERO,face,age,age*9,0.7 if get_meta("moving",true) else 0.0,age,0,false,false,get_meta("character","scavenger"),0,weapon,weapon,Vector2(face,0),age)
 func check(ok: bool, label: String) -> void:
 	checks += 1
 	if not ok:
@@ -50,6 +61,12 @@ func verify() -> void:
 	viewport.size = Vector2i(1200,920)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(viewport)
+	check(Weapon.kick("scattergun",0)>Weapon.kick("pistol",0) and Weapon.kick("pistol",0)>Weapon.kick("crossbow",0),"Weapon impulses reflect shotgun mass and the crossbow's low kick")
+	for family in ["pistol","scattergun","crossbow"]:
+		check(Weapon.kick(family,0)>Weapon.kick(family,0.03) and Weapon.kick(family,0.03)>Weapon.kick(family,0.12) and Weapon.kick(family,0.24)==0,"Recoil settles smoothly without a repeated body oscillation")
+		var foot := Vector2(0.5,0.99)
+		check(Hero.deform_point(foot,Vector2(58,80),0,0,0,0,0,family)==Hero.deform_point(foot,Vector2(58,80),0,0,0,0.16,0,family),"Weapon firing keeps the feet planted")
+		check(Hero.hand_offset(family,Vector2.RIGHT,0).x<Hero.hand_offset(family,Vector2.RIGHT,0.24).x,"The forearm absorbs backward recoil along the aim axis")
 	for family in Weapon.SPECS:
 		for facing in [Vector2.RIGHT,Vector2.LEFT,Vector2.UP,Vector2.DOWN]:
 			for age in [0.0,0.07,0.16,0.24,1.0]:
@@ -71,6 +88,7 @@ func verify() -> void:
 		finish()
 		return
 	var board := Board.new()
+	board.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	for n in 20:
 		board.add_child(Actor.new())
 	viewport.add_child(board)
@@ -85,6 +103,10 @@ func verify() -> void:
 	var mirrored: Image = await capture(board)
 	mirrored.save_png(output+"equipped-weapons-left.png")
 	check(mirrored.get_data()!=moved.get_data(),"Left facing changes rendered body and equipment")
+	board.face = 1
+	board.sequence = true
+	var sequence: Image = await capture(board)
+	sequence.save_png(output+"gun-action-sequence.png")
 	finish()
 func finish() -> void:
 	print("Nightfall equipped weapon render: %d checks, %d failures" % [checks,failures])

@@ -33,6 +33,9 @@ func verify() -> void:
 	var p = Profile.new(PATH)
 	p.data.credits = 10000
 	p.data.parts = 1000
+	# This fixture verifies the funded armor upgrade interaction through level five.
+	p.data.class_combat.scavenger.xp.defence = float(p.Training.threshold(9))
+	p.sync_training_alias()
 	for index in 32:
 		p.data.inventory.append(p.Loot.equipment(p.Content.SLOTS[index % 8], "epic", p.data.next_item))
 		p.data.next_item += 1

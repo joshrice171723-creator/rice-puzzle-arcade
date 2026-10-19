@@ -18,8 +18,8 @@ static func draw_ambience(canvas: Node2D, run: RefCounted, offset: Vector2, time
 	for index in EMBER_COUNT:
 		var cycle := fposmod(clock * 0.075 + index * 0.137, 1.0)
 		var drift := sin(clock * 0.21 + index * 1.9) * 7.0
-		var at := Vector2(145.0 + fposmod(index * 277.0, 910.0) + drift,
-			155.0 + fposmod(index * 173.0, 850.0) - cycle * 42.0) + offset
+		var at := Vector2(290.0 + fposmod(index * 554.0, 1820.0) + drift,
+			310.0 + fposmod(index * 346.0, 1700.0) - cycle * 42.0) + offset
 		var fade := sin(cycle * PI) * 0.24
 		var half := Vector2(0.0, 0.12 + (index % 3) * 0.18)
 		points.append(at - half)
@@ -39,9 +39,9 @@ static func draw_player_ground(canvas: Node2D, run: RefCounted, offset: Vector2,
 		Shapes.ring(canvas,Vector2.ZERO,18.0,1.0,Color(0.49,0.82,1.0,breath))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_feedback(canvas: Node2D, run: RefCounted, offset: Vector2, reduced: bool) -> void:
+static func draw_feedback(canvas: Node2D, run: RefCounted, offset: Vector2, reduced: bool, show_numbers: bool = true) -> void:
 	var entries: Array = run.feedback
-	var labels: Dictionary = {13: [], 15: [], 17: []}
+	var labels: Dictionary = {13: [], 18: [], 22: []}
 	var spark_points := PackedVector2Array()
 	var spark_colors := PackedColorArray()
 	for index in mini(entries.size(), MAX_FEEDBACK):
@@ -61,8 +61,8 @@ static func draw_feedback(canvas: Node2D, run: RefCounted, offset: Vector2, redu
 		else:
 			direction = direction.normalized()
 		var kind: String = item.get("kind", "")
-		if kind == "hit":
-			var label := damage_label(item, at, direction, age, alpha, reduced)
+		if kind in ["hit","hero_damage"]:
+			var label := damage_label(item, at, direction, age, alpha, reduced) if show_numbers else {}
 			if not label.is_empty():
 				labels[label.size].append(label)
 			if not reduced:
@@ -94,10 +94,10 @@ static func damage_label(item: Dictionary, at: Vector2, direction: Vector2, age:
 	if critical and not reduced:
 		text += "!"
 	var font: Font = MenuSkin.DISPLAY if MenuSkin.DISPLAY != null else ThemeDB.fallback_font
-	var size := (17 if critical else 15) if not reduced else 13
-	var position := at + Vector2(direction.x * age * (3.0 if reduced else 8.0), -24.0 - age * (9.0 if reduced else 29.0))
+	var size := (22 if critical else 18) if not reduced else 13
+	var position := at + Vector2(direction.x * age * (3.0 if reduced else 8.0), -24.0 - age * (9.0 if reduced else 42.0) - (sin(age*PI)*6.0 if not reduced else 0.0))
 	position.x -= font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5
-	var color := Color("ffd568") if critical else (CYAN if elemental else GOLD)
+	var color := Color("ff8296") if item.get("kind","") == "hero_damage" else (Color("ffd568") if critical else (CYAN if elemental else GOLD))
 	color.a = alpha
 	return {"text": text, "position": position, "size": size, "color": color, "alpha": alpha}
 
@@ -129,6 +129,18 @@ static func pickup_rune(canvas: Node2D, at: Vector2, age: float, alpha: float) -
 	canvas.draw_polyline(points, Color(1.0,0.84,0.55,alpha * 0.68), 1.1, true)
 
 static func muzzle_prongs(canvas: Node2D, at: Vector2, direction: Vector2, age: float, alpha: float) -> void:
-	for angle in [-0.42,0.0,0.42]:
-		var ray := direction.rotated(angle)
-		canvas.draw_line(at + ray * 2.0, at + ray * (7.0 + age * 2.0), Color(1.0,0.88,0.61,alpha * 0.78), 1.4, true)
+	if age < 0 or age >= 1 or alpha <= 0:
+		return
+	var axis := direction.normalized() if direction.length_squared() > 0.01 else Vector2.RIGHT
+	var side := axis.orthogonal()
+	# A 30 ms directional gas cone, then a faint expanding smoke curl.
+	var flash := 1.0-smoothstep(0.035,0.15,age)
+	if flash > 0:
+		var length := (7.5+alpha*1.5)*flash
+		canvas.draw_colored_polygon(PackedVector2Array([at-side*2.2,at+axis*length-side*0.7,at+axis*(length+2),at+axis*length+side*0.7,at+side*2.2]),Color(1.0,0.64,0.19,minf(1,alpha)*flash))
+		canvas.draw_line(at,at+axis*(length*0.70),Color(1,0.98,0.79,minf(1,alpha)*flash),2.1,true)
+	if age > 0.10:
+		var smoke := sin(clampf((age-0.10)/0.90,0,1)*PI)*minf(1,alpha)*0.20
+		var center := at+axis*(3.0+age*6.0)+Vector2(0,-age*6.0)
+		Shapes.circle(canvas,center,1.5+age*2.0,Color(0.68,0.72,0.77,smoke))
+		Shapes.circle(canvas,center+side*1.1-axis*2.0,1.1+age*1.4,Color(0.76,0.78,0.83,smoke*0.65))

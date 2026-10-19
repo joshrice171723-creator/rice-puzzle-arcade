@@ -45,6 +45,8 @@ const FACILITIES := {
 	"infirmary": {"name": "Infirmary", "description": "Improves your once-per-run Field Medkit from 20% to 25% maximum HP.", "credits": 350, "parts": 12}}
 
 static func item_stats(item: Dictionary) -> Dictionary:
+	if item.is_empty():
+		return {"power":0.0,"hp":0.0,"armor":0.0}
 	var stats: Dictionary = BASE_STATS[item.slot].duplicate()
 	var rank := RARITIES.find(item.rarity)
 	var multiplier: float = (1.0 + 0.05 * (item.level - 1)) * RARITY_SCALE[maxi(0, rank)]

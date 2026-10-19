@@ -72,7 +72,7 @@ func _initialize() -> void:
 	check(r.talents.slow_left == 2 and r.health == 108, "Spitter projectile applies its two-second slow only with damage")
 	var from: Vector2 = r.player
 	r.tick(0.5, Vector2.RIGHT)
-	check(is_equal_approx(r.player.x - from.x, 50), "Slow reduces walking speed by twenty percent")
+	check(is_equal_approx(r.player.x - from.x, Run.World.HERO_SPEED*0.8*0.5), "Slow reduces walking speed by twenty percent")
 	r.paused = true
 	r.tick(1, Vector2.RIGHT)
 	check(r.talents.slow_left == 1.5, "Pause freezes the temporary slow")
@@ -103,7 +103,7 @@ func _initialize() -> void:
 	check(turret.boost_left == 0, "Overclock expires instead of permanently improving the turret")
 	r.enemies.clear()
 	r.defenses.structures.clear()
-	r.player = Vector2(600, 650)
+	r.player = Run.World.CENTER+Vector2(0,80)
 	r.facing = Vector2.RIGHT
 	r.field.scrap = 100
 	r.blueprints.assign(["turret"])

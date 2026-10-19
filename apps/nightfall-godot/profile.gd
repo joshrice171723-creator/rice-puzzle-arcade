@@ -8,7 +8,8 @@ const Skills = preload("res://skill_tree.gd")
 const Daily = preload("res://daily_progress.gd")
 const ZoneOne = preload("res://zone_one.gd")
 const Training = preload("res://combat_progression.gd")
-const VERSION := 5
+const EquipmentRequirements = preload("res://equipment_requirements.gd")
+const VERSION := 6
 const BUILD_SLOTS := ["1", "2", "3"]
 const SHOP_OFFERS := {"key": {"name": "Supply key", "cost": 25, "currency": "gems", "grant": "cache_keys", "amount": 1}, "parts": {"name": "10 Workshop Parts", "cost": 200, "currency": "credits", "grant": "parts", "amount": 10}}
 var path := "user://haven.json"
@@ -27,8 +28,12 @@ func fresh() -> Dictionary:
 	for index in Content.SLOTS.size():
 		items.append({"id": index, "slot": Content.SLOTS[index], "name": Content.STARTER_NAMES[index], "rarity": "common", "level": 1})
 		equipment[Content.SLOTS[index]] = index
+	var class_combat := {}
+	for id in Content.CLASSES:
+		class_combat[id] = {"xp":Training.fresh(),"training_style":"ranged","talent_ranks":{},"legacy_entitlement":0,"inherited":[]}
 	return {"version": VERSION, "credits": 0, "parts": 0, "gems": 0, "survivor_xp": 0,
-		"combat_xp": Training.fresh(), "training_style": "accurate", "legacy_talent_points": 0,
+		"combat_xp": class_combat.scavenger.xp, "training_style": "ranged", "legacy_talent_points": 0,
+		"class_combat":class_combat, "talent_migration_notice":"", "talent_revision":2,
 		"mastery": {"scavenger": 0, "engineer": 0, "warden": 0, "arcanist": 0}, "class": "scavenger",
 		"inventory": items, "equipment": equipment, "next_item": Content.SLOTS.size(), "missions": {}, "zone_claims": [],
 		"loadouts": {}, "locked_items": [], "affix_rolls": 0, "daily": Daily.fresh(),
@@ -38,18 +43,33 @@ func fresh() -> Dictionary:
 		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false, "seen_bosses": [],
 		"shop_day": "", "shop_videos": 0, "last_shop_reward": "",
 		"cache_keys": 0, "cache_opened": 0, "rare_misses": 0, "epic_misses": 0, "cache_seed": randi(), "last_cache": {}, "rare_choices": 0, "contract_clears": 0,
-		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false}}
+		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false, "damage_numbers": true, "health_bars": true}}
 
 func valid(candidate: Variant) -> bool:
-	if not candidate is Dictionary or candidate.get("version") != VERSION:
+	if not candidate is Dictionary or candidate.get("version") != VERSION or candidate.get("talent_revision") != 2:
 		return false
 	var defaults := fresh()
 	for key: String in defaults:
 		if not candidate.has(key):
 			return false
-	if not Training.valid(candidate.combat_xp) or candidate.training_style not in Training.STYLES:
+	if not candidate.class_combat is Dictionary or candidate.class_combat.size() != Content.CLASSES.size() or not candidate.talent_migration_notice is String:
 		return false
-	if not candidate.legacy_talent_points is int or candidate.legacy_talent_points < 0 or candidate.legacy_talent_points > 36:
+	for id in Content.CLASSES:
+		var progression: Variant = candidate.class_combat.get(id)
+		if not progression is Dictionary or not Training.valid(progression.get("xp")) or progression.get("training_style") not in Training.STYLES:
+			return false
+		if not progression.get("legacy_entitlement") is int or progression.legacy_entitlement < 0 or progression.legacy_entitlement > 99 or not progression.get("inherited") is Array:
+			return false
+		for ability in progression.inherited:
+			if ability not in Skills.BRANCHES[id]:
+				return false
+		if not Skills.valid(id,progression.get("talent_ranks"),progression.inherited):
+			return false
+		if Skills.spent(id,progression.talent_ranks) > maxi(Training.combat_level(progression.xp),progression.legacy_entitlement):
+			return false
+	if not Training.valid(candidate.combat_xp) or candidate.training_style not in Training.STYLES or candidate.get("class") not in Content.CLASSES:
+		return false
+	if candidate.combat_xp != candidate.class_combat[candidate["class"]].xp or candidate.training_style != candidate.class_combat[candidate["class"]].training_style:
 		return false
 	if not Daily.valid(candidate.daily):
 		return false
@@ -73,7 +93,7 @@ func valid(candidate: Variant) -> bool:
 		var value: Variant = candidate.settings.get(key)
 		if not (value is int or value is float) or value < 0 or value > 1:
 			return false
-	for key in ["haptics", "reduced_effects"]:
+	for key in ["haptics", "reduced_effects", "damage_numbers", "health_bars"]:
 		if not candidate.settings.get(key) is bool:
 			return false
 	var ids: Array = []
@@ -102,6 +122,8 @@ func valid(candidate: Variant) -> bool:
 	for slot: String in Content.SLOTS:
 		if not candidate.equipment.has(slot):
 			return false
+		if slot != "weapon" and candidate.equipment[slot] == -1:
+			continue
 		var found := false
 		for item in candidate.inventory:
 			if item.id == candidate.equipment[slot] and item.slot == slot:
@@ -117,15 +139,12 @@ func valid(candidate: Variant) -> bool:
 		var learned: Variant = candidate.skill_unlocks.get(id)
 		if not learned is Array:
 			return false
-		var seen: Array = []
-		for ability in learned:
-			if ability not in Skills.BRANCHES[id] or ability in seen:
-				return false
-			seen.append(ability)
-			if not Skills.prerequisites_met(id, ability, learned):
-				return false
-	if talent_spent(candidate) > Training.combat_level(candidate.combat_xp) - 1 + candidate.legacy_talent_points:
-		return false
+		var expected: Array = []
+		for ability in Skills.BRANCHES[id]:
+			if candidate.class_combat[id].talent_ranks.get(ability,0) > 0:
+				expected.append(ability)
+		if learned != expected:
+			return false
 	if not candidate.loadouts is Dictionary or not candidate.locked_items is Array:
 		return false
 	var locked_ids: Array = []
@@ -142,6 +161,8 @@ func valid(candidate: Variant) -> bool:
 		if build.get("class") not in Content.CLASSES or not build.get("equipment") is Dictionary or build.equipment.size() != Content.SLOTS.size():
 			return false
 		for equipment_slot in Content.SLOTS:
+			if equipment_slot != "weapon" and build.equipment.get(equipment_slot) == -1:
+				continue
 			var found := false
 			for item in candidate.inventory:
 				if item.id == build.equipment.get(equipment_slot, -1) and item.slot == equipment_slot:
@@ -166,9 +187,9 @@ func read_candidate(file_path: String) -> Variant:
 	if parser.parse(FileAccess.get_file_as_string(file_path)) != OK:
 		return null
 	var parsed: Variant = normalize_numbers(parser.data)
-	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, 4, VERSION] and not parsed.has("settings"):
+	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, 4, 5, VERSION] and not parsed.has("settings"):
 		parsed.settings = fresh().settings
-	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, 4, VERSION]:
+	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, 4, 5, VERSION]:
 		var defaults := fresh()
 		if parsed.version < 4:
 			parsed.daily = Daily.fresh()
@@ -195,8 +216,75 @@ func read_candidate(file_path: String) -> Variant:
 					parsed.equipment[slot] = item.id
 		if parsed.version < 5:
 			parsed.combat_xp = Training.fresh()
-			parsed.training_style = "accurate"
+			parsed.training_style = parsed.get("training_style","ranged")
 			parsed.legacy_talent_points = talent_spent(parsed)
+		if parsed.version < 6:
+			if not Training.valid_legacy(parsed.get("combat_xp")) or not parsed.get("skill_unlocks") is Dictionary:
+				return parsed
+			for id in Content.CLASSES:
+				var owned: Variant = parsed.skill_unlocks.get(id)
+				if not owned is Array:
+					return parsed
+				var seen: Array = []
+				for ability in owned:
+					if ability not in Skills.BRANCHES[id] or ability in seen:
+						return parsed
+					seen.append(ability)
+			for key in ["damage_numbers","health_bars"]:
+				parsed.settings[key] = true
+			parsed.class_combat = defaults.class_combat.duplicate(true)
+			var selected: String = parsed.get("class","scavenger")
+			if selected in Content.CLASSES and Training.valid_legacy(parsed.get("combat_xp")):
+				parsed.class_combat[selected].xp = Training.migrate_legacy(parsed.combat_xp)
+				parsed.class_combat[selected].training_style = parsed.get("training_style","ranged")
+			var refunded := 0
+			for id in Content.CLASSES:
+				var legacy: Array = parsed.get("skill_unlocks",{}).get(id,[])
+				var entitlement := 0
+				for ability in legacy:
+					if ability in Skills.BRANCHES[id]:
+						parsed.class_combat[id].talent_ranks[ability] = 1
+						parsed.class_combat[id].inherited.append(ability)
+						entitlement += Skills.legacy_cost(id,ability)
+				parsed.class_combat[id].legacy_entitlement = entitlement
+				refunded += maxi(0,entitlement - legacy.size())
+				parsed.skill_unlocks[id] = []
+				for ability in Skills.BRANCHES[id]:
+					if ability in parsed.class_combat[id].talent_ranks:
+						parsed.skill_unlocks[id].append(ability)
+			parsed.talent_migration_notice = "Class training is now independent. Previous spell unlocks remain; %d old-cost points returned to their class trees. Retained points count toward the 99-point lifetime cap." % refunded
+			parsed.legacy_talent_points = 0
+			if selected in Content.CLASSES:
+				parsed.combat_xp = parsed.class_combat[selected].xp
+				parsed.training_style = parsed.class_combat[selected].training_style
+		if parsed.get("talent_revision",0) < 2:
+			var refunded_ranks := 0
+			if not parsed.get("class_combat") is Dictionary:
+				return parsed
+			for id in Content.CLASSES:
+				var progression: Variant=parsed.class_combat.get(id)
+				if not progression is Dictionary or not progression.get("talent_ranks") is Dictionary:
+					return parsed
+				var retained: Dictionary={}
+				var old_total:=0
+				for key in progression.talent_ranks:
+					var rank: Variant=progression.talent_ranks[key]
+					if not rank is int or rank<1 or rank>5:
+						return parsed
+					old_total+=rank
+					if key in Skills.BRANCHES[id]:
+						retained[key]=1
+					else:
+						var pieces: PackedStringArray=String(key).split("_")
+						if pieces.size()!=2 or pieces[0] not in ["hp","power","armor","speed","pickup","cooldown"] or not pieces[1].is_valid_int() or int(pieces[1]) not in range(1,6):
+							return parsed
+				refunded_ranks+=old_total-retained.size()
+				progression.talent_ranks=retained
+				progression.inherited=retained.keys()
+				progression.legacy_entitlement=maxi(int(progression.get("legacy_entitlement",0)),mini(99,old_total))
+			parsed.talent_revision=2
+			if refunded_ranks>0:
+				parsed.talent_migration_notice="The branching talent redesign refunded %d generic ranks to their original classes. Spell unlocks and all trained levels remain. Open Talent Tree to choose your paths." % refunded_ranks
 		parsed.version = VERSION
 	return parsed
 
@@ -207,7 +295,7 @@ func normalize_numbers(value: Variant) -> Variant:
 		return int(value)
 	if value is Dictionary:
 		for key in value:
-			if key == "combat_xp" and value[key] is Dictionary:
+			if key in ["combat_xp", "xp"] and value[key] is Dictionary:
 				for stat in value[key]:
 					if value[key][stat] is int or value[key][stat] is float:
 						value[key][stat] = float(value[key][stat])
@@ -226,6 +314,7 @@ func load_save() -> bool:
 	var candidate: Variant = read_candidate(path)
 	if valid(candidate):
 		data = candidate
+		sync_training_alias()
 		return true
 	# A future version must not be replaced by an older backup.
 	if candidate is Dictionary and candidate.get("version", 0) > VERSION:
@@ -235,6 +324,7 @@ func load_save() -> bool:
 	candidate = read_candidate(path + ".bak")
 	if valid(candidate):
 		data = candidate
+		sync_training_alias()
 		error = "Recovered the previous save after an interrupted write."
 		return true
 	blocked = true
@@ -277,6 +367,7 @@ func commit(previous: Dictionary) -> bool:
 	if save():
 		return true
 	data = previous
+	sync_training_alias()
 	return false
 
 func item_by_id(id: int) -> Dictionary:
@@ -295,6 +386,8 @@ func item_in_build(id: int) -> bool:
 	return false
 
 func salvage_block_reason(id: int) -> String:
+	if item_by_id(id).get("training_item",false):
+		return "Training weapon · cannot salvage"
 	if id in data.equipment.values():
 		return "Equipped item"
 	if id in data.locked_items:
@@ -328,11 +421,17 @@ func apply_loadout(slot: String) -> bool:
 		return false
 	# Validate every reference before replacing anything; never partially equip.
 	for equipment_slot in Content.SLOTS:
+		if equipment_slot != "weapon" and build.equipment.get(equipment_slot,-1) == -1:
+			continue
 		var item := item_by_id(int(build.equipment.get(equipment_slot, -1)))
 		if item.is_empty() or item.slot != equipment_slot:
 			return false
+		if not equipment_eligible(item,build["class"]):
+			error = equipment_requirement_reason(item,build["class"])
+			return false
 	var previous := data.duplicate(true)
 	data["class"] = build["class"]
+	sync_training_alias()
 	data.equipment = build.equipment.duplicate(true)
 	return commit(previous)
 
@@ -347,19 +446,61 @@ func equip(id: int) -> bool:
 	var item := item_by_id(id)
 	if not can_change_loadout() or item.is_empty():
 		return false
+	if not equipment_eligible(item):
+		error = equipment_requirement_reason(item)
+		return false
 	var previous := data.duplicate(true)
 	data.equipment[item.slot] = id
 	return commit(previous)
 
+func equipment_eligible(item: Dictionary, class_id: String = "") -> bool:
+	return EquipmentRequirements.eligible(item,combat_experience(class_id))
+
+func equipment_requirement_reason(item: Dictionary, class_id: String = "") -> String:
+	var target: String = data["class"] if class_id.is_empty() else class_id
+	return EquipmentRequirements.description(item,combat_experience(target),Content.CLASSES[target].name)
+
+func reconcile_equipment(class_id: String) -> Array[String]:
+	var replaced: Array[String] = []
+	for slot: String in Content.SLOTS:
+		var current := item_by_id(data.equipment[slot])
+		if equipment_eligible(current,class_id):
+			continue
+		var alternative := -1
+		var best := -1.0
+		for candidate: Dictionary in data.inventory:
+			if candidate.slot != slot or not equipment_eligible(candidate,class_id):
+				continue
+			var values := Content.item_stats(candidate)
+			var score: float = values.power+values.hp+values.armor
+			if score > best:
+				alternative = int(candidate.id)
+				best = score
+		if slot == "weapon" and alternative < 0:
+			var starter := Loot.equipment("weapon","common",int(data.next_item))
+			starter.training_item = true
+			data.next_item += 1
+			data.inventory.append(starter)
+			alternative = starter.id
+		data.equipment[slot] = alternative
+		if not current.is_empty():
+			replaced.append(current.name)
+	return replaced
+
 func upgrade_cost(id: int) -> Dictionary:
 	var item := item_by_id(id)
-	if item.is_empty() or item.level >= 5:
+	if item.is_empty() or item.get("training_item",false) or item.level >= 5:
 		return {}
 	return {"credits": ceili(40 * item.level * (0.9 if data.facilities.workshop >= 2 else 1.0)), "parts": int(item.level) + 1}
 
 func upgrade_item(id: int) -> bool:
 	var cost := upgrade_cost(id)
 	if not can_change_loadout() or cost.is_empty() or data.credits < cost.credits or data.parts < cost.parts:
+		return false
+	var upgraded := item_by_id(id).duplicate(true)
+	upgraded.level += 1
+	if data.equipment[upgraded.slot] == id and not equipment_eligible(upgraded):
+		error = equipment_requirement_reason(upgraded)
 		return false
 	var previous := data.duplicate(true)
 	data.credits -= cost.credits
@@ -369,10 +510,14 @@ func upgrade_item(id: int) -> bool:
 
 func quick_upgrade_cost(id: int) -> Dictionary:
 	var item := item_by_id(id)
-	if item.is_empty():
+	if item.is_empty() or item.get("training_item",false):
 		return {}
 	var cost := {"levels": 0, "credits": 0, "parts": 0}
 	for level in range(int(item.level), 5):
+		var upgraded := item.duplicate(true)
+		upgraded.level = level+1
+		if data.equipment[item.slot] == id and not equipment_eligible(upgraded):
+			break
 		var credits := ceili(40 * level * (0.9 if data.facilities.workshop >= 2 else 1.0))
 		var parts := level + 1
 		if cost.credits + credits > data.credits or cost.parts + parts > data.parts:
@@ -385,6 +530,11 @@ func quick_upgrade_cost(id: int) -> Dictionary:
 func quick_upgrade_item(id: int) -> bool:
 	var cost := quick_upgrade_cost(id)
 	if not can_change_loadout() or cost.is_empty():
+		var item := item_by_id(id)
+		if not item.is_empty() and item.level < 5 and data.equipment[item.slot] == id:
+			var upgraded := item.duplicate(true)
+			upgraded.level += 1
+			if not equipment_eligible(upgraded): error = equipment_requirement_reason(upgraded)
 		return false
 	var previous := data.duplicate(true)
 	data.credits -= cost.credits
@@ -403,7 +553,7 @@ func salvage(id: int) -> bool:
 
 func merge_candidates(id: int) -> Array:
 	var target := item_by_id(id)
-	if target.is_empty() or Content.RARITIES.find(target.rarity) >= Content.RARITIES.find(Content.MERGE_MAX_RARITY):
+	if target.is_empty() or target.get("training_item",false) or Content.RARITIES.find(target.rarity) >= Content.RARITIES.find(Content.MERGE_MAX_RARITY):
 		return []
 	return data.inventory.filter(func(item: Dictionary): return item.id != id and item.slot == target.slot and item.name == target.name and item.rarity == target.rarity and salvage_block_reason(item.id).is_empty())
 
@@ -412,6 +562,12 @@ func merge_items(id: int, donors: Array) -> bool:
 		return false
 	var eligible: Array = merge_candidates(id).map(func(item: Dictionary): return item.id)
 	if donors[0] not in eligible or donors[1] not in eligible:
+		return false
+	var result := item_by_id(id).duplicate(true)
+	for donor_id in donors:
+		result.level = maxi(result.level,item_by_id(donor_id).level)
+	if data.equipment[result.slot] == id and not equipment_eligible(result):
+		error = equipment_requirement_reason(result)
 		return false
 	var previous := data.duplicate(true)
 	var target := item_by_id(id)
@@ -479,6 +635,8 @@ func set_counts() -> Dictionary:
 	var result := {"outrider": 0, "ironwatch": 0, "riftweaver": 0}
 	for slot: String in Content.SLOTS:
 		var item := item_by_id(data.equipment[slot])
+		if not equipment_eligible(item):
+			continue
 		var id := Content.set_id(item)
 		if not id.is_empty() and Content.RARITIES.find(item.rarity) >= 2:
 			result[id] += 1
@@ -504,7 +662,12 @@ func select_class(id: String) -> bool:
 		return false
 	var previous := data.duplicate(true)
 	data["class"] = id
-	return commit(previous)
+	sync_training_alias()
+	var replaced := reconcile_equipment(id)
+	if not commit(previous): return false
+	if not replaced.is_empty():
+		error = "Items kept in inventory; eligible gear selected for %s: %s" % [Content.CLASSES[id].name,", ".join(replaced)]
+	return true
 
 func talent_spent(candidate: Dictionary) -> int:
 	var spent := 0
@@ -516,34 +679,70 @@ func talent_spent(candidate: Dictionary) -> int:
 		if unlocks is Array:
 			for ability in unlocks:
 				if ability is String:
-					spent += Skills.cost(id, ability)
+					spent += Skills.legacy_cost(id, ability)
 	return spent
+
+func sync_training_alias() -> void:
+	var selected: Dictionary = data.class_combat[data["class"]]
+	data.combat_xp = selected.xp
+	data.training_style = selected.training_style
+
+func combat_experience(class_id: String = "") -> Dictionary:
+	return data.class_combat[data["class"] if class_id.is_empty() else class_id].xp
+
+func class_combat_level(class_id: String) -> int:
+	return Training.combat_level(combat_experience(class_id))
+
+func talent_ranks(class_id: String) -> Dictionary:
+	return data.class_combat[class_id].talent_ranks
 
 func skill_points(class_id: String) -> int:
 	if class_id not in Content.CLASSES:
 		return 0
-	return maxi(0, Training.combat_level(data.combat_xp) - 1 + data.legacy_talent_points - talent_spent(data))
+	var progression: Dictionary = data.class_combat[class_id]
+	return maxi(0, maxi(class_combat_level(class_id),progression.legacy_entitlement) - Skills.spent(class_id,progression.talent_ranks))
 
-func set_training_style(id: String) -> bool:
-	if id not in Training.STYLES or not can_change_loadout():
+func set_training_style(id: String, class_id: String = "") -> bool:
+	var target: String = data["class"] if class_id.is_empty() else class_id
+	if target not in Content.CLASSES or id not in Training.STYLES or not can_change_loadout() or not class_unlocked(target):
 		return false
 	var previous := data.duplicate(true)
-	data.training_style = id
+	data.class_combat[target].training_style = id
+	sync_training_alias()
 	return commit(previous)
 
 func ability_pool(class_id: String) -> Array:
 	return Skills.pool(class_id, data.skill_unlocks[class_id])
 
-func unlock_skill(class_id: String, ability: String) -> bool:
+func rank_talent(class_id: String, id: String) -> bool:
 	if not can_change_loadout() or not class_unlocked(class_id):
 		return false
-	var cost: int = Skills.cost(class_id, ability)
-	if cost == 0 or ability in data.skill_unlocks[class_id] or skill_points(class_id) < cost:
+	var definition := Skills.node(class_id,id)
+	var ranks := talent_ranks(class_id)
+	if definition.is_empty() or int(ranks.get(id,0)) >= definition.max_rank or skill_points(class_id) < 1:
 		return false
-	if not Skills.prerequisites_met(class_id, ability, data.skill_unlocks[class_id]):
+	if not Skills.requirement(class_id,id,ranks).is_empty():
 		return false
 	var previous := data.duplicate(true)
-	data.skill_unlocks[class_id].append(ability)
+	ranks[id] = int(ranks.get(id,0)) + 1
+	data.skill_unlocks[class_id] = []
+	for ability in Skills.BRANCHES[class_id]:
+		if ranks.get(ability,0) > 0:
+			data.skill_unlocks[class_id].append(ability)
+	return commit(previous)
+
+func unlock_skill(class_id: String, ability: String) -> bool:
+	if ability not in Skills.BRANCHES.get(class_id,[]):
+		return false
+	return rank_talent(class_id,ability)
+
+func reset_talents(class_id: String) -> bool:
+	if class_id not in Content.CLASSES or not can_change_loadout() or not class_unlocked(class_id) or talent_ranks(class_id).is_empty():
+		return false
+	var previous := data.duplicate(true)
+	data.class_combat[class_id].talent_ranks = {}
+	data.class_combat[class_id].inherited = []
+	data.skill_unlocks[class_id] = []
 	return commit(previous)
 
 func stats() -> Dictionary:
@@ -551,7 +750,10 @@ func stats() -> Dictionary:
 		"speed": 1.05 if data["class"] == "scavenger" else 1.0, "pickup": 1.15 if data["class"] == "scavenger" else 1.0,
 		"capacity": 8 + int(data.facilities.quartermaster) - 1, "secure": 2,
 		"medkit": 0.25 if data.facilities.infirmary >= 2 else 0.20, "class": data["class"], "cooldown": 0.0}
-	result.weapon = preload("res://weapons.gd").family(item_by_id(data.equipment.weapon))
+	var equipped_weapon := item_by_id(data.equipment.weapon)
+	result.weapon = preload("res://weapons.gd").family(equipped_weapon) if equipment_eligible(equipped_weapon) else "pistol"
+	if not equipment_eligible(item_by_id(data.equipment.gadget)):
+		result.medkit = 0.0
 	if data["class"] == "warden":
 		result.armor += 18
 	result.blueprints = ["barricade", "trap"]
@@ -562,9 +764,11 @@ func stats() -> Dictionary:
 	result.mastery = Content.mastery_level(data.mastery[data["class"]])
 	result.ability_pool = ability_pool(data["class"])
 	result.training_style = data.training_style
-	result.training_bonuses = Training.bonuses(data.combat_xp)
+	result.training_bonuses = Training.bonuses(combat_experience())
 	for slot: String in Content.SLOTS:
 		var item := item_by_id(data.equipment[slot])
+		if not equipment_eligible(item):
+			continue
 		var values := Content.item_stats(item)
 		for stat in ["hp", "power", "armor"]:
 			result[stat] += values[stat]
@@ -587,6 +791,17 @@ func stats() -> Dictionary:
 		result.cooldown += 0.04
 	if data["class"] == "warden":
 		result.hp *= 1.10
+	var talents := Skills.bonuses(data["class"],talent_ranks(data["class"]))
+	result.talent_effects = Skills.effect_bonuses(data["class"],talent_ranks(data["class"]))
+	result.capacity += int(talents.capacity)
+	result.secure += int(talents.secure)
+	result.medkit += talents.medkit
+	result.hp *= 1.0 + talents.hp
+	result.power *= 1.0 + talents.power
+	result.armor += talents.armor
+	result.speed += talents.speed
+	result.pickup += talents.pickup
+	result.cooldown += talents.cooldown
 	result.hp *= 1.0 + result.training_bonuses.hp
 	result.speed = minf(result.speed, 1.15)
 	result.cooldown = minf(result.cooldown, 0.15)
@@ -600,6 +815,7 @@ func start_attempt(mission: int) -> Dictionary:
 	if not can_change_loadout() or not mission_unlocked(mission):
 		return {}
 	var previous := data.duplicate(true)
+	reconcile_equipment(data["class"])
 	var attempt := {"id": int(data.next_attempt), "mission": mission, "class": data["class"], "seed": int(Time.get_unix_time_from_system()) + int(data.next_attempt) * 7919}
 	data.next_attempt += 1
 	data.active_attempt = attempt
@@ -698,14 +914,18 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 	data.survivor_xp += reward.survivor_xp
 	data.mastery[attempt["class"]] += reward.mastery_xp
 	reward.combat_xp = Training.fresh()
-	reward.combat_before = Training.combat_level(data.combat_xp)
+	var class_xp := combat_experience(attempt["class"])
+	reward.combat_class = attempt["class"]
+	reward.combat_before = Training.combat_level(class_xp)
+	var before_points := skill_points(attempt["class"])
 	if outcome.get("progress_eligible", true):
 		for stat in Training.STATS:
-			var updated := minf(Training.MAX_XP, data.combat_xp[stat] + combat_earned[stat])
-			reward.combat_xp[stat] = updated - data.combat_xp[stat]
-			data.combat_xp[stat] = updated
-	reward.combat_after = Training.combat_level(data.combat_xp)
-	reward.talent_points = reward.combat_after - reward.combat_before
+			var updated := minf(Training.MAX_XP, class_xp[stat] + combat_earned[stat])
+			reward.combat_xp[stat] = updated - class_xp[stat]
+			class_xp[stat] = updated
+	reward.combat_after = Training.combat_level(class_xp)
+	reward.talent_points = skill_points(attempt["class"]) - before_points
+	sync_training_alias()
 	data.daily = daily_state()
 	Daily.record(data.daily, outcome)
 	data.last_banked = id
@@ -719,6 +939,7 @@ func start_contract(slot: String, weapon_family: String = "pistol") -> Dictionar
 	if not can_change_loadout() or not Salvage.unlocked(self) or slot not in Content.SLOTS or weapon_family not in Loot.Weapons.TYPES:
 		return {}
 	var previous := data.duplicate(true)
+	reconcile_equipment(data["class"])
 	var attempt := {"id": int(data.next_attempt), "mission": 1, "class": data["class"],
 		"seed": int(Time.get_unix_time_from_system()) + int(data.next_attempt) * 7919,
 		"mode": "salvage", "target_slot": slot, "target_weapon": weapon_family if slot == "weapon" else "pistol"}

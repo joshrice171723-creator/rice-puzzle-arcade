@@ -73,23 +73,26 @@ func _initialize() -> void:
 	check(r.phase == "waves","Exhausted upgrade pools never trap the player in an empty level-up screen")
 	r = Run.new()
 	r.field.sites.assign([r.field.sites[0]])
-	r.player = Vector2(600,560)
-	var stopped := r.move_body(r.player,Vector2(600,360),10)
-	check(stopped.y >= 486.9 and stopped.distance_to(r.field.sites[0].pos) < r.Field.RADIUS,"Altar plinth blocks movement while leaving its charge ring accessible")
+	var altar: Vector2 = r.field.sites[0].pos
+	var approach: Vector2 = altar + Vector2(0,130)
+	var behind: Vector2 = altar - Vector2(0,130)
+	r.player = approach
+	var stopped := r.move_body(r.player,behind,10)
+	check(stopped.y >= altar.y+59.9 and stopped.distance_to(r.Field.interaction_center(r.field.sites[0])) < r.Field.interaction_radius(r.field.sites[0]),"Altar plinth blocks movement while leaving its charge ring accessible")
 	var sliding := r.move_body(stopped,stopped+Vector2(90,-90),10)
 	check(sliding.x > stopped.x+30,"Diagonal input slides around a landmark rather than sticking")
-	r.player = Vector2(600,330)
-	var pursuer := target(r,Vector2(600,580))
+	r.player = behind
+	var pursuer := target(r,approach)
 	for frame in 1200:
 		r.tick_enemy(pursuer,1.0/60)
 	check(pursuer.pos.distance_to(r.player) < 65,"Pursuing enemies route around an altar and can still reach the player")
-	var front_edge := target(r,Vector2(600,490))
-	target(r,Vector2(600,499))
+	var front_edge := target(r,altar+Vector2(0,65))
+	target(r,altar+Vector2(0,74))
 	for frame in 60:
 		r.separate_enemies(1.0/60)
-	check(((front_edge.pos-Vector2(600,445))/Vector2(71,45)).length() >= 0.999,"Crowd separation cannot push an enemy into a solid shrine")
+	check(((front_edge.pos-altar)/Vector2(143,63)).length() >= 0.999,"Crowd separation cannot push an enemy into a solid shrine")
 	r.practice = true
-	check(r.move_body(Vector2(600,560),Vector2(600,360),10) == Vector2(600,360),"Hidden field landmarks never obstruct boss training")
+	check(r.move_body(approach,behind,10) == behind,"Hidden field landmarks never obstruct boss training")
 	for kind in ["drifter","runner","spitter"]:
 		r = Run.new()
 		var e := target(r,r.player+Vector2(25 if kind != "spitter" else 180,0),kind)

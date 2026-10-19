@@ -32,6 +32,9 @@ func _initialize() -> void:
 	check(not p.upgrade_item(0), "Insufficient upgrade funds do not mutate gear")
 	p.data.credits = 1000
 	p.data.parts = 100
+	# This fixture tests purchasing, not the separate class equipment eligibility gate.
+	p.data.class_combat.scavenger.xp.ranged = float(p.Training.threshold(3))
+	p.sync_training_alias()
 	check(p.upgrade_item(0) and p.item_by_id(0).level == 2 and p.data.credits == 960 and p.data.parts == 98, "Equipment upgrade deducts exact costs once")
 	check(is_equal_approx(p.stats().power, 42), "Equipment upgrade changes real Power")
 	var copies: Array = []

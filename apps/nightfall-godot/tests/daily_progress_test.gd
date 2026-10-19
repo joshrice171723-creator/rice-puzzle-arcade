@@ -147,6 +147,9 @@ func verify() -> void:
 	p = fresh_profile()
 	p.data.credits = 260
 	p.data.parts = 9
+	# Funded bulk-purchase arithmetic assumes an eligible class at the equipment cap.
+	p.data.class_combat.scavenger.xp.ranged = float(p.Training.threshold(9))
+	p.sync_training_alias()
 	check(p.quick_upgrade_cost(0) == {"levels": 3, "credits": 240, "parts": 9}, "Quick Upgrade previews max affordable steps")
 	check(p.quick_upgrade_item(0) and p.item_by_id(0).level == 4 and p.data.credits == 20 and p.data.parts == 0, "Quick Upgrade charges exact total and preserves remaining currency")
 	check(p.quick_upgrade_cost(0).is_empty() and not p.quick_upgrade_item(0), "Unaffordable quick upgrade has no effects")

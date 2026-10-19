@@ -77,7 +77,8 @@ func verify() -> void:
 		for maximum in [false, true]:
 			for stat in Training.STATS:
 				profile.data.combat_xp[stat] = Training.MAX_XP if maximum else 0.0
-			profile.data.training_style = "accurate"
+			profile.data.class_combat[profile.data["class"]].training_style = "accurate"
+			profile.sync_training_alias()
 			home.navigate("combat_training")
 			await settle()
 			check(home.body.get_global_rect().end.y <= home.navigation.position.y, "Training fits above phone navigation at " + str(dimensions))
@@ -91,7 +92,8 @@ func verify() -> void:
 				DirAccess.make_dir_recursive_absolute(capture_dir)
 				await RenderingServer.frame_post_draw
 				root.get_texture().get_image().save_png(capture_dir.path_join("combat-training-%s-%dx%d.png" % ["max" if maximum else "fresh", dimensions.x, dimensions.y]))
-	profile.data.combat_xp = Training.fresh()
+	profile.data.class_combat[profile.data["class"]].xp = Training.fresh()
+	profile.sync_training_alias()
 	home.navigate("talents")
 	await settle()
 	home.find_child("TalentPreviewOpenMastery", true, false).pressed.emit()

@@ -97,6 +97,9 @@ static func merge(home: Control) -> void:
 	UI.label(summary_words, "%s · Level %d" % [next_rarity.capitalize(), result_level], 20, Color("ffdb95"))
 	UI.label(summary_words, "%d/2 copies selected · No currency cost" % home.merge_donors.size(), 13)
 	UI.label(result, "Keeps this piece's substats and ranks, plus the highest level. New substat slots fill automatically.", 12)
+	var merge_eligible: bool = profile.data.equipment[item.slot] != item.id or profile.equipment_eligible(result_item)
+	if not merge_eligible:
+		UI.label(result,profile.equipment_requirement_reason(result_item)+". Equip another piece before merging.",13,Color("ffca88"))
 	var scroll := ScrollContainer.new()
 	scroll.name = "MergeCopies"
 	scroll.custom_minimum_size.y = 100
@@ -139,7 +142,7 @@ static func merge(home: Control) -> void:
 		return success, "Merged into " + next_rarity.capitalize() + "."))
 	merge_button.name = "ConfirmMerge"
 	home.MenuSkin.action(merge_button, "gold")
-	merge_button.disabled = home.merge_donors.size() != 2 or not profile.can_change_loadout()
+	merge_button.disabled = not merge_eligible or home.merge_donors.size() != 2 or not profile.can_change_loadout()
 	home.button("Back to item", func(): home.page = "gear"; home.rebuild(), null, 38)
 
 static func substats(home: Control) -> void:

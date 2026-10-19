@@ -21,14 +21,14 @@ func _initialize() -> void:
 	run.damage_enemy(enemy, 4, run.player, false, true)
 	check(run.feedback.size() == 1 and run.feedback[0].amount == 7 and run.feedback[0].critical, "Rapid hits coalesce without losing damage or critical status")
 	check(enemy.hp == start - 7, "Presentation preserves actual damage")
-	check(is_equal_approx(run.combat_xp.attack, 24.0 * 7.0 / start), "Feedback cannot multiply permanent XP")
+	check(is_equal_approx(run.combat_xp.attack, 2.4 * 7.0 / start), "Feedback cannot multiply permanent XP")
 	run.paused = true
 	run.tick(1, Vector2.ZERO)
-	check(run.feedback[0].life == 0.62, "Pause freezes feedback")
+	check(run.feedback[0].life == 0.78, "Pause freezes feedback")
 	run.paused = false
 	run.fire_wait = 5
 	run.spawn_wait = 5
-	run.tick(0.7, Vector2.ZERO)
+	run.tick(0.8, Vector2.ZERO)
 	check(run.feedback.is_empty(), "Feedback expires during active simulation")
 	for n in 100:
 		run.add_feedback("hit", run.player, Vector2.RIGHT, 1)

@@ -44,6 +44,9 @@ func verify() -> void:
 	var p = Profile.new(PATH)
 	p.data.credits = 10000
 	p.data.parts = 1000
+	# The workshop fixture may equip its level-four merge result.
+	p.data.class_combat.scavenger.xp.ranged = float(p.Training.threshold(9))
+	p.sync_training_alias()
 	var target := add_item(p, "weapon", "rare")
 	target.affixes = ["tempered"]
 	target.affix_levels = {"tempered": 2}

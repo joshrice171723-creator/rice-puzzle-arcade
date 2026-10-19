@@ -6,6 +6,8 @@ const ENEMIES := {
 	"drifter": {"name": "Drifter", "hp": 48.0, "speed": 32.0, "contact": 10.0},
 	"runner": {"name": "Rift Runner", "hp": 32.0, "speed": 56.0, "contact": 8.0},
 	"spitter": {"name": "Ash Spitter", "hp": 40.0, "speed": 24.0, "contact": 8.0},
+	"bulwark": {"name":"Scrap Bulwark", "hp":88.0, "speed":26.0, "contact":18.0},
+	"hexer": {"name":"Rift Hexer", "hp":52.0, "speed":30.0, "contact":10.0},
 	"breaker": {"name": "The Breaker", "hp": 1000.0, "speed": 35.0, "contact": 18.0},
 }
 const SPELLS := {
@@ -63,15 +65,27 @@ const BRANCHES := {
 		"focus": {"name": "Crushing Knot", "description": "+50% impact, stronger pull. Radius shrinks from 130 to 100.", "damage": 1.5, "radius": 100.0, "pull": 90.0},
 		"spread": {"name": "Wide Orbit", "description": "Radius grows from 130 to 170. Damage is 25% lower; pull is gentler.", "damage": 0.75, "radius": 170.0, "pull": 55.0}}}
 const WAVES := [
-	{"at": 0.0, "name": "Dusk patrol", "interval": 1.4, "runner": 0.0, "spitter": 0.0},
-	{"at": 45.0, "name": "Runners arrive", "interval": 1.05, "runner": 0.25, "spitter": 0.0},
-	{"at": 100.0, "name": "Crossfire", "interval": 0.80, "runner": 0.25, "spitter": 0.25},
-	{"at": 165.0, "name": "Last stand", "interval": 0.60, "runner": 0.35, "spitter": 0.25},
-]
+	{"at":0.0,"name":"Dusk patrol","runner":0.05,"spitter":0.0,"bulwark":0.0,"hexer":0.0},
+	{"at":45.0,"name":"Runners arrive","runner":0.28,"spitter":0.08,"bulwark":0.0,"hexer":0.0},
+	{"at":100.0,"name":"The breach","runner":0.25,"spitter":0.18,"bulwark":0.12,"hexer":0.06},
+	{"at":165.0,"name":"Last stand","runner":0.30,"spitter":0.20,"bulwark":0.15,"hexer":0.10}]
+
+static func pressure_at(seconds: float, duration: float = 240.0) -> Dictionary:
+	var q := smoothstep(0.0,1.0,clampf(seconds/maxf(1.0,duration),0,1))
+	return {"rate":1.0+4.0*q,"hp":1.0+0.65*q,"speed":1.0+0.40*q,"damage":1.0+0.35*q}
+
+static func spawn_interval(seconds: float, duration: float, mission_pressure: float) -> float:
+	return 1.4/(maxf(0.1,mission_pressure)*pressure_at(seconds,duration).rate)
+
+static func enemy_at(wave: Dictionary, roll: float) -> String:
+	var threshold := 0.0
+	for kind in ["runner","spitter","bulwark","hexer"]:
+		threshold += wave.get(kind,0.0)
+		if roll < threshold: return kind
+	return "drifter"
 
 static func wave_at(seconds: float) -> Dictionary:
 	var wave: Dictionary = WAVES[0]
 	for candidate in WAVES:
-		if seconds >= candidate.at:
-			wave = candidate
+		if seconds >= candidate.at: wave = candidate
 	return wave

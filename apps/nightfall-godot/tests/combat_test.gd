@@ -18,8 +18,8 @@ func target_at(r, position: Vector2, kind: String = "drifter") -> Dictionary:
 
 func _initialize() -> void:
 	var r = Run.new()
-	check(r.Content.wave_at(44).runner == 0 and r.Content.wave_at(45).runner > 0, "Runners enter at 45 seconds")
-	check(r.Content.wave_at(99).spitter == 0 and r.Content.wave_at(100).spitter > 0, "Ranged enemies enter after the opening waves")
+	check(r.Content.wave_at(0).runner > 0 and r.Content.wave_at(45).runner > r.Content.wave_at(44).runner, "Runners occur in opening patrols and become more common at 45 seconds")
+	check(r.Content.wave_at(44).spitter == 0 and r.Content.wave_at(45).spitter > 0, "Ranged enemies enter after the opening waves")
 	r.phase = "upgrade"
 	r.level = 2
 	r.available_spells = ["ember", "frost", "chain"]

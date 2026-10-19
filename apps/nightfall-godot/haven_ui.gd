@@ -48,6 +48,7 @@ const EQUIPMENT_ART = preload("res://assets/equipment-icons.png")
 var profile: RefCounted
 var page := "mission"
 var mission := 1
+var zone_index := 0
 var selected_item := -1
 var confirmation := ""
 var message := ""
@@ -388,12 +389,27 @@ func mission_page() -> void:
 	body.add_child(heading)
 	page_heading(heading, "Expedition")
 	button("Zones", func(): navigate("zones"), heading, 36).custom_minimum_size.x = 72
-	MenuSkin.label(body, "1 · Blackout Outskirts", 21, Color("ffe4a5"), true)
+	MenuSkin.label(body, "%d · %s" % [zone_index+1,ZONES[zone_index]], 21, Color("ffe4a5"), true)
 	var stage := Control.new()
 	stage.custom_minimum_size.y = 138 if not profile.data.active_attempt.is_empty() else 194
 	body.add_child(stage)
-	var island_rect := Rect2(32, -15, 322, stage.custom_minimum_size.y + 21)
-	Art.picture(stage, Art.OUTSKIRTS, island_rect)
+	stage.name = "ZoneMap"
+	var island_rect := Rect2(46, -15, 294, stage.custom_minimum_size.y + 21)
+	var island := Art.picture(stage, Art.OUTSKIRTS, island_rect)
+	island.modulate = Color.WHITE if zone_index == 0 else Color(0.32,0.38,0.55)
+	var previous := ClassShowcase.fixed_button(self,stage,"‹",Rect2(0,stage.custom_minimum_size.y*0.5-25,42,50),func(): browse_zone(-1),false,28)
+	previous.name = "PreviousZone"
+	previous.disabled = zone_index == 0
+	previous.tooltip_text = "Previous zone"
+	var next := ClassShowcase.fixed_button(self,stage,"›",Rect2(344,stage.custom_minimum_size.y*0.5-25,42,50),func(): browse_zone(1),false,28)
+	next.name = "NextZone"
+	next.disabled = zone_index == ZONES.size()-1
+	next.tooltip_text = "Next zone"
+	if zone_index != 0:
+		MenuSkin.label(body,"Uncharted zone",24,Color("ffe4a5"),true)
+		MenuSkin.label(body,"This region is planned. Its missions and map are not available yet.",16,Color("d7e6ff"))
+		button("Return to Blackout Outskirts",func(): zone_index = 0; rebuild(),null,48)
+		return
 	if not profile.data.settings.reduced_effects:
 		var motion = MenuMotion.island(stage, fitted_art_rect(Art.OUTSKIRTS, island_rect))
 		motion.beacon_uv = Vector2(0.558,0.09)
@@ -445,6 +461,10 @@ func mission_page() -> void:
 		MenuSkin.action(start, "gold")
 		start.add_theme_font_size_override("font_size", 25)
 		start.disabled = not unlocked or profile.blocked
+
+func browse_zone(direction: int) -> void:
+	zone_index = clampi(zone_index+direction,0,ZONES.size()-1)
+	rebuild()
 
 func zones_page() -> void:
 	Services.zones(self)
@@ -566,6 +586,12 @@ func gear_page() -> void:
 		ItemDetail.show_item(self)
 
 func equipment_tile(item: Dictionary, parent: Node, dimensions: Vector2) -> Button:
+	if item.is_empty():
+		var empty := button("Empty",func(): pass,parent,int(dimensions.y))
+		empty.custom_minimum_size = dimensions
+		empty.size = dimensions
+		empty.disabled = true
+		return empty
 	var tile := button("", func(): selected_item = item.id; message = ""; rebuild(), parent, int(dimensions.y))
 	tile.custom_minimum_size = dimensions
 	tile.size = dimensions

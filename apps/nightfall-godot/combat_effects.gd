@@ -55,7 +55,7 @@ static func draw_projectiles(canvas: Node2D, run: RefCounted, offset: Vector2, t
 
 
 static func draw_shot(canvas: Node2D, shot: Dictionary, offset: Vector2, time: float, reduced: bool) -> void:
-	var at: Vector2 = shot.pos + offset + LIFT
+	var at: Vector2 = shot_visual_position(shot) + offset
 	var velocity: Vector2 = shot.get("velocity",Vector2.RIGHT)
 	var direction := velocity.normalized() if velocity.length_squared() > 0.001 else Vector2.RIGHT
 	match shot.get("kind","pistol"):
@@ -100,6 +100,22 @@ static func draw_shot(canvas: Node2D, shot: Dictionary, offset: Vector2, time: f
 			canvas.draw_line(at - direction * 3.0 - side, at + direction * 3.0 - side, Color("fff0b7"), 1.7, true)
 			if not reduced:
 				canvas.draw_line(at - direction * 6.0, at - direction * 12.0, Color(1.0, 0.72, 0.35, 0.36), 1.6, true)
+
+static func shot_visual_position(shot: Dictionary) -> Vector2:
+	var grounded: Vector2 = shot.pos+LIFT
+	var kind: String = shot.get("kind","pistol")
+	if kind not in ["pistol","scattergun","crossbow","wand"] or not shot.has("visual_launch"):
+		return grounded
+	var launch: Dictionary = shot.visual_launch
+	var origin: Vector2 = launch.origin
+	var aim: Vector2 = launch.aim
+	var muzzle := HeroMotion.muzzle_offset(launch.class_id,kind,launch.face,aim,launch.clock,0,0,0,0,kind,0)
+	var distance := origin.distance_to(shot.pos)
+	# Blend the short launch height correction into the unchanged torso-height path.
+	# Close targets converge before their existing collision boundary, not after it.
+	var converge := minf(80.0,maxf(0.01,float(launch.contact_distance)))
+	var weight := 1.0-smoothstep(0.0,converge,distance)
+	return grounded+(muzzle-LIFT)*weight
 
 
 static func draw_wisps(canvas: Node2D, run: RefCounted, offset: Vector2, time: float, reduced: bool, front: bool = true) -> void:

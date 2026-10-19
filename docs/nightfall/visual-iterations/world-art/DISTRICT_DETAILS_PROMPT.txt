@@ -1,0 +1,8 @@
+Use case: stylized-concept. Production original fantasy neighborhood SCENERY ATLAS, TRANSPARENT1536square, 2columns3rows EXACTLYsix isolated props with generous empty margins, nofloorislands, noUItext, nocharacters. Match reference NightfallBase and originalBlackoutOutskirts: bluegraybeveledstone,bluepaintedmetal, warmamberlights, handpaintedpremium3Dstyle coherenthigh3/4topdowncamera. Each prop fullyvisible notcropped.
+TOPLEFT: ornate practical brass-and-blue STEETLAMP tallslenderpole with two warmamber lanterns and stone foot.
+TOPRIGHT: short ruined stone-and-iron FENCE SECTION angledisometric, twobluegraybrickposts linkedbydarkironfence, creepingivy aroundstonebase, lanternhangingonepost. Longhorizontal silhouette.
+MIDDLELEFT: wooden UTILITY POLE withcrossarm, blueinsulators, shortselfcontainedwireloop, brassswitchbox andfewvines atbase; tallslendersilhouette.
+MIDDLERIGHT: stacked WEATHERED WOODEN CRATES withone redtoolbox, sack andrustytirecluster; compactgroundedscavengingpile, nofloor.
+BOTTOMLEFT: low ruined bluegray BRICK WALL FRAGMENT withweedsandfallenbricks, longhorizontal rubblebarrierreadableaslowcover.
+BOTTOMRIGHT: isolated FLAT LOW GROUNDCOVER PATCH ofshortivy, smallwhiteflowers, threetinyloosebrickchips andfallenbrownleaves, irregulartransparentedges, seenfromabove, NO tallbush, NOtree, NOplanter.
+Truealpha outsideeachasset, no cellframes, no labeling. Objects should havecrisp silhouettes detailedbevelswithsmoothcolor, notpixelnoise. Allobjectsindependent with cleargaps between6cells.

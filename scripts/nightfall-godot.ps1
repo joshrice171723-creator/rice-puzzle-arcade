@@ -23,6 +23,14 @@ function Invoke-Godot([string[]]$Arguments) {
     }
 }
 if ($Action -eq 'Test') {
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/talent_effects_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/equipment_requirements_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/weapon_muzzle_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/field_controls_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/neighborhood_rules_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/class_talents_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/class_talents_ui_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/enemy_animation_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/run_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_mechanics_test.gd')

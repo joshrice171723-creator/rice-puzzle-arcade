@@ -58,8 +58,9 @@ static func geometry(size: Vector2, clock: float, stride: float, move_blend: flo
 	var rotation := -0.48*cast
 	var recoil := 0.0
 	if action in ["pistol","scattergun","crossbow"]:
-		recoil = (4.5 if action=="scattergun" else (2.8 if action=="crossbow" else 1.8))*cast
-		rotation = -0.10*cast
+		recoil = EquipmentArt.kick(action,cast_age)*0.22
+		rotation = -recoil*0.035
+		cast = 0.0
 	elif action == "sabre" and cast_age >= 0 and cast_age < 0.30:
 		rotation = lerpf(-0.65,0.70,smoothstep(0.0,0.16,cast_age))*(1-smoothstep(0.16,0.30,cast_age))
 	var shoulder := Vector2(size.x*0.12,-size.y*0.62)
@@ -81,11 +82,37 @@ static func geometry(size: Vector2, clock: float, stride: float, move_blend: flo
 static func deform_point(uv: Vector2, size: Vector2, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, action: String = "") -> Vector2:
 	return geometry(size,clock,stride,move_blend,cast_age,dodge,action,PackedVector2Array([uv]))[0]
 
+static func hand_offset(weapon: String, aim: Vector2, age: float) -> Vector2:
+	if weapon not in ["pistol","scattergun","crossbow"]:
+		return Vector2.ZERO
+	var direction := aim.normalized() if aim.length_squared() > 0.01 else Vector2.RIGHT
+	# Lift the forearm into a supported firing position and absorb the impulse at the wrist.
+	return Vector2(-2.0,-6.0+direction.y*4.0) - direction*EquipmentArt.kick(weapon,age)
+
+static func weapon_attachment(class_id: String, weapon: String, face: float, aim: Vector2, clock: float, stride: float = 0.0, move_blend: float = 0.0, cast_age: float = 0.0, dodge: float = 0.0, action: String = "", weapon_age: float = 0.0) -> Transform2D:
+	var source: Rect2 = BODIES_REGIONS.get(class_id,BODIES_REGIONS.scavenger)
+	var size := Vector2(source.size.x/source.size.y*80,80)
+	var local_aim := Vector2(aim.x*face,aim.y)
+	var uv: Vector2 = HANDS.get(class_id,HANDS.scavenger)
+	var hand := deform_point(uv,size,clock,stride,move_blend,cast_age,dodge,action)
+	hand += hand_offset(weapon,local_aim,weapon_age)*vertex_weights(uv)[6]
+	var body := Transform2D(Vector2(face,0),Vector2(0,1),Vector2(0,5.6))
+	return body*EquipmentArt.mount(weapon,hand,local_aim,weapon_age,true)
+
+static func muzzle_offset(class_id: String, weapon: String, face: float, aim: Vector2, clock: float, stride: float = 0.0, move_blend: float = 0.0, cast_age: float = 0.0, dodge: float = 0.0, action: String = "", weapon_age: float = 0.0) -> Vector2:
+	var attachment := weapon_attachment(class_id,weapon,face,aim,clock,stride,move_blend,cast_age,dodge,action,weapon_age)
+	var spec: Dictionary = EquipmentArt.SPECS.get(weapon,EquipmentArt.SPECS.pistol)
+	return attachment*spec.tip
+
 static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, engineer: bool, reduced: bool, class_id: String = "scavenger", hurt: float = 0.0, action: String = "", weapon: String = "pistol", aim: Vector2 = Vector2.RIGHT, weapon_age: float = 99.0) -> void:
 	var texture: Texture2D = BODIES
 	var source: Rect2 = BODIES_REGIONS.get(class_id,BODIES_REGIONS.engineer if engineer else BODIES_REGIONS.scavenger)
 	var size := Vector2(source.size.x/source.size.y*80,80)
 	var vertices := geometry(size,clock,stride,move_blend,cast_age,dodge,action)
+	var local_aim := Vector2(aim.x*face,aim.y)
+	var forearm := hand_offset(weapon,local_aim,weapon_age)
+	for n in vertices.size():
+		vertices[n] += forearm*weights[n][6]
 	var key := str(source)
 	if not uv_cache.has(key):
 		var uvs := PackedVector2Array()
@@ -105,8 +132,8 @@ static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: flo
 	canvas.set_meta("hero_mesh",mesh)
 	var transform := Transform2D(Vector2(face,0),Vector2(0,1),pos+offset+Vector2(0,5.6))
 	var tint := Color.WHITE.lerp(Color(1.7,1.35,1.25),hurt if not reduced else 0.0)
-	var hand := deform_point(HANDS.get(class_id,HANDS.scavenger),size,clock,stride,move_blend,cast_age,dodge,action)
-	var attachment := transform*EquipmentArt.mount(weapon,hand,Vector2(aim.x*face,aim.y),weapon_age,true)
+	var attachment := weapon_attachment(class_id,weapon,face,aim,clock,stride,move_blend,cast_age,dodge,action,weapon_age)
+	attachment.origin += pos+offset
 	# The body covers the grip, keeping the fingers in front of the held equipment.
 	EquipmentArt.draw(canvas,weapon,attachment,tint)
 	if dodge > 0 and not reduced:
@@ -114,11 +141,12 @@ static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: flo
 		trail.origin.x -= face*14*dodge
 		canvas.draw_mesh(mesh,texture,trail,Color(0.62,0.77,1,dodge*0.18))
 	canvas.draw_mesh(mesh,texture,transform,tint)
-	if weapon in ["pistol","scattergun","crossbow"] and weapon_age >= 0 and weapon_age < 0.09 and not reduced:
+	EquipmentArt.mechanism(canvas,weapon,attachment,weapon_age,tint)
+	if weapon in ["pistol","scattergun"] and weapon_age >= 0 and weapon_age < 0.24:
 		var spec: Dictionary = EquipmentArt.SPECS[weapon]
 		var muzzle: Vector2 = attachment*spec.tip
 		var direction: Vector2 = (muzzle-attachment*spec.grip).normalized()
-		Presentation.muzzle_prongs(canvas,muzzle,direction,weapon_age/0.09,1-weapon_age/0.09)
+		Presentation.muzzle_prongs(canvas,muzzle,direction,weapon_age/0.24,(0.45 if reduced else 1.0)*(1.35 if weapon == "scattergun" else 1.0))
 
 static func weapon_pose(run: RefCounted) -> Dictionary:
 	for index in range(run.vfx_events.size()-1,-1,-1):

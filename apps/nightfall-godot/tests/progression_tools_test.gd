@@ -48,7 +48,7 @@ func verify() -> void:
 	file.close()
 	check(p.load_save() and p.valid(p.data), "Version 2 migrates to valid version 3")
 	check(p.data.active_attempt == legacy.active_attempt and p.data.inventory == legacy.inventory, "Migration preserves checkpoint and inventory")
-	check(p.skill_points("scavenger") == 0 and p.data.skill_unlocks.scavenger.is_empty(), "Migration keeps mastery separate from combat talent points")
+	check(p.skill_points("scavenger") == 1 and p.data.skill_unlocks.scavenger.is_empty(), "Migration keeps mastery separate from combat talent points")
 	p.data.active_attempt = {}
 	check(p.save_loadout("1", "Scavenging"), "Save current equipment build")
 	var extra: Dictionary = p.Loot.equipment("weapon", "rare", p.data.next_item)
@@ -60,7 +60,8 @@ func verify() -> void:
 	check(not p.salvage(0), "Unequipped build item cannot be salvaged")
 	p.data.credits = 1000
 	p.data.parts = 100
-	check(p.upgrade_item(extra.id), "Upgrade a saved item normally")
+	p.combat_experience("engineer").ranged=float(p.Training.threshold(3))
+	check(p.upgrade_item(extra.id), "Eligible class upgrades a saved item normally")
 	check(p.apply_loadout("1") and p.data["class"] == "scavenger" and p.data.equipment.weapon == 0, "Apply restores all gear and class")
 	check(p.apply_loadout("2") and p.stats().power > 43 and p.item_by_id(extra.id).level == 2, "Build uses live upgraded item values")
 	check(p.remove_loadout("1") and p.set_item_locked(0, true) and not p.salvage(0), "Explicit lock protects an item after its build is removed")
@@ -68,14 +69,21 @@ func verify() -> void:
 	check(p.valid(p.data), "Salvage leaves no stale build or lock references")
 	check(not p.save_loadout("4", "Invalid") and not p.save_loadout("1", " ") and not p.save_loadout("1", "x".repeat(21)), "Reject invalid build slots and names")
 	check(not p.unlock_skill("warden", "ember"), "Locked class cannot purchase skills")
-	check(not p.unlock_skill("scavenger", "gravity"), "Capstone requires both parent branches")
+	check(not p.unlock_skill("scavenger", "gravity"), "Capstone requires ranked tier gates")
 	p.data.mastery.engineer = 0
+	check(p.rank_talent("engineer","machines_calibrated_turrets"),"Fresh class can allocate its initial point")
 	check(not p.unlock_skill("engineer", "frost"), "Mastery alone cannot grant combat talent points")
 	for stat in p.Training.STATS:
-		p.data.combat_xp[stat] = float(p.Training.threshold(10))
-	for ability: String in Skills.BRANCHES.scavenger:
-		check(p.unlock_skill("scavenger", ability), "Unlock prerequisite-ordered node " + ability)
-	check(p.skill_points("scavenger") == 0 and p.ability_pool("scavenger").size() == 8, "Nine earned points unlock all five nodes")
+		p.combat_experience("scavenger")[stat] = p.Training.MAX_XP
+	var spell_route := {"precision_sure_shot":5,"blades":1,"lance":1,"scavenge_trail_finder":5,"scavenge_hardy_rations":5,"wisp":1,"scavenge_watchful_lantern":4,"ground":1,"mobility_light_foot":5,"mobility_rolling_escape":5,"gravity":1}
+	for pass_index in 40:
+		var changed:=false
+		for id in spell_route:
+			if p.talent_ranks("scavenger").get(id,0)<spell_route[id] and Skills.requirement("scavenger",id,p.talent_ranks("scavenger")).is_empty():
+				check(p.rank_talent("scavenger",id),"Purchase spell route "+id)
+				changed=true
+		if not changed:break
+	check(p.skill_points("scavenger") == 65 and p.ability_pool("scavenger").size() == 8,"Branched build unlocks five spells without buying every talent")
 	check(not p.unlock_skill("scavenger", "wisp"), "Duplicate unlock cannot spend again")
 	check(p.ability_pool("engineer") == Skills.STARTERS.engineer, "Class unlock pools remain independent")
 	var invalid: Dictionary = p.data.duplicate(true)
@@ -96,6 +104,8 @@ func verify() -> void:
 	p.data.active_attempt = {}
 	for stat in p.Training.STATS:
 		p.data.combat_xp[stat] = float(p.Training.threshold(11))
+	for rank in 5:
+		check(p.rank_talent("engineer","energy_swarm_cycling"),"Engineer spell path root")
 	before = p.data.duplicate(true)
 	p.path = "user://missing-progression-tools-dir/save.json"
 	check(not p.save_loadout("1", "Write fail") and p.data == before, "Failed build write rolls back")
@@ -200,11 +210,23 @@ func verify() -> void:
 	await settle()
 	check(home.page == "skills" and home.active_tab() == "class", "Class opens its permanent tree")
 	for stat in p.Training.STATS:
-		p.data.combat_xp[stat] = float(p.Training.threshold(12))
-	home.body.get_node("ClassSkillTree/Skill_lance").pressed.emit()
+		p.combat_experience("engineer")[stat] = p.Training.MAX_XP
+	check(p.reset_talents("engineer"),"Prepare independent UI route")
+	var engineer_route: Dictionary={"machines_calibrated_turrets": 5, "machines_reinforced_chassis": 5, "machines_sidearm_drills": 5, "machines_service_tools": 4, "blades": 1, "machines_spectral_cutters": 4, "machines_drive_calibration": 4, "fortification_worksite_resolve": 5, "fortification_plate_harness": 3, "machines_piledriver": 4, "machines_redundant_bracing": 3, "machines_cutter_timing": 3, "machines_piston_timing": 3}
+	for pass_index in 50:
+		var changed:=false
+		for id in engineer_route:
+			if p.talent_ranks("engineer").get(id,0)<engineer_route[id] and Skills.requirement("engineer",id,p.talent_ranks("engineer")).is_empty():
+				check(p.rank_talent("engineer",id),"Prepare eligible UI route "+id)
+				changed=true
+		if not changed:break
+	home.tree_ability="lance"
+	home.rebuild()
 	await settle()
-	check(not home.body.get_node("HBoxContainer/UnlockSkill").disabled if home.body.has_node("HBoxContainer/UnlockSkill") else not button_in(home, "Unlock ·").disabled, "Earned point enables eligible tree node")
-	button_in(home, "Unlock ·").pressed.emit()
+	home.find_child("Skill_lance",true,false).pressed.emit()
+	await settle()
+	check(not home.find_child("UnlockSkill",true,false).disabled, "Earned point enables eligible tree node")
+	home.find_child("UnlockSkill",true,false).pressed.emit()
 	await settle()
 	check("lance" in p.ability_pool("engineer"), "Tree button permanently unlocks real draft ability")
 	for viewport in [Vector2i(320, 568), Vector2i(390, 844), Vector2i(430, 760)]:

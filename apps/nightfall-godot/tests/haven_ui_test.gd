@@ -16,6 +16,9 @@ func visible_controls(node: Node) -> Array[Control]:
 	var result: Array[Control] = []
 	if node is Control and node.is_visible_in_tree():
 		result.append(node)
+	# Scroll contents may extend beyond the viewport; their visible clip must fit.
+	if node is ScrollContainer and node.clip_contents:
+		return result
 	for child in node.get_children():
 		result.append_array(visible_controls(child))
 	return result

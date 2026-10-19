@@ -32,18 +32,18 @@ func capture() -> void:
 	arena.home.hide()
 	arena.run.configure(1,arena.profile.stats())
 	arena.run.paused = false
-	arena.run.player = Vector2(600,260)
+	arena.run.player = Vector2(830,1110)
 	arena.run.elapsed = 2
 	await save_frame("garage-arrival")
-	arena.run.player = Vector2(600,600)
+	arena.run.player = Vector2(1200,1120)
 	arena.run.elapsed = 135
 	arena.run.level = 7
 	arena.run.xp = 17
 	arena.run.kills = 98
 	arena.run.spells = {"frost":{"rank":2,"wait":1.0},"ember":{"rank":2,"wait":2.0},"wisp":{"rank":1,"wait":0.0},"ground":{"rank":1,"wait":3.0}}
-	for n in 9:
-		arena.run.spawn_enemy(false,["drifter","runner","spitter"][n % 3])
-		arena.run.enemies.back().pos = arena.run.player + Vector2.from_angle(n * TAU / 9) * (125 if n % 2 else 180)
+	for n in 15:
+		arena.run.spawn_enemy(false,["drifter","runner","spitter","bulwark","hexer"][n % 5])
+		arena.run.enemies.back().pos = arena.run.player + Vector2.from_angle(n * TAU / 15) * (125 if n % 2 else 180)
 		arena.run.enemies.back().face = -1.0 if n % 2 else 1.0
 	arena.run.damage_enemy(arena.run.enemies[0],12,arena.run.player)
 	arena.run.damage_enemy(arena.run.enemies[2],8,arena.run.player,true)
@@ -61,7 +61,7 @@ func capture() -> void:
 	arena.run.zones.clear()
 	arena.run.spawn_enemy(true)
 	var boss: Dictionary = arena.run.enemies.back()
-	boss.pos = Vector2(680,530)
+	boss.pos = Vector2(1280,1050)
 	boss.target = arena.run.player
 	boss.attack = "rush"
 	boss.tell = 0.55

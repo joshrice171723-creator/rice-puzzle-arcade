@@ -39,10 +39,10 @@ static func draw_telegraphs(canvas: Node2D, run: RefCounted, offset: Vector2, re
 				canvas.draw_polyline(PackedVector2Array([from-side,end-side,end+direction*15,end+side,from+side]), color, 1.3, true)
 				var arrow := from + direction * reach * progress
 				canvas.draw_polyline(PackedVector2Array([arrow-direction*7-side*0.28,arrow,arrow-direction*7+side*0.28]), Color("ffe4b9"), 2.0, true)
-			"swipe":
-				canvas.draw_polyline(arc_points(from,42,direction.angle(),2.5), color, 1.3, true)
-			"spit", "toss":
-				for angle in ([-0.22,0.0,0.22] if enemy.attack == "toss" else [0.0]):
+			"swipe", "cleave":
+				canvas.draw_polyline(arc_points(from,80 if enemy.attack == "cleave" else 42,direction.angle(),2.8 if enemy.attack == "cleave" else 2.5), color, 1.8, true)
+			"spit", "toss", "hex":
+				for angle in ([-0.28,0.0,0.28] if enemy.attack == "hex" else ([-0.22,0.0,0.22] if enemy.attack == "toss" else [0.0])):
 					var aim := from.direction_to(target).rotated(angle)
 					var marks := PackedVector2Array()
 					for n in 5:
@@ -86,7 +86,11 @@ static func rock(canvas: Node2D, at: Vector2, angle: float, size: float, alpha: 
 static func draw_hostile(canvas: Node2D, shot: Dictionary, offset: Vector2, clock: float, reduced: bool) -> void:
 	var at: Vector2 = shot.pos + offset + LIFT
 	var direction: Vector2 = shot.velocity.normalized()
-	if shot.get("kind","spit") == "rubble":
+	if shot.get("kind", "spit") == "hex":
+		Ember.body(canvas,at,Vector2(12,10),direction.angle(),clock,0,0.85,8)
+		Shapes.ring(canvas,at,10,1.5,Color("efbdff"))
+		if not reduced: Ember.ribbon(canvas,at,direction,23,4,clock,0,0.7,6)
+	elif shot.get("kind","spit") == "rubble":
 		if not reduced:
 			Ember.body(canvas,at-direction*10,Vector2(13,8),direction.angle(),clock,0,0.25,3)
 		rock(canvas,at,clock*8+shot.pos.x*0.01,10,1)
@@ -142,6 +146,7 @@ static func draw_effects(canvas: Node2D, run: RefCounted, offset: Vector2, clock
 		var at: Vector2 = event.pos+offset
 		match event.kind:
 			"enemy_swipe": slash(canvas,at+Vector2(0,-10),event.direction,42,age,true,reduced)
+			"enemy_cleave": slash(canvas,at+Vector2(0,-10),event.direction,80,age,true,reduced)
 			"enemy_death":
 				var corpse: Dictionary = event.enemy.duplicate()
 				corpse.pos = event.pos

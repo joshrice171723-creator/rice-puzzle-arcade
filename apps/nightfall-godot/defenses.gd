@@ -25,12 +25,16 @@ func can_place(kind: String, position: Vector2, sites: Array, player: Vector2) -
 	if kind == "turret" and structures.filter(func(s: Dictionary): return s.kind == "turret" and s.hp > 0).size() >= 2:
 		notice = "Only two damaging turrets can be active."
 		return false
-	if not Rect2(170, 170, 860, 860).has_point(position) or position.distance_to(player) < 45:
+	if not preload("res://world_geometry.gd").BOUNDS.grow(-35).has_point(position) or position.distance_to(player) < 45:
 		notice = "Move away from the edge to place a structure."
 		return false
 	for site in sites:
-		if position.distance_to(site.pos) < 90:
+		if position.distance_to(site.pos) < (90 if site.kind == "cache" else 200):
 			notice = "Keep shrine and cache approaches clear."
+			return false
+	for entry: Dictionary in preload("res://neighborhood.gd").entries():
+		if entry.footprint.grow(TYPES[kind].radius+8).has_point(position):
+			notice = "Keep buildings and vehicle approaches clear."
 			return false
 	for structure in structures:
 		if position.distance_to(structure.pos) < 80:
@@ -104,7 +108,7 @@ func tick(delta: float, run: RefCounted) -> void:
 		if structure.kind == "turret" and structure.wait == 0:
 			var target: Dictionary = run.nearest_enemy(structure.pos, 240)
 			if not target.is_empty():
-				run.damage_enemy(target, 8 * structure.power * (1.0 + 0.06 * run.passive_rank("mechanic")), structure.pos)
+				run.damage_enemy(target, 8 * structure.power * (1+run.talent_effects.structure_damage) * (1.0 + 0.06 * run.passive_rank("mechanic")), structure.pos)
 				run.add_effect("turret", structure.pos, target.pos, 0.12)
 				structure.target = target.pos
 				structure.wait = 0.8 / (1.15 if structure.boost_left > 0 else 1.0)
@@ -113,7 +117,7 @@ func tick(delta: float, run: RefCounted) -> void:
 			if not target.is_empty():
 				for enemy in run.enemies:
 					if enemy.hp > 0 and enemy.pos.distance_to(structure.pos) <= 80:
-						run.damage_enemy(enemy, 48 * structure.power * (1.0 + 0.06 * run.passive_rank("mechanic")), structure.pos, true)
+						run.damage_enemy(enemy, 48 * structure.power * (1+run.talent_effects.structure_damage) * (1.0 + 0.06 * run.passive_rank("mechanic")), structure.pos, true)
 				run.add_effect("trap", structure.pos, structure.pos, 0.45)
 				structure.hp = 0.0
 		for enemy in run.enemies:

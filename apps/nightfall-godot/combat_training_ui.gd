@@ -12,13 +12,15 @@ const BONUS_NAMES := {"attack":"Crit", "strength":"Physical", "defence":"Reducti
 
 static func show_page(home: Control) -> void:
 	UI.title(home, "Combat Training")
-	var experience: Dictionary = home.profile.data.combat_xp
+	var class_id: String = home.inspected_class if not home.inspected_class.is_empty() else home.profile.data["class"]
+	var experience: Dictionary = home.profile.combat_experience(class_id)
+	UI.label_in(home, home.body, preload("res://haven_content.gd").CLASSES[class_id].name, 17, Color("ffe2a0"))
 	var summary := HBoxContainer.new()
 	summary.add_theme_constant_override("separation", 8)
 	home.body.add_child(summary)
 	UI.art(home, summary, Art.icon("training"), Vector2(32,32))
 	UI.label_in(home, summary, "Combat Level %d / 99" % Progression.combat_level(experience), 17, Color("ffe2a0")).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var points := UI.label_in(home, summary, "%d talent points" % home.profile.skill_points(home.profile.data["class"]), 14, Color("d8ecff"))
+	var points := UI.label_in(home, summary, "%d talent points" % home.profile.skill_points(class_id), 14, Color("d8ecff"))
 	points.name = "CombatTalentPoints"
 	var stats := UI.card(home, home.body, Color("5799db"), 10)
 	stats.name = "CombatStats"
@@ -35,7 +37,7 @@ static func show_page(home: Control) -> void:
 	MenuSkin.action(choose, "blue")
 	choose.add_theme_font_size_override("font_size", 16)
 	focus.add_child(choose)
-	var selected: String = home.profile.data.training_style
+	var selected: String = home.profile.data.class_combat[class_id].training_style
 	for index in STYLES.size():
 		var id: String = STYLES[index]
 		var definition: Dictionary = Progression.STYLES[id]
@@ -43,17 +45,18 @@ static func show_page(home: Control) -> void:
 		choose.set_item_metadata(index, id)
 		if id == selected:
 			choose.select(index)
-	choose.disabled = not home.profile.can_change_loadout()
+	choose.tooltip_text = "Ranged trains pistols and bows; Powerful trains melee; Arcane trains wands. Equipping a weapon never changes your selected focus."
+	choose.disabled = not home.profile.can_change_loadout() or not home.profile.class_unlocked(class_id)
 	choose.item_selected.connect(func(index: int):
-		var saved: bool = home.profile.set_training_style(choose.get_item_metadata(index))
+		var saved: bool = home.profile.set_training_style(choose.get_item_metadata(index),class_id)
 		home.message = "Training focus saved." if saved else (home.profile.error if not home.profile.error.is_empty() else "Training focus could not be saved.")
 		home.rebuild())
 	var definition: Dictionary = Progression.STYLES[selected]
 	var hint := "Damage XP → " + skill_names(definition.skills)
 	if selected == "balanced":
 		hint += " equally"
-	UI.label_in(home, focus, hint + ". Vitality also earns one-third XP.", 12, Color("c9dff8"))
-	var note: Label = home.text_line("Permanent training stays after each run. Bonuses apply to your next mission. Run levels and spell ranks reset.", 12)
+	UI.label_in(home, focus, hint + ". Vitality earns one-third. Skills unlock gear.", 12, Color("c9dff8"))
+	var note: Label = home.text_line("Your focus trains gear requirements for this class. Bonuses apply next mission. Mission spell ranks reset.", 12)
 	note.name = "CombatTrainingNote"
 	if not home.profile.can_change_loadout():
 		note.text = "Finish your saved expedition to change training focus. Your earned combat XP stays permanent."

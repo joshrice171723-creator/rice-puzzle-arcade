@@ -115,7 +115,7 @@ static func contract_steer(run: RefCounted) -> Vector2:
 
 static func steer(run: RefCounted) -> Vector2:
 	var nearest: Dictionary = run.nearest_enemy(run.player,450)
-	var desired := Vector2(600,600)+Vector2.from_angle(run.elapsed*0.20)*205
+	var desired: Vector2 = run.World.CENTER+Vector2.from_angle(run.elapsed*0.20)*205
 	# Collect earned XP when the approach is clear; otherwise skirt the nearest threat.
 	var pickup: Vector2 = desired
 	var pickup_distance := 160.0
@@ -134,10 +134,10 @@ static func steer(run: RefCounted) -> Vector2:
 		elif run.weapon_id == "sabre" and separation > 65:
 			direction = run.player.direction_to(nearest.pos)
 	var edge := Vector2.ZERO
-	if run.player.x < 205: edge.x = 1
-	if run.player.x > 995: edge.x = -1
-	if run.player.y < 205: edge.y = 1
-	if run.player.y > 995: edge.y = -1
+	if run.player.x < run.BOUNDS.position.x+70: edge.x = 1
+	if run.player.x > run.BOUNDS.end.x-70: edge.x = -1
+	if run.player.y < run.BOUNDS.position.y+70: edge.y = 1
+	if run.player.y > run.BOUNDS.end.y-70: edge.y = -1
 	return (direction+edge*2).normalized()
 
 func _process(delta: float) -> void:
