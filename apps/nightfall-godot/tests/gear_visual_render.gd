@@ -28,6 +28,11 @@ func capture() -> void:
 		arena.home.rebuild()
 		await frame("gear-starter-%dx%d" % [dimensions.x, dimensions.y])
 	root.size = Vector2i(430, 760)
+	for family: String in arena.run.Weapons.TYPES:
+		arena.profile.item_by_id(arena.profile.data.equipment.weapon).name = arena.run.Weapons.TYPES[family].name
+		arena.home.rebuild()
+		await frame("gear-equipped-"+family)
+	arena.profile.data = starter.duplicate(true)
 	for rank in 6:
 		var item: Dictionary = arena.profile.Loot.equipment(arena.home.Content.SLOTS[rank], arena.home.Content.RARITIES[rank], arena.profile.data.next_item)
 		arena.profile.data.next_item += 1

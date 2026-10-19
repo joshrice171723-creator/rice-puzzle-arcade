@@ -11,6 +11,7 @@ var stage := -1
 var elapsed := 0.0
 var stage_elapsed := 0.0
 var campaign := false
+var contract := false
 var finished := false
 var frames: Array[float] = []
 var samples: Array[Dictionary] = []
@@ -29,8 +30,11 @@ var draw_sections: Dictionary = {}
 
 func _ready() -> void:
 	campaign = "--combat-campaign" in OS.get_cmdline_user_args()
+	contract = "--combat-contract" in OS.get_cmdline_user_args()
 	if FileAccess.file_exists("user://combat-preview.flag"):
-		campaign = FileAccess.get_file_as_string("user://combat-preview.flag").strip_edges() == "campaign"
+		var mode := FileAccess.get_file_as_string("user://combat-preview.flag").strip_edges()
+		campaign = mode == "campaign"
+		contract = mode == "contract"
 	caption = Label.new()
 	caption.position = Vector2(12,602)
 	caption.add_theme_font_size_override("font_size",11)
@@ -73,13 +77,17 @@ func configure(next: int) -> void:
 	arena.physics_ms = 0
 	arena.run = arena.Run.new(41 + next * 37)
 	var stats: Dictionary = arena.profile.stats()
-	if not campaign:
+	if not campaign and not contract:
 		var loadout: Dictionary = LOADOUTS[next % LOADOUTS.size()]
 		arena.profile.data["class"] = loadout["class"]
 		stats = arena.profile.stats()
 		stats.weapon = loadout.weapon
 	arena.run.configure(1 if campaign else (next % 5 + 1),stats)
-	if not campaign:
+	if contract:
+		# The first-clear prerequisite is granted only in this disposable QA profile.
+		arena.profile.data.missions["1"] = ["clear"]
+		arena.start_contract("weapon","crossbow")
+	elif not campaign:
 		var loadout: Dictionary = LOADOUTS[next % LOADOUTS.size()]
 		for index in loadout.spells.size():
 			arena.run.spells[loadout.spells[index]] = {"rank":loadout.rank,"branch":loadout.branch,"wait":0.4+index*0.7,"evolved":loadout.rank==3}
@@ -94,7 +102,16 @@ func configure(next: int) -> void:
 	arena.home.hide()
 	arena.run.paused = false
 	arena.last_screen = ""
-	caption.text = "Mission 1 • normal combat • review profile" if campaign else "%s · %s · live AI / practice loadout" % [stats["class"].capitalize(),stats.weapon.capitalize()]
+	caption.text = "Salvage Contract • starter gear • review profile" if contract else ("Mission 1 • normal combat • review profile" if campaign else "%s · %s · live AI / practice loadout" % [stats["class"].capitalize(),stats.weapon.capitalize()])
+
+static func contract_steer(run: RefCounted) -> Vector2:
+	for site_id in [3,6,4]:
+		var site: Dictionary = run.field.sites[site_id]
+		if not site.opened:
+			return run.player.direction_to(site.pos) if run.player.distance_to(site.pos)>45 else Vector2.ZERO
+	if run.elapsed >= run.Salvage.BEACON_READY:
+		return run.player.direction_to(run.Salvage.EXIT) if run.player.distance_to(run.Salvage.EXIT)>25 else Vector2.ZERO
+	return steer(run)
 
 static func steer(run: RefCounted) -> Vector2:
 	var nearest: Dictionary = run.nearest_enemy(run.player,450)
@@ -150,15 +167,16 @@ func _process(delta: float) -> void:
 			run.choose_relic(0)
 		else:
 			run.leave_shrine()
-	arena.stick = steer(run) if campaign or stage_elapsed > 3.0 else Vector2.ZERO
+	arena.stick = contract_steer(run) if contract else (steer(run) if campaign or stage_elapsed > 3.0 else Vector2.ZERO)
 	var danger := false
 	for enemy: Dictionary in run.enemies:
 		if enemy.tell > 0 and enemy.tell < 0.20 and enemy.pos.distance_to(run.player) < (110 if enemy.boss else 65):
 			danger = true
 	if danger and run.dodge():
 		used_dodge += 1
-	if campaign:
+	if campaign or contract:
 		if run.phase in ["victory","defeat"] or elapsed > 420:
+			if contract: arena.bank_result()
 			finish()
 	elif run.phase in ["victory","defeat"] or stage_elapsed > (45.0 if stage >= 5 else 24.0):
 		if run.phase == "defeat":
@@ -175,14 +193,14 @@ func finish() -> void:
 	arena.run.paused = true
 	write_report(true)
 	caption.text = "Combat review complete • no campaign progress saved"
-	print("Nightfall combat review complete: ","campaign" if campaign else "roster")
+	print("Nightfall combat review complete: ","contract" if contract else ("campaign" if campaign else "roster"))
 	if "--combat-quit" in OS.get_cmdline_user_args():
 		get_tree().quit()
 
 func write_report(complete: bool) -> void:
-	var path := "user://combat-campaign-metrics.json" if campaign else "user://combat-roster-metrics.json"
+	var path := "user://combat-contract-metrics.json" if contract else ("user://combat-campaign-metrics.json" if campaign else "user://combat-roster-metrics.json")
 	var file := FileAccess.open(path,FileAccess.WRITE)
-	file.store_string(JSON.stringify({"complete":complete,"fixture":"normal starter mission" if campaign else "practice loadouts, live AI, normal enemy health and damage", "os":OS.get_name(),"adapter":RenderingServer.get_video_adapter_name(),"stages":samples,"downs":downs},"\t"))
+	file.store_string(JSON.stringify({"complete":complete,"fixture":"starter contract; first-clear prerequisite granted in disposable profile" if contract else ("normal starter mission" if campaign else "practice loadouts, live AI, normal enemy health and damage"), "os":OS.get_name(),"adapter":RenderingServer.get_video_adapter_name(),"stages":samples,"downs":downs,"reward":arena.reward_receipt if contract else {}},"\t"))
 
 func capture_frame() -> void:
 	capturing = true

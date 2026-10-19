@@ -22,4 +22,4 @@ Use case: stylized-concept. Asset type: finished individual equipment sprite for
 - Wand: Beacon Wand with an indigo handle, gold fittings, a floating icy blue-violet crystal held by three gold prongs, and restrained pale-blue light; diagonal up-right.
 - Sabre: slender curved silver blade, blue leather handle, gold guard and pommel, small sapphire; diagonal up-right.
 
-The images were generated as original Nightfall props. Character costumes and baked-in held props are not dynamically replaced by these item icons; the equipped family controls the live attack, recoil/swing, projectile, sound and damage behavior.
+The images were generated as original Nightfall props. The follow-up now attaches these same illustrations to empty-handed combat bodies, so the equipped weapon is visible as well as controlling its attack, sound and damage. See [equipped hero bodies](EQUIPPED_HERO_BODIES.md). Armor costumes remain class illustrations.

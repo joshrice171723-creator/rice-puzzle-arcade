@@ -1,5 +1,7 @@
 # Nightfall combat delivery — October 19, 2026
 
+The follow-up [equipment and contract delivery](EQUIPMENT_AND_CONTRACT_DELIVERY.md) records the newer body/weapon attachment, GPU spell meshes, targeted weapon rewards and Android build. The measurements at the end of this document remain the earlier pass.
+
 This pass covers the implemented first-zone combat: four class kits, eight spells and their existing branches/evolutions, five equipped weapon families, three ordinary enemy types and five mission bosses. Warden and Arcanist retain their future-content unlock gates. This is not implementation of the planned twenty-zone campaign.
 
 ## What the earlier recording could not establish
@@ -24,7 +26,7 @@ Values below are at 40 Power, before training, affixes, critical hits, traits or
 
 Multi-target attacks trade reach, timing or target access for their extra total damage. This table is an equal-tier starting budget, not a claim that five weapons have identical practical win rates. The sabre commits its direction and deals damage 0.10 seconds into a 0.24-second swing. A target behind the player is not struck. Piercing Shot adds one projectile penetration or one sabre target. Opening Shot and critical training apply to all basic families. Arcanist's 8% elemental bonus applies to the wand as well as spells.
 
-The four additional families are available from the existing supply/weapons chest rolls, preserving slot and rarity probabilities. Their illustrated inventory icons are recorded in `art-sources/COMBAT_WEAPONS.md`. Field-cache and targeted-contract reward generation still use the starter item names. Character illustrations have baked-in held props; equipping a family changes live attack geometry, recoil/swing, projectile, sound and damage, not a fully interchangeable character weapon model.
+The four additional families are available from the existing supply/weapons chest rolls, preserving slot and rarity probabilities. Their illustrated inventory icons are recorded in `art-sources/COMBAT_WEAPONS.md`. Field-cache rewards still use the starter item names. The follow-up adds a chosen weapon family to targeted contracts. Live combat and Gear now attach separate weapon art to empty-handed class bodies, including recoil, swing and tip-aligned muzzle flashes; armor does not yet change the costume.
 
 ## Spell and class presentation
 

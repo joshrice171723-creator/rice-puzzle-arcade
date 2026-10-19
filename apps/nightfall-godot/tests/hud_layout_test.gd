@@ -36,6 +36,8 @@ func verify() -> void:
 		check(not arena.modal.visible, "Normal combat has no help or pause card blocking the arena")
 		check(not arena.hud_root is PanelContainer and arena.hud_root.size.y <= 88, "Header is a compact transparent overlay")
 		check(arena.hud.text == "01:45" and arena.level_label.text == "Lv. 7", "Timer and combat level occupy separate readable labels")
+		check(arena.credit_count.text==str(arena.run.field.credits) and arena.kill_count.text==str(arena.run.kills), "Icon counters show live values without repeated currency words")
+		check(arena.counters.get_child(0).get_child(0).texture != null and arena.counters.get_child(1).get_child(0).texture != null, "Both counters retain their identifying artwork")
 		check(arena.xp_bar.size.y <= 10 and arena.health_bar.size.y <= 7 and arena.boss_bar.size.y <= 7, "Live-themed meters stay thin instead of expanding into cards")
 		check(arena.power_hud.get_global_rect().end.y <= 148, "Selected abilities stay directly below XP and leave the center clear")
 		check(not arena.metrics.visible, "Debug and wave text do not clutter normal combat")

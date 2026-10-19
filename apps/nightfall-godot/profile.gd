@@ -634,7 +634,7 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 		var contract_rng := RandomNumberGenerator.new()
 		contract_rng.seed = int(attempt.seed) + 93841
 		var rarity := "uncommon" if contract_rng.randf() < 0.25 else "common"
-		var item := Loot.equipment(attempt.target_slot, rarity, int(data.next_item))
+		var item := Loot.equipment(attempt.target_slot, rarity, int(data.next_item), "outrider", attempt.get("target_weapon", "pistol"))
 		data.next_item += 1
 		data.inventory.append(item)
 		reward.gear.append(rarity.capitalize() + " " + item.name)
@@ -715,13 +715,13 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 		return {}
 	return reward.duplicate(true)
 
-func start_contract(slot: String) -> Dictionary:
-	if not can_change_loadout() or not Salvage.unlocked(self) or slot not in Content.SLOTS:
+func start_contract(slot: String, weapon_family: String = "pistol") -> Dictionary:
+	if not can_change_loadout() or not Salvage.unlocked(self) or slot not in Content.SLOTS or weapon_family not in Loot.Weapons.TYPES:
 		return {}
 	var previous := data.duplicate(true)
 	var attempt := {"id": int(data.next_attempt), "mission": 1, "class": data["class"],
 		"seed": int(Time.get_unix_time_from_system()) + int(data.next_attempt) * 7919,
-		"mode": "salvage", "target_slot": slot}
+		"mode": "salvage", "target_slot": slot, "target_weapon": weapon_family if slot == "weapon" else "pistol"}
 	data.next_attempt += 1
 	data.active_attempt = attempt
 	if not commit(previous):

@@ -20,7 +20,7 @@ static func catalog() -> Array[Dictionary]:
 		result.append({"family":id, "name":preload("res://weapons.gd").TYPES[id].name, "slot":"weapon",
 			"first_zone":1, "drop_level":1, "level_cap":5, "set":"", "weapon":id,
 			"field_rarity_max":"common", "crate_rarity_max":"epic", "craft_rarity":"",
-			"base_stats":Content.BASE_STATS.weapon.duplicate(), "sources":["supply_crate", "weapons_cache"]})
+			"base_stats":Content.BASE_STATS.weapon.duplicate(), "sources":["supply_crate", "weapons_cache", "targeted_contract"]})
 	return result
 
 static func family_for_slot(slot: String) -> String:

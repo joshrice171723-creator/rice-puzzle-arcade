@@ -8,11 +8,18 @@ class Probe extends Node2D:
 	var effects := false
 	var material_only := false
 	var material_kind := 5
+	var cached := false
+	var ribbon := false
 	func _draw() -> void:
 		draw_texture_rect(FLOOR,Rect2(0,0,300,200),false,Color(0.8,0.9,1,1))
 		draw_rect(Rect2(4,4,20,20),Color(0.3,0.6,0.9,0.5))
 		if effects:
-			if material_only:
+			if cached:
+				if ribbon:
+					Ember.ribbon(self,Vector2(200,100),Vector2.RIGHT,100,25,age,0,1,material_kind)
+				else:
+					Ember.body(self,Vector2(150,100),Vector2(40,30),0.3,age,0,1,material_kind)
+			elif material_only:
 				var uvs := PackedVector2Array()
 				for n in Ember.SEGMENTS:
 					uvs.append(Vector2.from_angle(float(n)*TAU/Ember.SEGMENTS)*0.5+Vector2(material_kind*64+0.5,0.5))
@@ -68,6 +75,21 @@ func verify() -> void:
 		check(start.get_data() != moved.get_data(),"Effect material %d changes continuously on actual rendered geometry" % kind)
 		var held: Image = await capture(probe)
 		check(moved.get_data() == held.get_data(),"Effect material %d freezes when simulation time is held" % kind)
+	probe.cached = true
+	for ribbon in [false,true]:
+		probe.ribbon = ribbon
+		for kind in ([2,6,9,13] if ribbon else [1,3,5,7,8,12]):
+			probe.material_kind = kind
+			probe.age = 2.1
+			var start: Image = await capture(probe)
+			check(start.get_data()!=passthrough.get_data(),"Cached effect %d is visibly rendered" % kind)
+			probe.age += 0.03
+			var moved: Image = await capture(probe)
+			check(start.get_data()!=moved.get_data(),"Cached GPU geometry/material %d moves continuously" % kind)
+			var frozen: Image = await capture(probe)
+			check(moved.get_data()==frozen.get_data(),"Cached effect %d respects paused simulation" % kind)
+			check(Ember.body_mesh(kind)==Ember.body_mesh(kind),"Body mesh is reused without per-frame allocation")
+			check(Ember.ribbon_mesh(kind)==Ember.ribbon_mesh(kind),"Ribbon mesh is reused without per-frame allocation")
 	probe.effects = false
 	var cleaned: Image = await capture(probe)
 	check(cleaned.get_data() == passthrough.get_data(),"Removing transient effects leaves no shader residue")

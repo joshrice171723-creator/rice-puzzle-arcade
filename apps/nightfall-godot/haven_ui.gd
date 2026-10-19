@@ -5,7 +5,7 @@ signal resume_requested
 signal abandon_requested
 signal practice_requested(mission: int, build: String)
 signal diagnostics_requested
-signal contract_requested(slot: String)
+signal contract_requested(slot: String, weapon_family: String)
 
 const Art = preload("res://haven_art.gd")
 const MenuSkin = preload("res://menu_skin.gd")
@@ -59,6 +59,7 @@ var navigation: HBoxContainer
 var status_label: Label
 var cache_receipt := false
 var contract_slot := "weapon"
+var contract_weapon := "pistol"
 var training_mission := 1
 var training_build := "Balanced"
 var guide_index := 0
@@ -467,10 +468,14 @@ func gear_page() -> void:
 	hall.stretch_mode = TextureRect.STRETCH_SCALE
 	Art.picture(stage, Art.GEAR_PLINTH, Rect2(85, 170, 216, 80))
 	Art.picture(stage, Art.CONTACT_SHADOW, Rect2(122, 210, 143, 17))
-	var hero := Art.picture(stage, Art.hero(profile.data["class"]), Rect2(79, -9, 228, 238))
+	var hero := preload("res://gear_actor.gd").new()
 	hero.name = "EquippedHero"
-	if not profile.data.settings.reduced_effects:
-		MenuMotion.hero(hero)
+	hero.class_id = profile.data["class"]
+	hero.weapon_family = profile.stats().weapon
+	hero.reduced = profile.data.settings.reduced_effects
+	hero.position = Vector2(183,211)
+	hero.scale = Vector2.ONE*2.6
+	stage.add_child(hero)
 	var columns := [["weapon", "ring", "charm", "gadget"], ["helmet", "body", "pants", "boots"]]
 	for column in 2:
 		for index in 4:

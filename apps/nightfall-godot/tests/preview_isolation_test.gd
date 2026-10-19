@@ -15,7 +15,10 @@ func verify() -> void:
 	check(arena.testing and arena.vfx_preview != null,"Preview explicitly runs a disposable journey")
 	check(arena.profile.path == "user://vfx-preview-profile.json","Preview UI profile has a different save destination")
 	check(arena.home.profile == arena.profile,"Home callbacks retain the isolated profile")
-	check(arena.attempt_id == 0 and arena.profile.data.active_attempt.is_empty(),"Fixture cannot become an owned campaign attempt")
+	if "--combat-contract" in OS.get_cmdline_user_args():
+		check(arena.profile.data.active_attempt.get("mode","")=="salvage" and arena.run.target_weapon=="crossbow","Contract review uses a real attempt only in its disposable profile")
+	else:
+		check(arena.attempt_id == 0 and arena.profile.data.active_attempt.is_empty(),"Fixture cannot become an owned campaign attempt")
 	arena.show_haven()
 	check(arena.home.visible,"Preview can return to home safely")
 	check(arena.profile.path != "user://haven.json","Home navigation cannot switch back to the real save")

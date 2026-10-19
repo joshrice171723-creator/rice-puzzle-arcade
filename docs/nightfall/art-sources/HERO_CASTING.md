@@ -1,6 +1,6 @@
 # Scavenger casting animation
 
-Current runtime uses only the consistent standing pose as a textured mesh. Legs, torso, coat and weapon deform continuously; the four-pose sequence described below is historical source documentation. See `../CONTINUOUS_COMBAT_VFX.md`.
+This file records historical source artwork. The current live combat renderer uses [empty-handed class bodies with separate equipped weapons](EQUIPPED_HERO_BODIES.md), continuously deformed rather than switching generated poses. See `../CONTINUOUS_COMBAT_VFX.md` for the continuous effects approach.
 
 Project asset: `apps/nightfall-godot/assets/hero-cast/scavenger-casting.png`.
 Renderer: `apps/nightfall-godot/hero_cast.gd`.

@@ -6,6 +6,9 @@ const IMPACT_SECONDS := 0.72
 const SEGMENTS := 24
 static var glow: GradientTexture2D
 static var shader_material: ShaderMaterial
+static var body_meshes: Dictionary = {}
+static var ribbon_meshes: Dictionary = {}
+static var spark_mesh: ArrayMesh
 
 static func prepare(canvas: Node2D) -> void:
 	if shader_material == null:
@@ -46,48 +49,66 @@ static func body_points(at: Vector2, size: Vector2, angle: float, age: float, se
 		points.append(at+(Vector2.from_angle(theta)*size*wave).rotated(angle))
 	return points
 
+static func mesh_for(vertices: PackedVector2Array, uv: PackedVector2Array, indices: PackedInt32Array) -> ArrayMesh:
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_TEX_UV] = uv
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+	return mesh
+
+static func body_mesh(kind: int) -> ArrayMesh:
+	if not body_meshes.has(kind):
+		var vertices := PackedVector2Array([Vector2.ZERO])
+		var uv := PackedVector2Array([Vector2(kind*64+0.5,64.5)])
+		var indices := PackedInt32Array()
+		for n in SEGMENTS:
+			var radial := Vector2.from_angle(float(n)*TAU/SEGMENTS)
+			vertices.append(radial)
+			uv.append(radial*0.5+Vector2(kind*64+0.5,64.5))
+			indices.append_array(PackedInt32Array([0,n+1,(n+1)%SEGMENTS+1]))
+		body_meshes[kind] = mesh_for(vertices,uv,indices)
+	return body_meshes[kind]
+
 static func body(canvas: Node2D, at: Vector2, size: Vector2, angle: float, age: float, seed: float, alpha: float, kind: int = 1) -> void:
 	if alpha <= 0 or size.x <= 0 or size.y <= 0:
 		return
 	prepare(canvas)
-	var uv := PackedVector2Array()
-	for n in SEGMENTS:
-		uv.append(Vector2.from_angle(float(n)*TAU/SEGMENTS)*0.5+Vector2(0.5+kind*64,0.5))
-	canvas.draw_polygon(body_points(at,size,angle,age,seed),PackedColorArray([Color(age,seed,alpha,1)]),uv)
+	var axis := Vector2.from_angle(angle)
+	canvas.draw_mesh(body_mesh(kind),null,Transform2D(axis*size.x,Vector2(-axis.y,axis.x)*size.y,at),Color(age,seed,alpha,1))
+
+static func ribbon_mesh(kind: int) -> ArrayMesh:
+	if not ribbon_meshes.has(kind):
+		var vertices := PackedVector2Array()
+		var uv := PackedVector2Array()
+		var indices := PackedInt32Array()
+		for n in 13:
+			var t := float(n)/12
+			var half_width := 0.05+pow(t,0.7)*0.95
+			vertices.append_array(PackedVector2Array([Vector2(t,half_width),Vector2(t,-half_width)]))
+			uv.append_array(PackedVector2Array([Vector2(kind*64+t,128),Vector2(kind*64+t,129)]))
+			if n < 12:
+				var a := n*2
+				indices.append_array(PackedInt32Array([a,a+1,a+2,a+1,a+3,a+2]))
+		ribbon_meshes[kind] = mesh_for(vertices,uv,indices)
+	return ribbon_meshes[kind]
 
 static func ribbon(canvas: Node2D, at: Vector2, direction: Vector2, length_value: float, width: float, age: float, seed: float, alpha: float, kind: int = 2) -> void:
+	if alpha <= 0 or length_value <= 0 or width <= 0:
+		return
+	prepare(canvas)
+	canvas.draw_mesh(ribbon_mesh(kind),null,Transform2D(direction*length_value,direction.orthogonal()*width,at-direction*length_value),Color(age,seed,alpha,1))
+
+static func spark(canvas: Node2D, at: Vector2, size: Vector2, angle: float, age: float, alpha: float) -> void:
 	if alpha <= 0:
 		return
 	prepare(canvas)
-	var top := PackedVector2Array()
-	var bottom := PackedVector2Array()
-	var top_uv := PackedVector2Array()
-	var bottom_uv := PackedVector2Array()
-	var side := direction.orthogonal()
-	# The same vertices move continuously; the tail stays attached and tapered.
-	for n in 13:
-		var t := float(n)/12
-		var sway := sin((1-t)*8-age*15+seed*4)*width*0.65*(1-t)
-		var center := at-direction*length_value*(1-t)+side*sway
-		var half_width := width*(0.05+pow(t,0.7)*0.95)
-		top.append(center+side*half_width)
-		bottom.append(center-side*half_width)
-		top_uv.append(Vector2(kind*64+t,0))
-		bottom_uv.append(Vector2(kind*64+t,1))
-	bottom.reverse()
-	bottom_uv.reverse()
-	top.append_array(bottom)
-	top_uv.append_array(bottom_uv)
-	canvas.draw_polygon(top,PackedColorArray([Color(age,seed,alpha,1)]),top_uv)
-
-static func spark(canvas: Node2D, at: Vector2, size: Vector2, angle: float, age: float, alpha: float) -> void:
-	prepare(canvas)
-	var points := PackedVector2Array()
-	var uv := PackedVector2Array()
-	for corner: Vector2 in [Vector2(0,0),Vector2(1,0),Vector2(1,1),Vector2(0,1)]:
-		points.append(at+((corner-Vector2.ONE*0.5)*size).rotated(angle))
-		uv.append(corner+Vector2(256,0))
-	canvas.draw_primitive(points,PackedColorArray([Color(age,0,alpha,1)]),uv)
+	if spark_mesh == null:
+		spark_mesh = mesh_for(PackedVector2Array([Vector2(-0.5,-0.5),Vector2(0.5,-0.5),Vector2(0.5,0.5),Vector2(-0.5,0.5)]),PackedVector2Array([Vector2(256,0),Vector2(257,0),Vector2(257,1),Vector2(256,1)]),PackedInt32Array([0,1,2,0,2,3]))
+	var axis := Vector2.from_angle(angle)
+	canvas.draw_mesh(spark_mesh,null,Transform2D(axis*size.x,Vector2(-axis.y,axis.x)*size.y,at),Color(age,0,alpha,1))
 
 static func draw_cast(canvas: Node2D, run: RefCounted, offset: Vector2, reduced: bool) -> void:
 	var pose := cast_pose(run)

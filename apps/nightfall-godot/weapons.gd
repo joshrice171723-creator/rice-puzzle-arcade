@@ -56,6 +56,4 @@ static func fire(run: RefCounted, target: Dictionary) -> bool:
 			shot.delay = 0.10
 			shot.radius = spec.range
 		run.shots.append(shot)
-	if run.weapon_id in ["pistol", "scattergun", "crossbow"]:
-		run.add_feedback("muzzle", run.player + aim * 20 - Vector2(0, 28), aim)
 	return true

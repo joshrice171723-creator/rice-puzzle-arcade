@@ -19,8 +19,18 @@ vec3 flame_color(float heat) {
 }
 void vertex() {
 	effect_kind=UV.x>=64.0 ? floor(UV.x/64.0) : 0.0;
-	effect_uv=vec2(UV.x-effect_kind*64.0,UV.y);
+	float geometry_kind=floor(UV.y/64.0);
+	effect_uv=vec2(UV.x-effect_kind*64.0,UV.y-geometry_kind*64.0);
 	effect_params=COLOR;
+	// Cached local meshes deform on the GPU. Legacy material-only geometry is unchanged.
+	if(geometry_kind>0.5 && geometry_kind<1.5) {
+		float theta=atan(VERTEX.y,VERTEX.x);
+		float wave=1.0+sin(theta*3.0+COLOR.r*12.0+COLOR.g)*0.055+sin(theta*5.0-COLOR.r*9.0)*0.025;
+		VERTEX*=wave;
+	} else if(geometry_kind>1.5 && geometry_kind<2.5) {
+		float t=VERTEX.x;
+		VERTEX.y+=sin((1.0-t)*8.0-COLOR.r*15.0+COLOR.g*4.0)*0.65*(1.0-t);
+	}
 }
 void fragment() {
 	if(effect_kind<0.5) {

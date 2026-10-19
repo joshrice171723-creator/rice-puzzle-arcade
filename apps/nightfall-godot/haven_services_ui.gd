@@ -5,6 +5,7 @@ const Art = preload("res://haven_art.gd")
 const Content = preload("res://haven_content.gd")
 const UI = preload("res://preparation_ui.gd")
 const KEY = preload("res://assets/menu-key.svg")
+const Weapons = preload("res://weapons.gd")
 
 static func heading(home: Control, words: String, _image: Texture2D) -> void:
 	UI.title(home, words)
@@ -101,11 +102,7 @@ static func facility(home: Control) -> void:
 static func contracts(home: Control) -> void:
 	heading(home, "Salvage Contracts", Art.icon("mission"))
 	var column := content(home, "ContractsScroll")
-	MenuSkin.label(column, "Scavenge · Collect · Extract", 16, Color("ffe2a0"), true)
-	var route := MenuSkin.panel(column, "panel", 14)
-	fact(route, KEY, "01 · Open 3 caches", "Scavenge supplies while holding off the undead.")
-	fact(route, Art.icon("haven"), "02 · Reach the beacon", "Powers up at 90 seconds. Hold its central ring for 3 seconds.")
-	fact(route, Art.icon("mission"), "03 · Extract", "Leave before the 3-minute deadline. No boss in this side mode.")
+	MenuSkin.label(column, "Choose your guaranteed reward", 16, Color("ffe2a0"), true)
 	var reward := MenuSkin.panel(column, "panel", 9)
 	var choose: Button = action(home, Content.SLOT_LABELS[home.contract_slot] + "  ›", func():
 		home.contract_slot = Content.SLOTS[(Content.SLOTS.find(home.contract_slot) + 1) % Content.SLOTS.size()]
@@ -114,6 +111,19 @@ static func contracts(home: Control) -> void:
 	choose.expand_icon = true
 	choose.add_theme_constant_override("icon_max_width", 35)
 	choose.tooltip_text = "Tap to change the guaranteed equipment slot"
+	if home.contract_slot == "weapon":
+		var choices := HBoxContainer.new()
+		choices.add_theme_constant_override("separation",3)
+		reward.add_child(choices)
+		for family: String in Weapons.TYPES:
+			var select := action(home,"",func(): home.contract_weapon = family; home.rebuild(),choices,"gold" if home.contract_weapon == family else "blue",52)
+			select.name = "ContractWeapon_"+family
+			select.icon = home.item_texture("weapon",{"name":Weapons.TYPES[family].name})
+			select.expand_icon = true
+			select.add_theme_constant_override("icon_max_width",36)
+			select.tooltip_text = Weapons.TYPES[family].name
+		MenuSkin.label(reward,Weapons.TYPES[home.contract_weapon].name,17,Color("ffe2a0"),true)
+		MenuSkin.label(reward,Weapons.TYPES[home.contract_weapon].description,12)
 	var loot := HBoxContainer.new()
 	loot.add_theme_constant_override("separation", 8)
 	reward.add_child(loot)
@@ -129,10 +139,16 @@ static func contracts(home: Control) -> void:
 	MenuSkin.progress(progress)
 	reward.add_child(progress)
 	MenuSkin.label(reward, "%d / 3 clears · Next bonus: 1 supply key" % (int(home.profile.data.contract_clears) % 3), 12, Color("ffe2a0"))
+	MenuSkin.label(column, "Scavenge · Collect · Extract", 16, Color("ffe2a0"), true)
+	var route := MenuSkin.panel(column, "panel", 14)
+	fact(route, KEY, "01 · Open 3 caches", "Scavenge supplies while holding off the undead.")
+	fact(route, Art.icon("haven"), "02 · Reach the beacon", "Powers up at 90 seconds. Hold its central ring for 3 seconds.")
+	fact(route, Art.icon("mission"), "03 · Extract", "Leave before the 3-minute deadline. No boss in this side mode.")
 	var unlocked: bool = home.profile.Salvage.unlocked(home.profile)
 	if not home.profile.data.active_attempt.is_empty():
 		MenuSkin.label(column, "Resume or finish your saved expedition first.", 13, Color("e1c3ff"))
-	var start := action(home, "Start contract" if unlocked else "Clear Garage Lights first", func(): home.contract_requested.emit(home.contract_slot), home.body, "gold", 48)
+	var start := action(home, "Start contract" if unlocked else "Clear Garage Lights first", func(): home.contract_requested.emit(home.contract_slot,home.contract_weapon), home.body, "gold", 48)
+	start.name = "StartContract"
 	start.disabled = not unlocked or not home.profile.can_change_loadout()
 	back(home)
 

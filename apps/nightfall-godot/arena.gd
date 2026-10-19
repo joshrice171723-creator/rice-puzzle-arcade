@@ -1,5 +1,6 @@
 extends Node2D
 
+const Shapes = preload("res://draw_shapes.gd")
 const CombatEffects = preload("res://combat_effects.gd")
 const WorldArt = preload("res://world_art.gd")
 const EnemyMotion = preload("res://enemy_motion.gd")
@@ -39,7 +40,9 @@ var hero_last_position := Vector2(600,600)
 var hud: Label
 var hud_root: Control
 var level_label: Label
-var counters: Label
+var counters: VBoxContainer
+var credit_count: Label
+var kill_count: Label
 var health_bar: ProgressBar
 var xp_bar: ProgressBar
 var boss_bar: ProgressBar
@@ -98,7 +101,7 @@ var vfx_preview: Node
 func _ready() -> void:
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	var combat_requested := OS.is_debug_build() and ("--combat-preview" in OS.get_cmdline_user_args() or "--combat-campaign" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://combat-preview.flag"))
+	var combat_requested := OS.is_debug_build() and ("--combat-preview" in OS.get_cmdline_user_args() or "--combat-campaign" in OS.get_cmdline_user_args() or "--combat-contract" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://combat-preview.flag"))
 	var preview_requested := OS.is_debug_build() and ("--vfx-preview" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://vfx-preview.flag"))
 	if preview_requested or combat_requested:
 		testing = true
@@ -199,16 +202,36 @@ func build_ui() -> void:
 	level_label.add_theme_constant_override("outline_size", 5)
 	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_root.add_child(level_label)
-	counters = Label.new()
+	counters = VBoxContainer.new()
 	counters.position = Vector2(325, 11)
 	counters.size = Vector2(89, 44)
-	counters.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	counters.add_theme_font_size_override("font_size", 13)
-	counters.add_theme_color_override("font_color", GOLD)
-	counters.add_theme_color_override("font_outline_color", INK)
-	counters.add_theme_constant_override("outline_size", 5)
+	counters.add_theme_constant_override("separation", 1)
 	counters.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_root.add_child(counters)
+	for entry in [[MenuArt.item("credits"),"Credits collected"],[MenuArt.SWORD,"Enemies defeated"]]:
+		var row := HBoxContainer.new()
+		row.custom_minimum_size.y = 20
+		row.tooltip_text = entry[1]
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		counters.add_child(row)
+		var icon := TextureRect.new()
+		icon.texture = entry[0]
+		icon.custom_minimum_size = Vector2(20,20)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon)
+		var value := Label.new()
+		value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		value.add_theme_font_size_override("font_size",14)
+		value.add_theme_color_override("font_color",GOLD)
+		value.add_theme_color_override("font_outline_color",INK)
+		value.add_theme_constant_override("outline_size",5)
+		value.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(value)
+		if credit_count == null: credit_count = value
+		else: kill_count = value
 	health_bar = ProgressBar.new()
 	health_bar.max_value = 120
 	health_bar.size = Vector2(46, 6)
@@ -352,14 +375,14 @@ func start_campaign(mission_number: int) -> void:
 	var attempt: Dictionary = profile.start_attempt(mission_number)
 	activate_attempt(attempt)
 
-func start_contract(slot: String) -> void:
-	var attempt: Dictionary = profile.start_contract(slot)
+func start_contract(slot: String, weapon_family: String = "pistol") -> void:
+	var attempt: Dictionary = profile.start_contract(slot,weapon_family)
 	activate_attempt(attempt)
 
 func configured_run(attempt: Dictionary) -> RefCounted:
 	var configured = Run.new(attempt.seed)
 	if attempt.get("mode", "campaign") == "salvage":
-		configured.configure_contract(profile.stats(), attempt.target_slot)
+		configured.configure_contract(profile.stats(), attempt.target_slot, attempt.get("target_weapon","pistol"))
 	else:
 		configured.configure(attempt.mission, profile.stats())
 	return configured
@@ -507,7 +530,7 @@ func mission_progress() -> String:
 	if run.practice:
 		return "Defeat %s.\nPractice has no time limit and grants no loot or progression.\nTry different spell builds from the Training Yard." % run.boss_name
 	if run.mode == "salvage":
-		return "%s\nCaches opened: %d/3\nBeacon charge: %.1f/3 seconds\nGuaranteed equipment: %s\nExtract before the timer ends to keep your full pack." % [Run.Salvage.objective(run), mini(3, run.field.caches_opened), run.extract_progress, run.target_slot.capitalize()]
+		return "%s\nCaches opened: %d/3\nBeacon charge: %.1f/3 seconds\nGuaranteed equipment: %s\nExtract before the timer ends to keep your full pack." % [Run.Salvage.objective(run), mini(3, run.field.caches_opened), run.extract_progress, Run.Weapons.TYPES[run.target_weapon].name if run.target_slot == "weapon" else run.target_slot.capitalize()]
 	var combat: String = "Still available" if run.damage_taken <= 8 and not run.rescued else "Missed this run"
 	var collection: String = "Ready on victory" if run.field.caches_opened >= 3 else "Keep searching"
 	return "Win: survive the waves, then defeat %s.\nThe boss fight has no second timer.\n\nCombat medal: %s\n%d damaging hits / maximum 8. No rescue.\n\nScavenger medal: %s\n%d/3 caches opened.\n\nExtra medals require a boss clear. Missing one does not block the next mission." % [run.boss_name, combat, run.damage_taken, collection, mini(3, run.field.caches_opened)]
@@ -719,7 +742,7 @@ func replay() -> void:
 		run.start_boss_practice(spells)
 		return
 	if not repeat_practice and run.mode == "salvage":
-		start_contract(run.target_slot)
+		start_contract(run.target_slot,run.target_weapon)
 		return
 	if not repeat_practice and run.mission > 0:
 		start_campaign(run.mission)
@@ -852,7 +875,8 @@ func _process(delta: float) -> void:
 	hud.text = time_text
 	hud.add_theme_font_size_override("font_size", 18 if run.boss_id >= 0 else 30)
 	level_label.text = "Lv. %d" % run.level
-	counters.text = "%d credits\n%d kills" % [run.field.credits, run.kills]
+	credit_count.text = str(run.field.credits)
+	kill_count.text = str(run.kills)
 	boss_bar.visible = run.boss_id >= 0 and run.phase not in ["victory", "defeat"]
 	for enemy in run.enemies:
 		if enemy.boss:
@@ -994,7 +1018,8 @@ func _draw() -> void:
 			var hero_started := Time.get_ticks_usec()
 			var pose := HeroCast.pose(run)
 			var face := -1.0 if (run.facing.x if pose.is_empty() else pose.direction.x) < 0 else 1.0
-			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")))
+			var weapon_pose := HeroCast.weapon_pose(run)
+			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")),run.weapon_id,weapon_pose.direction,weapon_pose.age)
 			hero_usec += Time.get_ticks_usec()-hero_started
 		else:
 			var enemy_started := Time.get_ticks_usec()
@@ -1032,9 +1057,9 @@ func _draw() -> void:
 	if run.hurt_wait > 0.55 and not profile.data.settings.reduced_effects:
 		draw_rect(Rect2(0, 0, 430, 760), Color(0.7, 0.05, 0.15, 0.08))
 	var origin := stick_origin if touch_id >= 0 or mouse_stick else Vector2(88, 650)
-	draw_circle(origin, 48, Color(0.04, 0.05, 0.1, 0.6))
-	draw_arc(origin, 48, 0, TAU, 48, Color(0.8, 0.8, 0.95, 0.25), 2, true)
-	draw_circle(origin + stick * 32, 22, Color(0.55, 0.58, 0.72, 0.55))
+	Shapes.circle(self,origin,48,Color(0.04,0.05,0.1,0.6))
+	Shapes.ring(self,origin,48,2,Color(0.8,0.8,0.95,0.25))
+	Shapes.circle(self,origin+stick*32,22,Color(0.55,0.58,0.72,0.55))
 
 	var finished_draw := Time.get_ticks_usec()
 	draw_cpu_ms = (finished_draw-draw_started)/1000.0

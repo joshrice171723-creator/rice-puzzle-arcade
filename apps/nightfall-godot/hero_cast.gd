@@ -1,9 +1,11 @@
 extends RefCounted
-## One persistent textured mesh per character, weighted around feet, hips and arms.
+## One textured body mesh per character, weighted around feet, hips and arms.
 ## Animation changes vertices continuously rather than switching generated poses.
-const SCAVENGER = preload("res://assets/hero-cast/scavenger-casting.png")
-const ENGINEER = preload("res://assets/engineer.png")
-const CLASSES = preload("res://assets/class-previews.png")
+const BODIES = preload("res://assets/hero-cast/equipment-bodies.png")
+const EquipmentArt = preload("res://equipped_weapon_art.gd")
+const Presentation = preload("res://mission_presentation.gd")
+const BODIES_REGIONS := {"scavenger":Rect2(20,110,415,720),"engineer":Rect2(460,110,410,720),"warden":Rect2(870,65,460,790),"arcanist":Rect2(1345,115,429,735)}
+const HANDS := {"scavenger":Vector2(0.92,0.55),"engineer":Vector2(0.90,0.55),"warden":Vector2(0.86,0.57),"arcanist":Vector2(0.88,0.59)}
 const COLS := 12
 const ROWS := 18
 
@@ -79,12 +81,9 @@ static func geometry(size: Vector2, clock: float, stride: float, move_blend: flo
 static func deform_point(uv: Vector2, size: Vector2, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, action: String = "") -> Vector2:
 	return geometry(size,clock,stride,move_blend,cast_age,dodge,action,PackedVector2Array([uv]))[0]
 
-static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, engineer: bool, reduced: bool, class_id: String = "scavenger", hurt: float = 0.0, action: String = "") -> void:
-	var texture: Texture2D = ENGINEER if engineer else SCAVENGER
-	var source := Rect2(15,70,510,580) if engineer else Rect2(1640,110,403,562)
-	if class_id in ["warden", "arcanist"]:
-		texture = CLASSES
-		source = Rect2(25,0,780,880) if class_id == "warden" else Rect2(1000,0,750,880)
+static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, engineer: bool, reduced: bool, class_id: String = "scavenger", hurt: float = 0.0, action: String = "", weapon: String = "pistol", aim: Vector2 = Vector2.RIGHT, weapon_age: float = 99.0) -> void:
+	var texture: Texture2D = BODIES
+	var source: Rect2 = BODIES_REGIONS.get(class_id,BODIES_REGIONS.engineer if engineer else BODIES_REGIONS.scavenger)
 	var size := Vector2(source.size.x/source.size.y*80,80)
 	var vertices := geometry(size,clock,stride,move_blend,cast_age,dodge,action)
 	var key := str(source)
@@ -105,11 +104,28 @@ static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: flo
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
 	canvas.set_meta("hero_mesh",mesh)
 	var transform := Transform2D(Vector2(face,0),Vector2(0,1),pos+offset+Vector2(0,5.6))
+	var tint := Color.WHITE.lerp(Color(1.7,1.35,1.25),hurt if not reduced else 0.0)
+	var hand := deform_point(HANDS.get(class_id,HANDS.scavenger),size,clock,stride,move_blend,cast_age,dodge,action)
+	var attachment := transform*EquipmentArt.mount(weapon,hand,Vector2(aim.x*face,aim.y),weapon_age,true)
+	# The body covers the grip, keeping the fingers in front of the held equipment.
+	EquipmentArt.draw(canvas,weapon,attachment,tint)
 	if dodge > 0 and not reduced:
 		var trail := transform
 		trail.origin.x -= face*14*dodge
 		canvas.draw_mesh(mesh,texture,trail,Color(0.62,0.77,1,dodge*0.18))
-	canvas.draw_mesh(mesh,texture,transform,Color.WHITE.lerp(Color(1.7,1.35,1.25),hurt if not reduced else 0.0))
+	canvas.draw_mesh(mesh,texture,transform,tint)
+	if weapon in ["pistol","scattergun","crossbow"] and weapon_age >= 0 and weapon_age < 0.09 and not reduced:
+		var spec: Dictionary = EquipmentArt.SPECS[weapon]
+		var muzzle: Vector2 = attachment*spec.tip
+		var direction: Vector2 = (muzzle-attachment*spec.grip).normalized()
+		Presentation.muzzle_prongs(canvas,muzzle,direction,weapon_age/0.09,1-weapon_age/0.09)
+
+static func weapon_pose(run: RefCounted) -> Dictionary:
+	for index in range(run.vfx_events.size()-1,-1,-1):
+		var event: Dictionary = run.vfx_events[index]
+		if event.kind == "weapon_cast" and event.life > 0:
+			return {"age":event.duration-event.life,"direction":event.direction}
+	return {"age":99.0,"direction":run.facing}
 
 static func pose(run: RefCounted) -> Dictionary:
 	# A spell gesture wins over a simultaneous basic shot, without changing its damage.

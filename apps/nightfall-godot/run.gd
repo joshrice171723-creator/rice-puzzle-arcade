@@ -91,6 +91,7 @@ var offer_back: Array[Dictionary] = []
 var mode := "campaign"
 var extract_progress := 0.0
 var target_slot := "weapon"
+var target_weapon := "pistol"
 var talents = Talents.new()
 var available_spells: Array = Content.SPELLS.keys()
 
@@ -130,10 +131,11 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	mastery_level = stats.get("mastery", 0)
 	permanent_cooldown = clampf(stats.get("cooldown", 0.0), 0, 0.15)
 
-func configure_contract(stats: Dictionary, slot: String) -> void:
+func configure_contract(stats: Dictionary, slot: String, weapon_family: String = "pistol") -> void:
 	configure(1, stats)
 	mode = "salvage"
 	target_slot = slot
+	target_weapon = weapon_family if slot == "weapon" and weapon_family in Weapons.TYPES else "pistol"
 	duration = Salvage.DURATION
 	boss_name = "Salvage Contract"
 
@@ -152,7 +154,7 @@ func snapshot() -> Dictionary:
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
 		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
 		"combat_xp": combat_xp.duplicate(), "training_style": training_style, "training_bonuses": training_bonuses.duplicate(),
-		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus, "weapon": weapon_id, "pickup_xp": experience_values}
+		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "target_weapon": target_weapon, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus, "weapon": weapon_id, "pickup_xp": experience_values}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -173,7 +175,7 @@ func restore(saved: Dictionary) -> bool:
 		return false
 	if saved.get("mode", "campaign") not in ["campaign", "salvage"] or saved.get("target_slot", "weapon") not in Haven.SLOTS:
 		return false
-	if saved.get("weapon", "pistol") not in Weapons.TYPES:
+	if saved.get("weapon", "pistol") not in Weapons.TYPES or saved.get("target_weapon", "pistol") not in Weapons.TYPES:
 		return false
 	var saved_pool: Variant = saved.get("available_spells", Content.SPELLS.keys())
 	if not saved_pool is Array or saved_pool.size() < 3 or saved_pool.size() > Content.SPELLS.size():
@@ -208,6 +210,7 @@ func restore(saved: Dictionary) -> bool:
 	mode = saved.get("mode", "campaign")
 	extract_progress = saved.get("extract_progress", 0.0)
 	target_slot = saved.get("target_slot", "weapon")
+	target_weapon = saved.get("target_weapon", "pistol")
 	talents.restore(saved.get("talents", {}))
 	# Old expeditions keep their original eight-spell pool until they finish.
 	available_spells = saved_pool.duplicate()
