@@ -32,7 +32,7 @@ func verify() -> void:
 	arena.home.show()
 	for viewport in [Vector2i(320, 568), Vector2i(390, 844), Vector2i(430, 760)]:
 		root.size = viewport
-		for page in ["mission", "gear", "haven", "class", "settings", "cache", "rare_choice", "rewards", "contracts", "training", "arcanum"]:
+		for page in ["mission", "gear", "haven", "class", "settings", "cache", "rare_choice", "rewards", "contracts", "training", "arcanum", "mastery"]:
 			arena.home.page = page
 			arena.home.rebuild()
 			await settle()
@@ -98,6 +98,14 @@ func verify() -> void:
 		arena.update_modal()
 		await settle()
 		check(root.get_visible_rect().encloses(arena.modal.get_global_rect()), "All unlocked structures fit without scrolling")
+		arena.run.class_id = "engineer"
+		arena.run.mastery_level = 20
+		arena.last_screen = ""
+		arena.update_modal()
+		await settle()
+		check(root.get_visible_rect().encloses(arena.modal.get_global_rect()), "Engineer reclamation fits with all structures")
+		arena.run.class_id = "scavenger"
+		arena.run.mastery_level = 0
 		arena.home.show()
 	# Read-only fixtures must never create a real campaign save or grant rewards.
 	check(arena.attempt_id == 0, "UI fixtures do not start a saved expedition")

@@ -40,7 +40,7 @@ func verify_layout() -> void:
 		for frame in 8:
 			await process_frame
 		checks += 1
-		var header: Control = arena.hud.get_parent().get_parent()
+		var header: Control = arena.hud_root
 		if not bounds.encloses(header.get_global_rect()):
 			failures += 1
 			push_error("Boss header outside viewport: %s" % header.get_global_rect())

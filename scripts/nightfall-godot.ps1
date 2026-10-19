@@ -8,8 +8,19 @@ $project = Join-Path $repo 'apps/nightfall-godot'
 $output = Join-Path $repo 'artifacts/nightfall-godot'
 if (!(Test-Path -LiteralPath $Godot)) { throw 'Godot 4.7.2 is required. Pass -Godot with its portable executable path.' }
 function Invoke-Godot([string[]]$Arguments) {
-    & $Godot @Arguments
-    if ($LASTEXITCODE -ne 0) { throw "Godot exited with $LASTEXITCODE" }
+    $isTest = $Arguments -contains '--script'
+    if ($isTest) { $Arguments += @('--quit-after', '6000') }
+    $scriptFailure = $false
+    $passedSummary = $false
+    & $Godot @Arguments 2>&1 | ForEach-Object {
+        $line = "$_"
+        if ($line -match 'SCRIPT ERROR:|Parse Error:|Failed to load script') { $scriptFailure = $true }
+        if ($line -match 'checks, 0 failures') { $passedSummary = $true }
+        Write-Output $line
+    }
+    if ($LASTEXITCODE -ne 0 -or $scriptFailure -or ($isTest -and !$passedSummary)) {
+        throw "Godot verification failed (exit $LASTEXITCODE, script error $scriptFailure, passed summary $passedSummary)"
+    }
 }
 if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/run_test.gd')
@@ -27,6 +38,8 @@ if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/expedition_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/salvage_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/preparation_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/mastery_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/hud_layout_test.gd')
     exit
 }
 if ($Action -eq 'Play') {

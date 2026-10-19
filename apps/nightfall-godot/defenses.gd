@@ -45,7 +45,7 @@ func place(kind: String, position: Vector2, power: float, engineer: bool) -> voi
 	next_id += 1
 	notice = "%s placed." % TYPES[kind].name
 
-func repair_nearest(position: Vector2, strength: float = 1.0) -> bool:
+func repair_nearest(position: Vector2, strength: float = 1.0, mastery: int = 0) -> bool:
 	var target: Dictionary = {}
 	var distance := 300.0
 	for structure in structures:
@@ -60,6 +60,18 @@ func repair_nearest(position: Vector2, strength: float = 1.0) -> bool:
 		return false
 	target.repair_left = 4.0
 	target.repair_rate = 0.05 * strength
+	if mastery >= 10 and target.kind == "turret":
+		target.boost_left = 4.0
+	if mastery >= 20:
+		var adjacent := {}
+		var adjacent_distance := 150.0
+		for structure in structures:
+			var distance_to_target: float = structure.pos.distance_to(target.pos)
+			if structure.id != target.id and structure.hp > 0 and structure.hp < structure.max_hp and distance_to_target < adjacent_distance:
+				adjacent = structure
+				adjacent_distance = distance_to_target
+		if not adjacent.is_empty():
+			adjacent.hp = minf(adjacent.max_hp, adjacent.hp + adjacent.max_hp * 0.05)
 	notice = "Repair Swarm is restoring %s." % TYPES[target.kind].name
 	return true
 
@@ -85,6 +97,7 @@ func tick(delta: float, run: RefCounted) -> void:
 			continue
 		structure.wait = maxf(0, structure.wait - delta)
 		structure.hurt_wait = maxf(0, structure.hurt_wait - delta)
+		structure.boost_left = maxf(0, structure.get("boost_left", 0.0) - delta)
 		if structure.repair_left > 0:
 			structure.hp = minf(structure.max_hp, structure.hp + structure.max_hp * structure.get("repair_rate", 0.05) * minf(delta, structure.repair_left))
 			structure.repair_left = maxf(0, structure.repair_left - delta)
@@ -94,7 +107,7 @@ func tick(delta: float, run: RefCounted) -> void:
 				run.damage_enemy(target, 8 * structure.power * (1.0 + 0.06 * run.passive_rank("mechanic")), structure.pos)
 				run.add_effect("turret", structure.pos, target.pos, 0.12)
 				structure.target = target.pos
-				structure.wait = 0.8
+				structure.wait = 0.8 / (1.15 if structure.boost_left > 0 else 1.0)
 		elif structure.kind == "trap":
 			var target: Dictionary = run.nearest_enemy(structure.pos, 36)
 			if not target.is_empty():

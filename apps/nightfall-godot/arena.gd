@@ -7,6 +7,7 @@ const HavenUI = preload("res://haven_ui.gd")
 const RewardFlow = preload("res://reward_flow.gd")
 const Soundscape = preload("res://soundscape.gd")
 const PowerHUD = preload("res://power_hud.gd")
+const BossArt = preload("res://boss_art.gd")
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const SHADOW = preload("res://assets/shadow.svg")
@@ -26,6 +27,9 @@ var mouse_stick := false
 var moving := false
 var anim_time := 0.0
 var hud: Label
+var hud_root: Control
+var level_label: Label
+var counters: Label
 var health_bar: ProgressBar
 var xp_bar: ProgressBar
 var boss_bar: ProgressBar
@@ -71,6 +75,9 @@ var power_page := "Attacks"
 var was_paused := false
 var boss_warning: Label
 var selected_power := ""
+var help_view := false
+var last_field_notice := ""
+var notice_left := 0.0
 
 func _ready() -> void:
 	if not testing:
@@ -140,72 +147,115 @@ func make_button(text_value: String, callback: Callable, parent: Node, height: f
 func build_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
-	var top := PanelContainer.new()
-	top.position = Vector2(12, 12)
-	top.size = Vector2(406, 106)
-	top.add_theme_stylebox_override("panel", panel_style(Color(0.04, 0.065, 0.13, 0.94)))
-	layer.add_child(top)
-	var box := VBoxContainer.new()
-	top.add_child(box)
+	hud_root = Control.new()
+	hud_root.size = Vector2(430, 88)
+	hud_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(hud_root)
 	hud = Label.new()
-	hud.add_theme_font_size_override("font_size", 19)
-	hud.add_theme_color_override("font_color", GOLD)
-	box.add_child(hud)
+	hud.position = Vector2(89, 9)
+	hud.size = Vector2(252, 36)
+	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hud.add_theme_font_size_override("font_size", 30)
+	hud.add_theme_color_override("font_color", Color("fff5e4"))
+	hud.add_theme_color_override("font_outline_color", Color("101526"))
+	hud.add_theme_constant_override("outline_size", 6)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_root.add_child(hud)
+	level_label = Label.new()
+	level_label.position = Vector2(140, 45)
+	level_label.size = Vector2(150, 20)
+	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	level_label.add_theme_font_size_override("font_size", 14)
+	level_label.add_theme_color_override("font_outline_color", INK)
+	level_label.add_theme_constant_override("outline_size", 5)
+	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_root.add_child(level_label)
+	counters = Label.new()
+	counters.position = Vector2(325, 11)
+	counters.size = Vector2(89, 44)
+	counters.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	counters.add_theme_font_size_override("font_size", 13)
+	counters.add_theme_color_override("font_color", GOLD)
+	counters.add_theme_color_override("font_outline_color", INK)
+	counters.add_theme_constant_override("outline_size", 5)
+	counters.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_root.add_child(counters)
 	health_bar = ProgressBar.new()
 	health_bar.max_value = 120
-	health_bar.custom_minimum_size.y = 12
+	health_bar.size = Vector2(46, 6)
 	health_bar.show_percentage = false
+	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var hp_style := StyleBoxFlat.new()
 	hp_style.bg_color = Color("dd697e")
-	hp_style.set_corner_radius_all(5)
+	hp_style.set_corner_radius_all(2)
 	health_bar.add_theme_stylebox_override("fill", hp_style)
-	box.add_child(health_bar)
+	var bar_track := StyleBoxFlat.new()
+	bar_track.bg_color = Color(0.025, 0.04, 0.08, 0.8)
+	bar_track.set_corner_radius_all(2)
+	health_bar.add_theme_stylebox_override("background", bar_track)
+	health_bar.add_theme_font_size_override("font_size", 1)
+	health_bar.size = Vector2(46, 6)
+	layer.add_child(health_bar)
 	xp_bar = ProgressBar.new()
-	xp_bar.custom_minimum_size.y = 5
+	xp_bar.position = Vector2(16, 68)
+	xp_bar.size = Vector2(398, 9)
 	xp_bar.show_percentage = false
+	xp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var xp_style := StyleBoxFlat.new()
-	xp_style.bg_color = VIOLET
+	xp_style.bg_color = Color("9cd5ff")
+	xp_style.set_corner_radius_all(2)
 	xp_bar.add_theme_stylebox_override("fill", xp_style)
-	box.add_child(xp_bar)
+	xp_bar.add_theme_stylebox_override("background", bar_track)
+	xp_bar.add_theme_font_size_override("font_size", 1)
+	xp_bar.size = Vector2(398, 9)
+	hud_root.add_child(xp_bar)
 	boss_bar = ProgressBar.new()
 	boss_bar.show_percentage = false
-	boss_bar.custom_minimum_size.y = 10
+	boss_bar.position = Vector2(16, 81)
+	boss_bar.size = Vector2(398, 6)
+	boss_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var boss_style := StyleBoxFlat.new()
-	boss_style.bg_color = GOLD
+	boss_style.bg_color = Color("ed8a78")
+	boss_style.set_corner_radius_all(2)
 	boss_bar.add_theme_stylebox_override("fill", boss_style)
+	boss_bar.add_theme_stylebox_override("background", bar_track)
+	boss_bar.add_theme_font_size_override("font_size", 1)
+	boss_bar.size = Vector2(398, 6)
 	boss_bar.visible = false
-	box.add_child(boss_bar)
+	hud_root.add_child(boss_bar)
 	metrics = Label.new()
-	metrics.position = Vector2(16, 124)
+	metrics.position = Vector2(16, 150)
 	metrics.add_theme_font_size_override("font_size", 12)
 	metrics.add_theme_color_override("font_color", Color("d9def0"))
 	layer.add_child(metrics)
 	power_hud = PowerHUD.new()
-	power_hud.position = Vector2(16, 149)
+	power_hud.position = Vector2(16, 94)
 	power_hud.size = Vector2(230, 54)
 	power_hud.inspect_requested.connect(open_power_view)
 	layer.add_child(power_hud)
-	pause_button = make_button("II", func(): run.paused = not run.paused; clear_input(), layer, 44)
-	pause_button.position = Vector2(366, 157)
+	pause_button = make_button("II", func(): help_view = false; run.paused = not run.paused; clear_input(), layer, 44)
+	pause_button.position = Vector2(14, 12)
 	pause_button.size.x = 48
 	dodge_button = make_button("DODGE", func(): run.dodge(), layer, 64)
-	dodge_button.position = Vector2(330, 668)
+	dodge_button.position = Vector2(330, 655)
 	dodge_button.size.x = 88
 	pack_button = make_button("PACK", func(): run.open_pack(), layer, 44)
-	pack_button.position = Vector2(14, 552)
+	pack_button.position = Vector2(128, 701)
 	pack_button.size.x = 90
 	build_button = make_button("BUILD", func(): run.open_build(), layer, 44)
-	build_button.position = Vector2(14, 498)
-	build_button.size.x = 90
+	build_button.position = Vector2(228, 701)
+	build_button.size.x = 84
 	field_status = Label.new()
-	field_status.position = Vector2(16, 205)
-	field_status.size = Vector2(335, 65)
+	field_status.position = Vector2(145, 637)
+	field_status.size = Vector2(175, 58)
 	field_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	field_status.add_theme_font_size_override("font_size", 13)
+	field_status.add_theme_font_size_override("font_size", 12)
+	field_status.add_theme_color_override("font_outline_color", INK)
+	field_status.add_theme_constant_override("outline_size", 4)
 	field_status.add_theme_color_override("font_color", GOLD)
 	layer.add_child(field_status)
 	boss_warning = Label.new()
-	boss_warning.position = Vector2(15, 275)
+	boss_warning.position = Vector2(15, 157)
 	boss_warning.size = Vector2(400, 28)
 	boss_warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	boss_warning.add_theme_font_size_override("font_size", 18)
@@ -213,11 +263,6 @@ func build_ui() -> void:
 	boss_warning.add_theme_color_override("font_outline_color", INK)
 	boss_warning.add_theme_constant_override("outline_size", 6)
 	layer.add_child(boss_warning)
-	var footer := Label.new()
-	footer.text = "NIGHTFALL  •  BLACKOUT OUTSKIRTS"
-	footer.position = Vector2(14, 738)
-	footer.add_theme_font_size_override("font_size", 11)
-	layer.add_child(footer)
 	modal = PanelContainer.new()
 	modal.position = Vector2(28, 204)
 	modal.size = Vector2(374, 0)
@@ -427,15 +472,17 @@ func update_modal() -> void:
 		"pack": FieldUI.pack(self)
 		"build": FieldUI.build(self)
 		"pause":
-			modal_title.text = "Salvage Contract" if run.mode == "salvage" else "Nightfall\nBlackout Outskirts"
-			var description := Label.new()
-			description.text = "Survive the waves. Defeat %s.\nAttacks and magic fire automatically.\nHold shrine rings to gain temporary powers.\nMove: WASD / drag left side\nDodge: Space / Dodge button" % run.boss_name
-			if run.mode == "salvage":
-				description.text = "Open 3 caches. Beacon activates at 90s.\nThen hold its central ring for 3s to leave.\nFinish before the 3-minute deadline.\nAttacks and magic fire automatically.\nMove: WASD / drag • Dodge: Space / button"
-			description.add_theme_font_size_override("font_size", 14)
-			modal_body.add_child(description)
-			make_button("Enter courtyard" if run.elapsed == 0.0 else "Resume", func(): run.paused = false, modal_body)
-			make_button("Save & return to Haven", show_haven, modal_body)
+			modal_title.text = "How to play" if help_view else "Paused"
+			if help_view:
+				var description := "Survive the waves, then defeat %s.\nAttacks and magic fire automatically.\nHold shrine rings to gain temporary powers.\nMove: drag the left side or WASD.\nDodge: button or Space." % run.boss_name
+				if run.mode == "salvage":
+					description = "Open 3 caches. The central beacon activates at 90 seconds. Hold its ring for 3 seconds to leave before the 3-minute deadline.\nAttacks fire automatically.\nMove: drag or WASD. Dodge: button or Space."
+				FieldUI.label(self, description, 14)
+				make_button("Back", func(): help_view = false; last_screen = "", modal_body)
+			else:
+				make_button("Resume", func(): run.paused = false, modal_body)
+				make_button("How to play", func(): help_view = true; last_screen = "", modal_body, 40)
+				make_button("Save & return to Haven", show_haven, modal_body)
 			if diagnostics:
 				var row := HBoxContainer.new()
 				modal_body.add_child(row)
@@ -445,11 +492,12 @@ func update_modal() -> void:
 			if ad_bridge and diagnostics:
 				make_button("Test rewarded video", func(): ad_bridge.testRewarded(), modal_body)
 				make_button("Ad privacy options", func(): ad_bridge.privacyOptions(), modal_body, 40)
-			ad_label = Label.new()
-			ad_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			ad_label.add_theme_font_size_override("font_size", 12)
-			modal_body.add_child(ad_label)
-			refresh_ad_label()
+			if diagnostics:
+				ad_label = Label.new()
+				ad_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				ad_label.add_theme_font_size_override("font_size", 12)
+				modal_body.add_child(ad_label)
+				refresh_ad_label()
 		"upgrade":
 			modal_title.text = "Choose a specialization" if not run.offer_back.is_empty() else "Level %d • Choose your power" % run.level
 			if run.offers.is_empty():
@@ -598,8 +646,9 @@ func _process(delta: float) -> void:
 	if run.health < previous_health and in_field and profile.data.settings.haptics and OS.get_name() == "Android":
 		Input.vibrate_handheld(35)
 	previous_health = run.health
-	for control in [hud.get_parent().get_parent(), metrics, dodge_button, pause_button]:
+	for control in [hud_root, dodge_button, pause_button]:
 		control.visible = in_field
+	metrics.visible = in_field and run.benchmark_count > 0
 	pause_button.disabled = power_view or not reward_flow.pending.is_empty()
 	power_hud.visible = in_field and not diagnostics and run.benchmark_count == 0
 	power_hud.update_run(run)
@@ -610,25 +659,40 @@ func _process(delta: float) -> void:
 			checkpoint_wait = 0.0
 	if not run.paused and run.phase in ["waves", "boss"]:
 		anim_time += delta
-	world_offset = Vector2(215, 380) - run.player.clamp(Vector2(215, 380), Vector2(985, 820))
+	world_offset = Vector2(215, 400) - run.player.clamp(Vector2(215, 240), Vector2(985, 920))
 	health_bar.value = run.health
 	health_bar.max_value = run.max_health()
+	# Reapply compact geometry after the controls inherit their live theme.
+	health_bar.size = Vector2(46, 6)
+	xp_bar.size = Vector2(398, 9)
+	boss_bar.size = Vector2(398, 6)
+	health_bar.position = run.player + world_offset - Vector2(23, 80)
+	health_bar.visible = in_field and not modal.visible
 	pack_button.visible = in_field and not run.practice and run.benchmark_count == 0
 	build_button.visible = pack_button.visible
 	pack_button.text = "PACK %d/%d" % [run.field.bag.size(), run.field.capacity]
+	if run.field.notice != last_field_notice:
+		last_field_notice = run.field.notice
+		notice_left = 3.0
+	notice_left = maxf(0, notice_left - delta)
 	field_status.visible = in_field and not run.practice and run.benchmark_count == 0 and not modal.visible
-	field_status.text = "%d scrap  •  %d credits  •  %d/3 relics\n%s" % [run.field.scrap, run.field.credits, run.field.relics.size(), run.field.notice]
+	field_status.text = "%d scrap • %d/3 relics" % [run.field.scrap, run.field.relics.size()]
+	if notice_left > 0 and not last_field_notice.is_empty():
+		field_status.text += "\n" + last_field_notice
 	xp_bar.max_value = run.level * 5
 	xp_bar.value = run.xp
 	var remaining := maxi(0, int(ceil(run.duration - run.elapsed)))
 	boss_warning.visible = in_field and run.phase == "waves" and (remaining <= 10 or run.mode == "salvage") and not modal.visible and run.benchmark_count == 0
 	boss_warning.text = run.Salvage.objective(run) if run.mode == "salvage" else "BOSS ARRIVES IN %d" % remaining
 	var time_text := "%02d:%02d" % [remaining / 60, remaining % 60]
-	if run.phase == "boss":
+	if run.boss_id >= 0:
 		time_text = run.boss_name.to_upper()
 	if run.benchmark_count > 0:
 		time_text = "CROWD TEST"
-	hud.text = "%s  •  Lv %d   |   %d HP" % [time_text, run.level, run.health]
+	hud.text = time_text
+	hud.add_theme_font_size_override("font_size", 18 if run.boss_id >= 0 else 30)
+	level_label.text = "Lv. %d" % run.level
+	counters.text = "%d credits\n%d kills" % [run.field.credits, run.kills]
 	boss_bar.visible = run.boss_id >= 0 and run.phase not in ["victory", "defeat"]
 	for enemy in run.enemies:
 		if enemy.boss:
@@ -760,6 +824,8 @@ func _draw() -> void:
 	for item in actors:
 		if item.has("player"):
 			actor(run.player, false, int(anim_time * 8) % 4 if moving else 1, 1.0, -1.0 if run.facing.x < 0 else 1.0)
+		elif item.boss and run.mission > 0:
+			BossArt.draw_boss(self, item, run.mission, world_offset)
 		else:
 			var scale_value := 1.7 if item.boss else (0.65 if item.kind == "runner" else 0.8)
 			var tint := Color("ffac87") if item.kind == "runner" else (Color("b6c8ff") if item.kind == "spitter" else Color.WHITE)
@@ -791,6 +857,10 @@ func _draw() -> void:
 			draw_spell_icon("wisp", wisp, Vector2(32, 32))
 	if run.shield > 0:
 		draw_arc(run.player + world_offset - Vector2(0, 18), 30, 0, TAU, 32, Color("b5dfff"), 2)
+	if run.talents.slow_left > 0:
+		var at: Vector2 = run.player + world_offset
+		draw_arc(at, 22, 0, TAU, 24, Color("b2a2ef"), 3)
+		draw_string(ThemeDB.fallback_font, at + Vector2(-20, 24), "SLOWED", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("ddd3ff"))
 	for shot in run.hostile_shots:
 		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
 		draw_circle(at, 6, Color("ff7181"))
@@ -851,6 +921,9 @@ func draw_field_sites() -> void:
 		var at: Vector2 = drop.pos + world_offset
 		draw_circle(at, 5, GOLD)
 		draw_arc(at, 6, 0, TAU, 12, Color("fff2bf"), 1)
+	for position in run.talents.cache_positions(run):
+		var at: Vector2 = (position + world_offset - Vector2(0, 48)).clamp(Vector2(18, 188), Vector2(412, 610))
+		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -7), at + Vector2(6, 0), at + Vector2(0, 7), at + Vector2(-6, 0)]), GOLD)
 
 func draw_defenses() -> void:
 	for structure in run.defenses.structures:

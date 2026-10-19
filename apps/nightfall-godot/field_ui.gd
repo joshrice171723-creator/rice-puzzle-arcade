@@ -73,4 +73,7 @@ static func build(arena: Node) -> void:
 		button.disabled = run.field.scrap < cost or run.defenses.used_capacity() + info.capacity > run.Defenses.CAPACITY
 		label(arena, info.description, 13)
 	label(arena, run.defenses.notice, 13)
+	if run.class_id == "engineer" and run.mastery_level >= 15:
+		var dismantle: Button = arena.make_button("Reclaim nearest • 40% scrap back", func(): run.dismantle_structure(), arena.modal_body, 40)
+		dismantle.disabled = run.defenses.nearest_structure(run.player, 150).is_empty()
 	arena.make_button("Back to the field", func(): run.close_build(), arena.modal_body)

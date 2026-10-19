@@ -8,6 +8,7 @@ const Haven = preload("res://haven_content.gd")
 const Defenses = preload("res://defenses.gd")
 const Magic = preload("res://magic.gd")
 const Salvage = preload("res://salvage.gd")
+const Talents = preload("res://class_talents.gd")
 const MAX_ENEMIES := 120
 const MAX_SHOTS := 64
 const BOUNDS := Rect2(135, 135, 930, 930)
@@ -77,6 +78,7 @@ var offer_back: Array[Dictionary] = []
 var mode := "campaign"
 var extract_progress := 0.0
 var target_slot := "weapon"
+var talents = Talents.new()
 
 const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
 const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
@@ -125,7 +127,7 @@ func snapshot() -> Dictionary:
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
 		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
-		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot}
+		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "talents": talents.snapshot()}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -163,6 +165,7 @@ func restore(saved: Dictionary) -> bool:
 	mode = saved.get("mode", "campaign")
 	extract_progress = saved.get("extract_progress", 0.0)
 	target_slot = saved.get("target_slot", "weapon")
+	talents.restore(saved.get("talents", {}))
 	paused = true
 	return true
 
@@ -212,7 +215,7 @@ func class_ability() -> bool:
 					damage_enemy(enemy, 48 * spell_scale(), player, true)
 			pulse_flash = 0.35
 		"engineer":
-			if not defenses.repair_nearest(player, 1.0 + 0.1 * passive_rank("mechanic")):
+			if not defenses.repair_nearest(player, 1.0 + 0.1 * passive_rank("mechanic"), mastery_level):
 				return false
 		_:
 			return false
@@ -243,7 +246,22 @@ func place_structure(kind: String) -> bool:
 	if not defenses.can_place(kind, position, field.sites, player):
 		return false
 	defenses.place(kind, position, spell_multiplier * 40.0, class_id == "engineer")
+	defenses.structures.back().paid_cost = build_cost(kind)
 	field.scrap -= build_cost(kind)
+	field.revision += 1
+	return true
+
+func dismantle_structure() -> bool:
+	if paused or phase != "build" or class_id != "engineer" or mastery_level < 15:
+		return false
+	var target: Dictionary = defenses.nearest_structure(player, 150)
+	if target.is_empty():
+		return false
+	var refund := floori(target.get("paid_cost", build_cost(target.kind)) * 0.4)
+	defenses.structures.erase(target)
+	field.scrap += refund
+	defenses.notice = "Structure reclaimed • +%d scrap" % refund
+	build_revision += 1
 	field.revision += 1
 	return true
 
@@ -374,6 +392,7 @@ func dodge() -> bool:
 		dodge_left = 0.30
 		class_wait = Haven.CLASSES.scavenger.cooldown
 		ability_notice = "Phase Step"
+		talents.phase_step(self)
 	return true
 
 func upgrade(choice: int) -> void:
@@ -551,9 +570,9 @@ func cast_spell(id: String) -> bool:
 			return Magic.cast(self, id, multiplier, target)
 	return true
 
-func hostile_projectile(from: Vector2, direction: Vector2, amount: float, speed: float = 170.0) -> void:
+func hostile_projectile(from: Vector2, direction: Vector2, amount: float, speed: float = 170.0, slow: float = 0.0) -> void:
 	if hostile_shots.size() < 32:
-		hostile_shots.append({"pos": from, "velocity": direction * speed, "damage": amount, "life": 3.0})
+		hostile_shots.append({"pos": from, "velocity": direction * speed, "damage": amount, "life": 3.0, "slow": slow})
 
 func tick_enemy(enemy: Dictionary, delta: float) -> void:
 	if enemy.hp <= 0:
@@ -592,7 +611,7 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 				"toss":
 					for angle in [-0.22, 0.0, 0.22]:
 						hostile_projectile(pos, pos.direction_to(enemy.target).rotated(angle), 16.0, 190.0)
-				"spit": hostile_projectile(pos, pos.direction_to(enemy.target), 12.0)
+				"spit": hostile_projectile(pos, pos.direction_to(enemy.target), 12.0, 170.0, 2.0)
 				"summon":
 					for count in 4:
 						if reinforcements_spawned >= 24 or enemies.filter(func(e: Dictionary): return e.hp > 0 and e.get("reinforcement", false)).size() >= 6:
@@ -630,6 +649,7 @@ func tick(delta: float, direction: Vector2) -> void:
 	if paused or phase not in ["waves", "boss"]:
 		return
 	elapsed += delta
+	talents.slow_left = maxf(0, talents.slow_left - delta)
 	if "emberleaf" in field.relics and elapsed - last_damage_at >= 4.0:
 		health = minf(max_health(), health + max_health() * 0.0015 * delta)
 	wisp_wait = maxf(0, wisp_wait - delta)
@@ -647,6 +667,8 @@ func tick(delta: float, direction: Vector2) -> void:
 		facing = direction.normalized()
 	var move := facing if dodge_left > 0.0 else direction.limit_length()
 	var speed := 125.0 * minf(1.3, speed_multiplier * (1.0 + 0.05 * passive_rank("fleet"))) * (0.95 if "obsidian" in field.relics else 1.0)
+	if talents.slow_left > 0:
+		speed *= 0.8
 	player = clamp_position(player + move * (520.0 if dodge_left > 0.0 else speed) * delta)
 	if benchmark_count == 0 and phase == "waves" and elapsed >= duration:
 		if mode == "salvage":
@@ -690,7 +712,10 @@ func tick(delta: float, direction: Vector2) -> void:
 		shot.life -= delta
 		shot.pos += shot.velocity * delta
 		if shot.pos.distance_to(player) < 15.0:
+			var hits_before := damage_taken
 			hurt(shot.damage)
+			if damage_taken > hits_before:
+				talents.slow_left = maxf(talents.slow_left, shot.get("slow", 0.0))
 			shot.life = 0.0
 	hostile_shots = hostile_shots.filter(func(shot: Dictionary) -> bool: return shot.life > 0)
 	for shot in shots:
@@ -698,7 +723,8 @@ func tick(delta: float, direction: Vector2) -> void:
 		shot.pos += shot.velocity * delta
 		for enemy in enemies:
 			if enemy.hp > 0.0 and enemy.id not in shot.get("hits", []) and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
-				damage_enemy(enemy, shot.get("damage", damage * field.damage_multiplier()), shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol")
+				var amount: float = talents.basic_damage(self, shot, shot.get("damage", damage * field.damage_multiplier()))
+				damage_enemy(enemy, amount, shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol")
 				if shot.get("kind", "pistol") == "ember":
 					enemy.burn = maxf(enemy.burn, 2.0)
 					enemy.burn_dps = maxf(enemy.burn_dps, shot.burn_dps)
@@ -764,7 +790,8 @@ func hurt(amount: float) -> void:
 		damage_taken += 1
 		last_damage_at = elapsed
 	hurt_wait = 0.8
-	if health > 0 and health <= max_health() * 0.25 and medkit_fraction > 0 and not medkit_used:
+	var last_light := talents.survive_lethal(self)
+	if not last_light and health > 0 and health <= max_health() * 0.25 and medkit_fraction > 0 and not medkit_used:
 		medkit_used = true
 		health = minf(max_health(), health + max_health() * medkit_fraction)
 		ability_notice = "Field Medkit restored health."

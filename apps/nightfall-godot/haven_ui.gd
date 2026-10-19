@@ -160,6 +160,7 @@ func rebuild() -> void:
 		"contracts": contracts_page()
 		"training": Preparation.training(self)
 		"arcanum": Preparation.arcanum(self)
+		"mastery": Preparation.mastery(self)
 	status_label.text = profile.error if not profile.error.is_empty() else message
 	for index in navigation.get_child_count():
 		var tab: Button = navigation.get_child(index)
@@ -312,7 +313,7 @@ func contracts_page() -> void:
 	button("Back to Haven", func(): page = "haven"; rebuild(), null, 40)
 
 func class_page() -> void:
-	text_line("YOUR SURVIVOR", 22, Color("ffd27c"))
+	button("Class mastery • view talents", func(): page = "mastery"; rebuild(), null, 44)
 	text_line("Survivor level %d / 40  •  %d earned XP" % [Content.survivor_level(profile.data.survivor_xp), profile.data.survivor_xp], 15)
 	for id: String in Content.CLASSES:
 		var info: Dictionary = Content.CLASSES[id]

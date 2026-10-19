@@ -70,3 +70,19 @@ Google's [rewarded-ad documentation](https://developers.google.com/admob/android
 - Arcanum guide displays all eight ability trees, both specialization tradeoffs, and the paired passive needed for evolution. It is a preview, not a permanent spell grant.
 - Training Yard offers each of the five encountered Outskirts bosses with equipped stats and three rank-one spell presets. Discovery persists even after defeat; older cleared saves migrate correctly. Practice grants no rewards and leaves an existing campaign checkpoint intact.
 - Full suite: 1,573 passing checks, including 961 phone layout checks and 13 preparation journey checks. Updated the old practice-health expectation because practice now uses equipped health.
+
+## Class mastery and boss presentation
+
+- Scavenger mastery milestones now reveal nearby caches, cleanse Spitter slows with Phase Step, empower the next basic hit, and survive one lethal hit at 1 HP. Engineer milestones discount construction, overclock a repairing turret, reclaim 40% of actual paid scrap, and heal one adjacent structure. Proc state survives checkpoints and rescue; bonuses apply only to the selected class.
+- Spitter damage now slows walking by 20% for two seconds. Dodge keeps its movement speed; fully shielded/dodged hits do not apply the slow. A visible ring and SLOWED label communicate it.
+- Thirty focused mastery checks pass. The runner now treats Godot script errors or missing passing summaries as failures even when Godot returns exit code zero.
+- Five original boss silhouettes with neutral/wind-up poses replace enlarged ordinary-enemy art. Training pages use the same boss portraits. These are two poses, not complete directional animation sets.
+- Static captures cover the Arcanum, Training Yard, contract preparation, class mastery and in-run ability path. No manual play or physical-device acceptance.
+
+## Requested compact combat HUD
+
+- Removed the opaque top card. Centered timer, separate combat-level label, nine-pixel XP bar, compact upper-left ability icons, and upper-right Credits/kills follow Joshua's reference layout.
+- Six-pixel HP bar follows the character. Boss HP is a separate six-pixel bar. Camera framing keeps the hero and HP below the HUD at the northern boundary and above bottom controls at the southern boundary.
+- Pack/Build moved beside the bottom controls. Resource notices expire after three seconds; branding/footer and ordinary debug/ad text were removed from combat.
+- Pause is an explicit compact menu. Instructions are behind How to play; level-up/shrine choices still pause and display when needed.
+- 63 new layout/interaction checks cover three phone viewports and arena edges. Static populated capture: `artifacts/nightfall-godot/compact-hud.png`. Native rendering remains a separate acceptance step.
