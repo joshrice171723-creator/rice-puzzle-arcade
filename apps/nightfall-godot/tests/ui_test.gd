@@ -8,6 +8,7 @@ func _initialize() -> void:
 
 func verify_layout() -> void:
 	var arena = load("res://main.tscn").instantiate()
+	arena.testing = true
 	root.add_child(arena)
 	# Exercise the largest menu without requesting an ad in a UI layout test.
 	arena.ad_bridge = RefCounted.new()

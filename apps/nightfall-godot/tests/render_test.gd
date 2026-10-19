@@ -9,6 +9,7 @@ func verify_batches() -> void:
 		quit(1)
 		return
 	var arena = load("res://main.tscn").instantiate()
+	arena.testing = true
 	root.add_child(arena)
 	arena.run.set_benchmark(120)
 	arena.run.paused = false

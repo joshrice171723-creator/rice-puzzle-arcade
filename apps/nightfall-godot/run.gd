@@ -1,8 +1,10 @@
 extends RefCounted
-## Fixed-step rules for the isolated engine proof. No permanent progression.
+## Fixed-step combat and attempt-local exploration rules.
 
 const DURATION := 240.0
 const Content = preload("res://combat_content.gd")
+const Field = preload("res://field.gd")
+const Haven = preload("res://haven_content.gd")
 const MAX_ENEMIES := 120
 const MAX_SHOTS := 64
 const BOUNDS := Rect2(135, 135, 930, 930)
@@ -36,9 +38,146 @@ var benchmark_count := 0
 var boss_id := -1
 var next_id := 0
 var practice := false
+var field: RefCounted
+var base_health := 120.0
+var damage_taken := 0
+var last_damage_at := -100.0
+var wisp_wait := 0.0
+var survivor_xp := 0
+var mastery_xp := 0
+var mission := 0
+var duration := DURATION
+var boss_name := "The Breaker"
+var armor := 0.0
+var speed_multiplier := 1.0
+var pickup_multiplier := 1.0
+var spell_multiplier := 1.0
+var medkit_fraction := 0.0
+var medkit_used := false
+var class_id := "scavenger"
+var class_wait := 0.0
+var shield := 0.0
+var shield_left := 0.0
+var ability_notice := ""
+
+const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
+const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
 
 func _init(seed_value: int = 41) -> void:
 	rng.seed = seed_value
+	field = Field.new(seed_value)
+
+func configure(mission_number: int, stats: Dictionary) -> void:
+	mission = clampi(mission_number, 1, Haven.MISSIONS.size())
+	var definition: Dictionary = Haven.MISSIONS[mission - 1]
+	duration = definition.duration
+	boss_name = definition.boss
+	base_health = stats.hp
+	health = max_health()
+	damage = stats.power * 0.6
+	fire_interval = 0.6
+	armor = stats.armor
+	speed_multiplier = stats.speed
+	pickup_multiplier = stats.pickup
+	spell_multiplier = stats.power / 40.0
+	field.capacity = stats.capacity
+	field.secure_capacity = stats.secure
+	medkit_fraction = stats.medkit
+	class_id = stats["class"]
+
+func snapshot() -> Dictionary:
+	var values := {}
+	for key in SNAPSHOT_KEYS:
+		values[key] = get(key)
+	var exploration := {}
+	for key in FIELD_KEYS:
+		exploration[key] = field.get(key)
+	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state}
+
+func restore(saved: Dictionary) -> bool:
+	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
+		return false
+	for key in SNAPSHOT_KEYS:
+		if not saved.combat.has(key) or typeof(saved.combat[key]) != typeof(get(key)):
+			return false
+	for key in FIELD_KEYS:
+		if not saved.field.has(key) or typeof(saved.field[key]) != typeof(field.get(key)):
+			return false
+	if saved.combat.phase not in ["waves", "boss", "upgrade", "shrine", "pack", "victory", "defeat"] or saved.combat.mission not in range(1, 6):
+		return false
+	if saved.combat.enemies.size() > MAX_ENEMIES or saved.combat.shots.size() > MAX_SHOTS or saved.field.sites.size() != 7 or saved.field.bag.size() > 12:
+		return false
+	for key in SNAPSHOT_KEYS:
+		set(key, saved.combat[key])
+	for key in FIELD_KEYS:
+		field.set(key, saved.field[key])
+	rng.state = saved.rng
+	field.rng.state = saved.field_rng
+	paused = true
+	return true
+
+func result() -> Dictionary:
+	var won := phase == "victory"
+	var loot: Array = field.banked_loot(won)
+	return {"victory": won, "credits": field.credits, "survivor_xp": survivor_xp,
+		"mastery_xp": mastery_xp, "loot": loot, "damage_taken": damage_taken,
+		"caches": field.caches_opened, "lost": field.bag.size() - loot.size(), "rescued": false}
+
+func class_ability() -> bool:
+	if paused or phase not in ["waves", "boss"] or class_wait > 0:
+		return false
+	match class_id:
+		"scavenger":
+			dodge_left = maxf(dodge_left, 0.30)
+			ability_notice = "Phase Step"
+		"warden":
+			shield = max_health() * 0.2
+			shield_left = 4.0
+		"arcanist":
+			for enemy in enemies:
+				if player.distance_to(enemy.pos) <= 145:
+					enemy.hp -= 48 * spell_multiplier
+			pulse_flash = 0.35
+		"engineer":
+			ability_notice = "Place a structure before using Repair Swarm."
+			return false
+	class_wait = Haven.CLASSES[class_id].cooldown
+	return true
+
+func max_health() -> float:
+	return base_health * field.health_multiplier()
+
+func buy_trait(id: String) -> bool:
+	if paused or phase != "shrine":
+		return false
+	var previous := max_health()
+	if not field.buy_trait(id):
+		return false
+	health = minf(max_health(), health + max_health() - previous)
+	return true
+
+func choose_relic(index: int) -> bool:
+	if paused or phase != "shrine":
+		return false
+	var previous := max_health()
+	if field.choose_relic(index).is_empty():
+		return false
+	health = minf(max_health(), health + max_health() - previous)
+	phase = "boss" if boss_id >= 0 else "waves"
+	return true
+
+func leave_shrine() -> void:
+	if phase == "shrine":
+		field.leave()
+		phase = "boss" if boss_id >= 0 else "waves"
+
+func open_pack() -> void:
+	if not paused and phase in ["waves", "boss"]:
+		phase = "pack"
+
+func close_pack() -> void:
+	if phase == "pack":
+		phase = "boss" if boss_id >= 0 else "waves"
 
 func start_boss_practice() -> void:
 	practice = true
@@ -58,6 +197,8 @@ func spawn_enemy(boss: bool = false, kind: String = "drifter") -> void:
 		kind = "breaker"
 	var stats: Dictionary = Content.ENEMIES[kind]
 	var hp: float = stats.hp
+	if boss and mission > 0:
+		hp = Haven.MISSIONS[mission - 1].health
 	enemies.append({"id": next_id, "pos": pos, "hp": hp, "max_hp": hp,
 		"speed": stats.speed, "boss": boss, "kind": kind, "contact": stats.contact,
 		"tell": 0.0, "attack_wait": 2.0, "target": pos, "face": 1.0,
@@ -88,7 +229,7 @@ func set_benchmark(count: int) -> void:
 func dodge() -> bool:
 	if paused or phase not in ["waves", "boss"] or dodge_wait > 0.0:
 		return false
-	dodge_wait = 3.0
+	dodge_wait = 3.0 * (0.85 if "feather" in field.relics else 1.0)
 	dodge_left = 0.18
 	return true
 
@@ -110,7 +251,7 @@ func upgrade(choice: int) -> void:
 	match choice:
 		0: damage = minf(48.0, damage + 4.0)
 		1: fire_interval = maxf(0.18, fire_interval - 0.025)
-		2: health = minf(120.0, health + 35.0)
+		2: health = minf(max_health(), health + 35.0)
 	phase = "boss" if boss_id >= 0 else "waves"
 	offers.clear()
 
@@ -128,8 +269,8 @@ func make_offers() -> void:
 		offers.append(spell_offer(available[(level - 3) % available.size()]))
 	if damage < 48.0:
 		offers.append({"id": "rounds", "name": "Heavy Rounds", "description": "+4 pistol damage this run (maximum 48)."})
-	if health < 120.0:
-		offers.append({"id": "heal", "name": "Field Dressing", "description": "Recover 35 HP now, up to 120."})
+	if health < max_health():
+		offers.append({"id": "heal", "name": "Field Dressing", "description": "Recover 35 HP now, up to %.0f." % max_health()})
 	if offers.size() < 3 and fire_interval > 0.18:
 		offers.append({"id": "quick", "name": "Quick Hands", "description": "Fire 0.025s faster (minimum 0.18s)."})
 	for id in available:
@@ -189,7 +330,7 @@ func cast_spell(id: String) -> bool:
 	var target := nearest_enemy(player, 425.0 if id != "frost" else 150.0)
 	if target.is_empty():
 		return false
-	var multiplier := 1.0 + 0.25 * (int(spells[id].rank) - 1)
+	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * (1.08 if "cinder" in field.relics else 1.0) * spell_multiplier
 	match id:
 		"ember":
 			if shots.size() >= MAX_SHOTS:
@@ -253,11 +394,15 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 					for angle in [-0.22, 0.0, 0.22]:
 						hostile_projectile(pos, pos.direction_to(enemy.target).rotated(angle), 16.0, 190.0)
 				"spit": hostile_projectile(pos, pos.direction_to(enemy.target), 12.0)
+				"summon":
+					for count in 4:
+						spawn_enemy(false, "drifter")
 			enemy.attack_wait = (1.6 if enemy.hp < enemy.max_hp * 0.5 else 2.4) if enemy.boss else 4.0
 	else:
 		if enemy.attack_wait <= 0 and (enemy.boss or (enemy.kind == "spitter" and pos.distance_to(player) < 360.0)):
 			enemy.target = player
-			enemy.attack = ["rush", "slam", "toss"][enemy.cycle % 3] if enemy.boss else "spit"
+			var attacks: Array = Haven.MISSIONS[mission - 1].attacks if mission > 0 else ["rush", "slam", "toss"]
+			enemy.attack = attacks[enemy.cycle % attacks.size()] if enemy.boss else "spit"
 			if enemy.attack == "slam":
 				enemy.target = pos
 			enemy.cycle += 1
@@ -273,13 +418,25 @@ func tick(delta: float, direction: Vector2) -> void:
 	if paused or phase not in ["waves", "boss"]:
 		return
 	elapsed += delta
-	for key in ["fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash"]:
+	if "emberleaf" in field.relics and elapsed - last_damage_at >= 4.0:
+		health = minf(max_health(), health + max_health() * 0.0015 * delta)
+	wisp_wait = maxf(0, wisp_wait - delta)
+	if "lantern" in field.relics and wisp_wait == 0:
+		var target := nearest_enemy(player, 220.0)
+		if not target.is_empty():
+			target.hp -= 12.0
+			add_effect("chain", player, target.pos)
+			wisp_wait = 3.0
+	for key in ["fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "class_wait", "shield_left"]:
 		set(key, maxf(0.0, float(get(key)) - delta))
+	if shield_left == 0:
+		shield = 0.0
 	if direction.length_squared() > 0.01:
 		facing = direction.normalized()
 	var move := facing if dodge_left > 0.0 else direction.limit_length()
-	player = clamp_position(player + move * (520.0 if dodge_left > 0.0 else 125.0) * delta)
-	if benchmark_count == 0 and phase == "waves" and elapsed >= DURATION:
+	var speed := 125.0 * speed_multiplier * (0.95 if "obsidian" in field.relics else 1.0)
+	player = clamp_position(player + move * (520.0 if dodge_left > 0.0 else speed) * delta)
+	if benchmark_count == 0 and phase == "waves" and elapsed >= duration:
 		phase = "boss"
 		# Reserve a slot: the crowd cap must never prevent mandatory boss arrival.
 		if enemies.size() == MAX_ENEMIES:
@@ -292,7 +449,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		var wave := Content.wave_at(elapsed)
 		var roll := rng.randf()
 		spawn_enemy(false, "runner" if roll < wave.runner else ("spitter" if roll < wave.runner + wave.spitter else "drifter"))
-		spawn_wait = wave.interval
+		spawn_wait = wave.interval / (Haven.MISSIONS[mission - 1].pressure if mission > 0 else 1.0)
 	for effect in effects:
 		effect.life -= delta
 	effects = effects.filter(func(effect: Dictionary) -> bool: return effect.life > 0)
@@ -321,7 +478,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		shot.pos += shot.velocity * delta
 		for enemy in enemies:
 			if enemy.hp > 0.0 and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
-				enemy.hp -= shot.get("damage", damage)
+				enemy.hp -= shot.get("damage", damage * field.damage_multiplier())
 				if shot.get("kind", "pistol") == "ember":
 					enemy.burn = maxf(enemy.burn, 2.0)
 					enemy.burn_dps = maxf(enemy.burn_dps, shot.burn_dps)
@@ -334,6 +491,10 @@ func tick(delta: float, direction: Vector2) -> void:
 		if enemy.hp > 0.0:
 			continue
 		kills += 1
+		if not practice and benchmark_count == 0:
+			survivor_xp += 1
+			mastery_xp += 1 if kills % 3 == 0 else 0
+			field.add_drop(enemy.pos, 3 if enemy.boss else 1, 12 if enemy.boss else (2 if kills % 3 == 0 else 0))
 		if pickups.size() < 40:
 			pickups.append(enemy.pos)
 		if enemy.boss and health > 0.0:
@@ -344,7 +505,7 @@ func tick(delta: float, direction: Vector2) -> void:
 	if phase not in ["waves", "boss"]:
 		return
 	for i in range(pickups.size() - 1, -1, -1):
-		if pickups[i].distance_to(player) < 70.0:
+		if pickups[i].distance_to(player) < 70.0 * field.pickup_multiplier() * pickup_multiplier:
 			pickups[i] = pickups[i].move_toward(player, 220.0 * delta)
 		if pickups[i].distance_to(player) < 14.0:
 			xp += 1
@@ -354,9 +515,23 @@ func tick(delta: float, direction: Vector2) -> void:
 		level += 1
 		phase = "upgrade"
 		make_offers()
+	if phase in ["waves", "boss"] and not practice and benchmark_count == 0:
+		if field.tick(delta, player):
+			phase = "shrine"
 
 func hurt(amount: float) -> void:
 	if benchmark_count > 0 or hurt_wait > 0.0 or dodge_left > 0.0:
 		return
-	health = maxf(0.0, health - amount)
+	if amount <= 0:
+		return
+	var reduced := amount * (1.0 - minf(0.5, armor / (armor + 150.0))) * (0.9 if "obsidian" in field.relics else 1.0)
+	var absorbed := minf(shield, reduced)
+	shield -= absorbed
+	health = maxf(0.0, health - (reduced - absorbed))
+	damage_taken += 1
+	last_damage_at = elapsed
 	hurt_wait = 0.8
+	if health > 0 and health <= max_health() * 0.25 and medkit_fraction > 0 and not medkit_used:
+		medkit_used = true
+		health = minf(max_health(), health + max_health() * medkit_fraction)
+		ability_notice = "Field Medkit restored health."

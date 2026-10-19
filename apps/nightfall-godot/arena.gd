@@ -1,6 +1,9 @@
 extends Node2D
 
 const Run = preload("res://run.gd")
+const FieldUI = preload("res://field_ui.gd")
+const Profile = preload("res://profile.gd")
+const HavenUI = preload("res://haven_ui.gd")
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const SHADOW = preload("res://assets/shadow.svg")
@@ -41,8 +44,23 @@ var ad_status := "Android sample-ad bridge unavailable on this platform."
 var ad_rewards := 0
 var ad_label: Label
 var ad_bridge: Object
+var pack_button: Button
+var pack_page := 0
+var pending_discard := -1
+var field_status: Label
+var profile = Profile.new()
+var home: Control
+var testing := false
+var attempt_id := 0
+var checkpoint_wait := 0.0
+var reward_receipt: Dictionary = {}
+var diagnostics := false
+var class_button: Button
+var last_checkpoint_key := ""
 
 func _ready() -> void:
+	if not testing:
+		profile.load_save()
 	if Engine.has_singleton("NightfallAds"):
 		ad_bridge = Engine.get_singleton("NightfallAds")
 		ad_status = "Google sample ads only • rewards: 0"
@@ -62,6 +80,8 @@ func _ready() -> void:
 			automated = true
 	if benchmark_seconds == 0.0 and run.benchmark_count == 0:
 		run.paused = true
+	else:
+		home.hide()
 	update_modal()
 
 func _notification(what: int) -> void:
@@ -69,6 +89,7 @@ func _notification(what: int) -> void:
 		if benchmark_seconds <= 0.0:
 			run.paused = true
 			clear_input()
+			save_checkpoint()
 
 func panel_style(color: Color, border: Color = Color("34456d")) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -144,6 +165,16 @@ func build_ui() -> void:
 	dodge_button = make_button("DODGE", func(): run.dodge(), layer, 64)
 	dodge_button.position = Vector2(330, 668)
 	dodge_button.size.x = 88
+	pack_button = make_button("PACK", func(): run.open_pack(), layer, 44)
+	pack_button.position = Vector2(14, 552)
+	pack_button.size.x = 90
+	field_status = Label.new()
+	field_status.position = Vector2(16, 205)
+	field_status.size = Vector2(335, 65)
+	field_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	field_status.add_theme_font_size_override("font_size", 13)
+	field_status.add_theme_color_override("font_color", GOLD)
+	layer.add_child(field_status)
 	var footer := Label.new()
 	footer.text = "NIGHTFALL  /  ENGINE PROOF  •  WASD / touch"
 	footer.position = Vector2(14, 738)
@@ -163,6 +194,108 @@ func build_ui() -> void:
 	modal_title.add_theme_color_override("font_color", GOLD)
 	modal_body.add_child(modal_title)
 	modal_body.minimum_size_changed.connect(func(): fit_modal.call_deferred())
+	class_button = make_button("PHASE", func(): run.class_ability(), layer, 54)
+	class_button.position = Vector2(330, 594)
+	class_button.size.x = 88
+	home = HavenUI.new()
+	home.profile = profile
+	home.mission_requested.connect(start_campaign)
+	home.resume_requested.connect(resume_campaign)
+	home.abandon_requested.connect(abandon_campaign)
+	home.practice_requested.connect(begin_practice)
+	home.diagnostics_requested.connect(begin_diagnostics)
+	layer.add_child(home)
+	if testing:
+		home.hide()
+
+func show_haven() -> void:
+	run.paused = true
+	clear_input()
+	save_checkpoint()
+	home.show()
+	home.rebuild()
+	modal.hide()
+	last_screen = ""
+
+func start_campaign(mission_number: int) -> void:
+	var attempt: Dictionary = profile.start_attempt(mission_number)
+	if attempt.is_empty():
+		home.rebuild()
+		return
+	attempt_id = attempt.id
+	run = Run.new(attempt.seed)
+	run.configure(mission_number, profile.stats())
+	reward_receipt = {}
+	diagnostics = false
+	checkpoint_wait = 0.0
+	save_checkpoint()
+	home.hide()
+	last_screen = ""
+	clear_input()
+
+func resume_campaign() -> void:
+	if profile.data.active_attempt.is_empty():
+		return
+	var attempt: Dictionary = profile.data.active_attempt
+	var resumed = Run.new(attempt.seed)
+	resumed.configure(attempt.mission, profile.stats())
+	var snapshot: Dictionary = profile.saved_run()
+	if not snapshot.is_empty() and not resumed.restore(snapshot):
+		profile.error = "This expedition checkpoint is incompatible. End the expedition from Haven to start a new one."
+		home.rebuild()
+		return
+	run = resumed
+	run.paused = true
+	attempt_id = attempt.id
+	diagnostics = false
+	reward_receipt = {}
+	home.hide()
+	last_screen = ""
+	clear_input()
+
+func abandon_campaign() -> void:
+	if profile.data.active_attempt.is_empty():
+		return
+	var attempt: Dictionary = profile.data.active_attempt
+	var abandoned = Run.new(attempt.seed)
+	abandoned.configure(attempt.mission, profile.stats())
+	var snapshot: Dictionary = profile.saved_run()
+	if not snapshot.is_empty():
+		abandoned.restore(snapshot)
+	abandoned.phase = "defeat"
+	var result: Dictionary = profile.finish_attempt(attempt.id, abandoned.result())
+	if not result.is_empty():
+		attempt_id = 0
+		home.message = "Expedition ended. %d credits and protected loot returned to Haven." % result.credits
+	home.rebuild()
+
+func save_checkpoint() -> void:
+	if testing or attempt_id == 0 or profile.data.active_attempt.is_empty():
+		return
+	if profile.checkpoint(run.snapshot()):
+		last_checkpoint_key = run.phase + str(run.field.revision)
+
+func begin_practice() -> void:
+	attempt_id = 0
+	diagnostics = false
+	restart()
+	run.start_boss_practice()
+	home.hide()
+	last_screen = ""
+
+func begin_diagnostics() -> void:
+	attempt_id = 0
+	diagnostics = true
+	restart()
+	run.paused = true
+	home.hide()
+	last_screen = ""
+
+func bank_result() -> void:
+	if attempt_id > 0 and reward_receipt.is_empty():
+		reward_receipt = profile.finish_attempt(attempt_id, run.result())
+		if not reward_receipt.is_empty():
+			attempt_id = 0
 
 func fit_modal() -> void:
 	var minimum := modal.get_combined_minimum_size()
@@ -179,11 +312,15 @@ func refresh_ad_label() -> void:
 		ad_label.text = "%s\nEarned callbacks: %d" % [ad_status.left(140), ad_rewards]
 
 func update_modal() -> void:
-	var screen: String = "pause" if run.paused else run.phase
-	if screen == last_screen:
+	if is_instance_valid(home) and home.visible:
+		modal.hide()
 		return
-	last_screen = screen
-	modal.visible = screen in ["pause", "upgrade", "victory", "defeat"]
+	var screen: String = "pause" if run.paused else run.phase
+	var screen_key := screen + (str(run.field.revision) if screen in ["shrine", "pack"] else "")
+	if screen_key == last_screen:
+		return
+	last_screen = screen_key
+	modal.visible = screen in ["pause", "upgrade", "victory", "defeat", "shrine", "pack"]
 	if not modal.visible:
 		return
 	clear_input()
@@ -193,21 +330,23 @@ func update_modal() -> void:
 			child.queue_free()
 	modal.size.y = 0
 	match screen:
+		"shrine": FieldUI.shrine(self)
+		"pack": FieldUI.pack(self)
 		"pause":
 			modal_title.text = "Nightfall\nBlackout Outskirts"
 			var description := Label.new()
-			description.text = "Survive 4 minutes. Defeat The Breaker.\nCollect XP to learn automatic magic.\nMove: WASD / drag left side\nDodge: Space  •  Pulse: E\nPrototype — progress is not saved."
+			description.text = "Survive the waves. Defeat %s.\nHold shrine rings to gain temporary powers.\nProtect valuable loot in your field pack.\nMove: WASD / drag left side\nDodge: Space  •  Ability: Q" % run.boss_name
 			description.add_theme_font_size_override("font_size", 14)
 			modal_body.add_child(description)
 			make_button("Enter courtyard" if run.elapsed == 0.0 else "Resume", func(): run.paused = false, modal_body)
-			var row := HBoxContainer.new()
-			modal_body.add_child(row)
-			for count in [30, 60, 120]:
-				var b := make_button("%d foes" % count, func(): run.set_benchmark(count); run.paused = false, row)
-				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			make_button("New survival run", restart, modal_body)
-			make_button("Practice The Breaker • no rewards", func(): restart(); run.start_boss_practice(), modal_body)
-			if ad_bridge:
+			make_button("Save & return to Haven", show_haven, modal_body)
+			if diagnostics:
+				var row := HBoxContainer.new()
+				modal_body.add_child(row)
+				for count in [30, 60, 120]:
+					var b := make_button("%d foes" % count, func(): run.set_benchmark(count); run.paused = false, row)
+					b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if ad_bridge and diagnostics:
 				make_button("Test rewarded video", func(): ad_bridge.testRewarded(), modal_body)
 				make_button("Ad privacy options", func(): ad_bridge.privacyOptions(), modal_body, 40)
 			ad_label = Label.new()
@@ -228,13 +367,27 @@ func update_modal() -> void:
 				description.add_theme_font_size_override("font_size", 13)
 				modal_body.add_child(description)
 		"victory", "defeat":
+			bank_result()
 			modal_title.text = "Boss defeated" if screen == "victory" else "The night claimed you"
 			if run.practice:
 				modal_title.text = "Practice complete" if screen == "victory" else "Practice • try another approach"
 			var result := Label.new()
 			result.text = "%d enemies defeated • Level %d\n%.0f seconds survived" % [run.kills, run.level, run.elapsed]
 			modal_body.add_child(result)
-			make_button("Practice again" if run.practice else "Try again", replay, modal_body)
+			if not reward_receipt.is_empty():
+				FieldUI.label(self, "Banked: %d credits • %d parts • %d gems\n+%d Survivor XP • +%d Mastery XP" % [reward_receipt.credits, reward_receipt.parts, reward_receipt.gems, reward_receipt.survivor_xp, reward_receipt.mastery_xp])
+				if not reward_receipt.new_medals.is_empty():
+					FieldUI.label(self, "New medals: " + ", ".join(reward_receipt.new_medals))
+				if not reward_receipt.gear.is_empty():
+					FieldUI.label(self, "Equipment: " + ", ".join(reward_receipt.gear))
+				if reward_receipt.lost > 0:
+					FieldUI.label(self, "%d unprotected loot bundles lost." % reward_receipt.lost)
+			if attempt_id > 0:
+				FieldUI.label(self, profile.error)
+				make_button("Retry saving rewards", func(): last_screen = "", modal_body)
+			else:
+				make_button("Practice again" if run.practice else "Try again", replay, modal_body)
+			make_button("Return to Haven", show_haven, modal_body)
 
 func restart() -> void:
 	run = Run.new()
@@ -243,6 +396,9 @@ func restart() -> void:
 
 func replay() -> void:
 	var repeat_practice: bool = run.practice
+	if not repeat_practice and run.mission > 0:
+		start_campaign(run.mission)
+		return
 	restart()
 	if repeat_practice:
 		run.start_boss_practice()
@@ -259,6 +415,8 @@ func _input(event: InputEvent) -> void:
 		stick = ((event.position - stick_origin) / 50.0).limit_length()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if home.visible:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE:
 			run.paused = not run.paused
@@ -267,6 +425,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			run.dodge()
 		elif event.keycode == KEY_E:
 			run.pulse()
+		elif event.keycode == KEY_Q:
+			run.class_ability()
+		elif event.keycode == KEY_TAB:
+			run.open_pack()
 	if run.paused or run.phase not in ["waves", "boss"]:
 		return
 	if event is InputEventScreenTouch:
@@ -287,6 +449,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		stick = ((event.position - stick_origin) / 50.0).limit_length()
 
 func _physics_process(delta: float) -> void:
+	if home.visible:
+		return
 	var direction := Vector2(
 		float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT)),
 		float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN)) - float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP)))
@@ -302,16 +466,32 @@ func _physics_process(delta: float) -> void:
 	physics_ms = maxf(physics_ms, (Time.get_ticks_usec() - start) / 1000.0)
 
 func _process(delta: float) -> void:
+	var in_field: bool = not home.visible
+	for control in [hud.get_parent().get_parent(), metrics, dodge_button, pause_button]:
+		control.visible = in_field
+	pulse_button.visible = in_field and run.mission == 0
+	class_button.visible = in_field and run.mission > 0
+	class_button.text = "%.1fs" % run.class_wait if run.class_wait > 0 else ("PHASE" if run.class_id == "scavenger" else "REPAIR")
+	if in_field and attempt_id > 0:
+		checkpoint_wait += delta
+		if checkpoint_wait >= 10.0 or (run.phase in ["upgrade", "shrine", "pack"] and last_checkpoint_key != run.phase + str(run.field.revision)):
+			save_checkpoint()
+			checkpoint_wait = 0.0
 	if not run.paused and run.phase in ["waves", "boss"]:
 		anim_time += delta
 	world_offset = Vector2(215, 380) - run.player.clamp(Vector2(215, 380), Vector2(985, 820))
 	health_bar.value = run.health
+	health_bar.max_value = run.max_health()
+	pack_button.visible = in_field and not run.practice and run.benchmark_count == 0
+	pack_button.text = "PACK %d/%d" % [run.field.bag.size(), run.field.capacity]
+	field_status.visible = in_field and not run.practice and run.benchmark_count == 0 and not modal.visible
+	field_status.text = "%d scrap  •  %d credits  •  %d/3 relics\n%s" % [run.field.scrap, run.field.credits, run.field.relics.size(), run.field.notice]
 	xp_bar.max_value = run.level * 5
 	xp_bar.value = run.xp
-	var remaining := maxi(0, int(ceil(Run.DURATION - run.elapsed)))
+	var remaining := maxi(0, int(ceil(run.duration - run.elapsed)))
 	var time_text := "%02d:%02d" % [remaining / 60, remaining % 60]
 	if run.phase == "boss":
-		time_text = "THE BREAKER"
+		time_text = run.boss_name.to_upper()
 	if run.benchmark_count > 0:
 		time_text = "CROWD TEST"
 	hud.text = "%s  •  Lv %d   |   %d HP" % [time_text, run.level, run.health]
@@ -381,6 +561,8 @@ func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: floa
 
 func _draw() -> void:
 	draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
+	if not run.practice and run.benchmark_count == 0:
+		draw_field_sites()
 	for pickup in run.pickups:
 		var at: Vector2 = pickup + world_offset
 		draw_texture_rect(EXPERIENCE, Rect2(at - Vector2(6, 6), Vector2(12, 12)), false)
@@ -450,3 +632,37 @@ func _draw() -> void:
 	draw_circle(origin, 48, Color(0.04, 0.05, 0.1, 0.6))
 	draw_arc(origin, 48, 0, TAU, 48, Color(0.8, 0.8, 0.95, 0.25), 2, true)
 	draw_circle(origin + stick * 32, 22, Color(0.55, 0.58, 0.72, 0.55))
+
+func draw_field_sites() -> void:
+	for site in run.field.sites:
+		var at: Vector2 = site.pos + world_offset
+		var color := GOLD if site.kind in ["shop", "cache"] else VIOLET
+		if site.opened or (site.kind == "relic" and run.field.relics.size() >= 3):
+			color = Color("59637b")
+		draw_circle(at, 29, Color("0b1023"))
+		draw_arc(at, 29, 0, TAU, 24, color.darkened(0.4), 3)
+		if not site.opened:
+			draw_circle(at, Run.Field.RADIUS, Color(color, 0.06))
+			draw_arc(at, Run.Field.RADIUS, 0, TAU, 48, Color(color, 0.28), 1)
+		if site.progress > 0 and not site.opened:
+			draw_arc(at, Run.Field.RADIUS, -PI / 2, -PI / 2 + TAU * site.progress / site.duration, 48, color, 4)
+		if site.kind == "cache":
+			draw_style_box(panel_style(Color("503b38"), color), Rect2(at - Vector2(20, 26), Vector2(40, 27)))
+			draw_line(at - Vector2(20, 16), at + Vector2(20, -16), color, 2)
+			draw_rect(Rect2(at - Vector2(3, 19), Vector2(6, 10)), color)
+		elif site.kind == "shop":
+			draw_rect(Rect2(at - Vector2(21, 22), Vector2(42, 13)), color.darkened(0.25))
+			draw_rect(Rect2(at - Vector2(8, 9), Vector2(16, 13)), Color("8b87a3"))
+			draw_line(at + Vector2(-10, -27), at + Vector2(8, -44), GOLD, 5)
+			draw_line(at + Vector2(2, -47), at + Vector2(14, -35), GOLD, 9)
+		else:
+			for offset in [-12.0, 12.0]:
+				var crystal := at + Vector2(offset, -25)
+				draw_colored_polygon(PackedVector2Array([crystal + Vector2(0, -19), crystal + Vector2(9, 0), crystal + Vector2(0, 10), crystal + Vector2(-9, 0)]), color)
+				draw_line(crystal + Vector2(0, -16), crystal + Vector2(0, 6), Color("f2dfff"), 2)
+		if site.cooldown > 0:
+			draw_arc(at, 34, -PI / 2, -PI / 2 + TAU * (1.0 - site.cooldown / 45.0), 32, Color("929bb4"), 2)
+	for drop in run.field.drops:
+		var at: Vector2 = drop.pos + world_offset
+		draw_circle(at, 5, GOLD)
+		draw_arc(at, 6, 0, TAU, 12, Color("fff2bf"), 1)
