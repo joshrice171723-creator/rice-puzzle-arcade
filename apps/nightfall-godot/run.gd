@@ -24,6 +24,7 @@ var kills := 0
 var shots: Array[Dictionary] = []
 var hostile_shots: Array[Dictionary] = []
 var effects: Array[Dictionary] = []
+var feedback: Array[Dictionary] = []
 var spells: Dictionary = {}
 var offers: Array[Dictionary] = []
 var enemies: Array[Dictionary] = []
@@ -294,7 +295,7 @@ func dismantle_structure() -> bool:
 	field.revision += 1
 	return true
 
-func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: bool = false) -> void:
+func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: bool = false, critical: bool = false) -> void:
 	if enemy.hp <= 0 or not is_finite(amount) or amount <= 0:
 		return
 	var mitigation := 1.0
@@ -307,8 +308,60 @@ func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: 
 	var eligible := minf(dealt, remaining)
 	enemy.reward_hp = maxf(0, remaining - eligible)
 	enemy.hp -= dealt
+	if benchmark_count == 0:
+		enemy.hit_flash = 0.12
+		enemy.hit_push = (enemy.pos - source).normalized() * (2.0 if enemy.boss else 4.0)
+		var combined := false
+		for event in feedback:
+			if event.kind == "hit" and event.get("enemy_id", -1) == enemy.id and event.life > 0.42:
+				event.amount += dealt
+				event.critical = event.critical or critical
+				combined = true
+				break
+		if not combined:
+			add_feedback("hit", enemy.pos - Vector2(0, 18), (enemy.pos - source).normalized(), dealt, elemental, critical)
+			feedback.back().enemy_id = enemy.id
 	if not practice and benchmark_count == 0:
 		Training.award(combat_xp, training_style, eligible, enemy.max_hp, enemy.boss)
+
+func add_feedback(kind: String, pos: Vector2, direction: Vector2 = Vector2.ZERO, amount: float = 0.0, elemental: bool = false, critical: bool = false) -> void:
+	if benchmark_count > 0:
+		return
+	if feedback.size() >= 48:
+		feedback.pop_front()
+	var lifetime := 0.62 if kind == "hit" else (0.42 if kind == "death" else 0.22)
+	feedback.append({"kind": kind, "pos": pos, "direction": direction, "amount": amount, "elemental": elemental, "critical": critical, "life": lifetime, "duration": lifetime})
+
+func separate_enemies(delta: float) -> void:
+	if mission != 1 or mode != "campaign" or benchmark_count > 0:
+		return
+	var cells := {}
+	for enemy in enemies:
+		if enemy.hp <= 0:
+			continue
+		var cell := Vector2i(floori(enemy.pos.x / 40.0), floori(enemy.pos.y / 40.0))
+		if not cells.has(cell):
+			cells[cell] = []
+		cells[cell].append(enemy)
+	for enemy in enemies:
+		if enemy.hp <= 0 or enemy.boss or enemy.tell > 0 or enemy.rush_left > 0:
+			continue
+		var cell := Vector2i(floori(enemy.pos.x / 40.0), floori(enemy.pos.y / 40.0))
+		var push := Vector2.ZERO
+		var examined := 0
+		for x in range(-1, 2):
+			for y in range(-1, 2):
+				for other in cells.get(cell + Vector2i(x, y), []):
+					if other.id == enemy.id or examined >= 20:
+						continue
+					examined += 1
+					var offset: Vector2 = enemy.pos - other.pos
+					var spacing := 36.0 if other.boss else 23.0
+					var distance := offset.length()
+					if distance < spacing:
+						var away := offset / distance if distance > 0.01 else Vector2.RIGHT.rotated(enemy.id * 2.39996)
+						push += away * (spacing - distance)
+		enemy.pos = clamp_position(enemy.pos + push.limit_length(35.0) * delta * 2.0)
 
 func max_health() -> float:
 	return base_health * (field.health_multiplier() + 0.08 * passive_rank("vital"))
@@ -423,6 +476,7 @@ func dodge() -> bool:
 		return false
 	dodge_wait = 3.0 * (0.85 if "feather" in field.relics else 1.0)
 	dodge_left = 0.18
+	add_feedback("dodge", player, facing)
 	if class_id == "scavenger" and class_wait <= 0:
 		dodge_left = 0.30
 		class_wait = Haven.CLASSES.scavenger.cooldown
@@ -622,6 +676,7 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 		enemy.burn = maxf(0, enemy.burn - delta)
 	if enemy.hp <= 0:
 		return
+	enemy.hit_flash = maxf(0.0, enemy.get("hit_flash", 0.0) - delta)
 	var pos: Vector2 = enemy.pos
 	enemy.face = -1.0 if player.x < pos.x else 1.0
 	if enemy.tell <= 0 and enemy.rush_left <= 0 and enemy.recover <= 0:
@@ -689,6 +744,9 @@ func tick(delta: float, direction: Vector2) -> void:
 	if paused or phase not in ["waves", "boss"]:
 		return
 	elapsed += delta
+	for event in feedback:
+		event.life -= delta
+	feedback = feedback.filter(func(event: Dictionary): return event.life > 0)
 	talents.slow_left = maxf(0, talents.slow_left - delta)
 	if "emberleaf" in field.relics and elapsed - last_damage_at >= 4.0:
 		health = minf(max_health(), health + max_health() * 0.0015 * delta)
@@ -738,15 +796,16 @@ func tick(delta: float, direction: Vector2) -> void:
 		if spells[id].wait == 0 and cast_spell(id):
 			spells[id].wait = spell_cooldown(id)
 	Magic.tick(self, delta)
-	if fire_wait <= 0.0 and not enemies.is_empty() and shots.size() < MAX_SHOTS:
-		var nearest: Dictionary = enemies[0]
-		for enemy in enemies:
-			if player.distance_squared_to(enemy.pos) < player.distance_squared_to(nearest.pos):
-				nearest = enemy
-		shots.append({"pos": player, "velocity": player.direction_to(nearest.pos) * 500.0, "life": 0.85, "pierce": passive_rank("pierce"), "hits": []})
-		fire_wait = fire_interval
+	if fire_wait <= 0.0 and shots.size() < MAX_SHOTS:
+		var nearest := nearest_enemy(player, 425.0)
+		if not nearest.is_empty():
+			var aim := player.direction_to(nearest.pos)
+			shots.append({"pos": player, "velocity": aim * 500.0, "life": 0.85, "pierce": passive_rank("pierce"), "hits": []})
+			add_feedback("muzzle", player + aim * 24 - Vector2(0, 18), aim)
+			fire_wait = fire_interval
 	for enemy in enemies:
 		tick_enemy(enemy, delta)
+	separate_enemies(delta)
 	defenses.tick(delta, self)
 	for shot in hostile_shots:
 		shot.life -= delta
@@ -764,9 +823,10 @@ func tick(delta: float, direction: Vector2) -> void:
 		for enemy in enemies:
 			if enemy.hp > 0.0 and enemy.id not in shot.get("hits", []) and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
 				var amount: float = talents.basic_damage(self, shot, shot.get("damage", damage * field.damage_multiplier()))
-				if shot.get("kind", "pistol") == "pistol" and training_bonuses.crit > 0 and rng.randf() < training_bonuses.crit:
+				var critical: bool = shot.get("kind", "pistol") == "pistol" and training_bonuses.crit > 0 and rng.randf() < training_bonuses.crit
+				if critical:
 					amount *= 1.5
-				damage_enemy(enemy, amount, shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol")
+				damage_enemy(enemy, amount, shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol", critical)
 				if shot.get("kind", "pistol") == "ember":
 					enemy.burn = maxf(enemy.burn, 2.0)
 					enemy.burn_dps = maxf(enemy.burn_dps, shot.burn_dps)
@@ -786,6 +846,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		var enemy := enemies[i]
 		if enemy.hp > 0.0:
 			continue
+		add_feedback("death", enemy.pos - Vector2(0, 12))
 		kills += 1
 		if not practice and benchmark_count == 0:
 			survivor_xp += 1
@@ -806,6 +867,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		if pickups[i].distance_to(player) < 70.0 * field.pickup_multiplier() * pickup_multiplier * (1.0 + 0.2 * passive_rank("magnet") + (0.2 if spells.get("wisp", {}).get("evolved", false) else 0.0)):
 			pickups[i] = pickups[i].move_toward(player, 220.0 * delta)
 		if pickups[i].distance_to(player) < 14.0:
+			add_feedback("pickup", player - Vector2(0, 15))
 			xp += 1
 			pickups.remove_at(i)
 	if benchmark_count == 0 and xp >= level * 5 and level < 12:

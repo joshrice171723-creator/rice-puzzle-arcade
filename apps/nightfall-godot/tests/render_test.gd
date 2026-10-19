@@ -20,4 +20,19 @@ func verify_batches() -> void:
 		await RenderingServer.frame_post_draw
 	var calls := int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
 	print("Nightfall render: 120 actors + 40 pickups, %d draw calls (budget 60)" % calls)
-	quit(0 if calls > 0 and calls <= 60 else 1)
+	var baseline_ok := calls > 0 and calls <= 60
+	arena.run.benchmark_count = 0
+	arena.run.mission = 1
+	arena.home.hide()
+	for n in arena.run.enemies.size():
+		arena.run.enemies[n].kind = ["drifter","runner","spitter"][n % 3]
+	for frame in 10:
+		await RenderingServer.frame_post_draw
+	print("Mission One without hits: ", int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+	for n in 12:
+		arena.run.add_feedback("hit",Vector2(450 + n * 20,500),Vector2.RIGHT,12)
+	for frame in 10:
+		await RenderingServer.frame_post_draw
+	calls = int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	print("Mission One render: 120 authored enemies + 40 pickups + 12 hits, %d draw calls (budget 100)" % calls)
+	quit(0 if baseline_ok and calls > 0 and calls <= 100 else 1)

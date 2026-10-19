@@ -16,7 +16,16 @@ static func draw_boss(canvas: Node2D, enemy: Dictionary, mission: int, offset: V
 	var index := clampi(mission - 1, 0, 4)
 	var windup: bool = enemy.tell > 0 or enemy.rush_left > 0
 	var size: Vector2 = SIZES[index]
-	var at: Vector2 = enemy.pos + offset
+	var reduced: bool = canvas.profile.data.settings.reduced_effects
+	var flash: float = enemy.get("hit_flash", 0.0) / 0.12
+	var recoil: Vector2 = enemy.get("hit_push", Vector2.ZERO) * flash if not reduced else Vector2.ZERO
+	var at: Vector2 = enemy.pos + offset + recoil
+	if not reduced:
+		var breath := sin(canvas.anim_time * 2.8) * 0.012
+		size *= Vector2(1.0 - breath, 1.0 + breath)
+		if enemy.tell > 0:
+			size *= Vector2(1.04, 0.97)
+	var tint := Color.WHITE if reduced else Color.WHITE.lerp(Color(1.6,1.6,1.7), flash)
 	canvas.draw_set_transform(at, 0, Vector2(enemy.face, 1))
-	canvas.draw_texture_rect_region(ART, Rect2(Vector2(-size.x / 2, -size.y * 0.94), size), REGIONS[int(windup)][index])
+	canvas.draw_texture_rect_region(ART, Rect2(Vector2(-size.x / 2, -size.y * 0.94), size), REGIONS[int(windup)][index], tint)
 	canvas.draw_set_transform(Vector2.ZERO)

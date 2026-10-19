@@ -1,5 +1,9 @@
 extends Node2D
 
+const Presentation = preload("res://mission_presentation.gd")
+const GARAGE_FLOOR = preload("res://assets/mission-one/garage-yard.png")
+const GARAGE_ENEMIES = preload("res://assets/mission-one/enemies.png")
+const GARAGE_REGIONS = {"drifter": Rect2(15,223,617,566), "runner": Rect2(674,245,563,517), "spitter": Rect2(1245,246,519,516)}
 const Run = preload("res://run.gd")
 const FieldUI = preload("res://field_ui.gd")
 const Profile = preload("res://profile.gd")
@@ -192,7 +196,7 @@ func build_ui() -> void:
 	health_bar.show_percentage = false
 	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var hp_style := StyleBoxFlat.new()
-	hp_style.bg_color = Color("dd697e")
+	hp_style.bg_color = Color("8ce1ff")
 	hp_style.set_corner_radius_all(2)
 	health_bar.add_theme_stylebox_override("fill", hp_style)
 	var bar_track := StyleBoxFlat.new()
@@ -251,6 +255,9 @@ func build_ui() -> void:
 	build_button = make_button("BUILD", func(): run.open_build(), layer, 44)
 	build_button.position = Vector2(228, 701)
 	build_button.size.x = 84
+	for control in [pause_button, pack_button, build_button, dodge_button]:
+		MenuSkin.action(control, "gold" if control == dodge_button else "blue")
+		control.add_theme_font_size_override("font_size", 13 if control != pause_button else 19)
 	field_status = Label.new()
 	field_status.position = Vector2(145, 637)
 	field_status.size = Vector2(175, 58)
@@ -497,7 +504,7 @@ func update_modal() -> void:
 		return
 	last_screen = screen_key
 	modal.visible = screen in ["pause", "upgrade", "victory", "defeat", "shrine", "pack", "build", "ad", "powers"]
-	menu_shade.visible = screen in ["pause", "victory", "defeat", "ad"]
+	menu_shade.visible = modal.visible
 	if not modal.visible:
 		return
 	clear_input()
@@ -628,7 +635,7 @@ func update_modal() -> void:
 			else:
 				make_button("Practice again" if run.practice else "Try again", replay, modal_body)
 			make_button("Return to Base", finish_to_haven, modal_body)
-	if screen in ["pause", "victory", "defeat", "ad"]:
+	if screen in ["pause", "victory", "defeat", "ad", "upgrade", "shrine", "pack", "build", "powers"]:
 		polish_menu_modal(screen)
 	else:
 		modal.add_theme_stylebox_override("panel", panel_style(Color("111b34"), Color("8d72b3")))
@@ -817,6 +824,11 @@ func _process(delta: float) -> void:
 	var remaining := maxi(0, int(ceil(run.duration - run.elapsed)))
 	boss_warning.visible = in_field and run.phase == "waves" and (remaining <= 10 or run.mode == "salvage") and not modal.visible and run.benchmark_count == 0
 	boss_warning.text = run.Salvage.objective(run) if run.mode == "salvage" else "BOSS ARRIVES IN %d" % remaining
+	if run.mission == 1 and run.mode == "campaign" and run.phase == "waves" and remaining > 10 and not modal.visible and in_field:
+		var wave := Run.Content.wave_at(run.elapsed)
+		if run.elapsed - wave.at < 2.8:
+			boss_warning.visible = true
+			boss_warning.text = "GARAGE LIGHTS" if wave.at == 0 else wave.name.to_upper()
 	var time_text := "%02d:%02d" % [remaining / 60, remaining % 60]
 	if run.boss_id >= 0:
 		time_text = run.boss_name.to_upper()
@@ -910,7 +922,12 @@ func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: floa
 	draw_texture_rect_region(ACTORS, rect, source, tint)
 
 func _draw() -> void:
-	draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
+	var reduced: bool = profile.data.settings.reduced_effects
+	if run.mission == 1 and run.mode == "campaign" and run.benchmark_count == 0:
+		draw_texture_rect(GARAGE_FLOOR, Rect2(world_offset - Vector2(35,35), Vector2(1270,1270)), false)
+	else:
+		draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
+	Presentation.draw_ambience(self, run, world_offset, anim_time, reduced)
 	for zone in run.zones:
 		if zone.get("kind", "ground") == "collapse":
 			continue
@@ -941,7 +958,8 @@ func _draw() -> void:
 				draw_arc(from, 110, 0, TAU * (1.0 - enemy.tell / enemy.windup), 48, VIOLET, 3)
 			elif enemy.attack == "slam":
 				draw_circle(at, 80, Color(1, 0.25, 0.35, 0.15))
-				draw_arc(at, 80, 0, TAU * (1.0 - enemy.tell / enemy.windup), 48, Color("ff7181"), 3)
+				draw_arc(at, 80, 0, TAU, 48, Color("ff7181"), 1.5)
+				draw_arc(at, 75, -PI / 2, -PI / 2 + TAU * (1.0 - enemy.tell / enemy.windup), 48, Color("ffdfb6"), 3)
 			else:
 				var direction := from.direction_to(at)
 				if enemy.attack == "rush":
@@ -960,26 +978,43 @@ func _draw() -> void:
 		var scale_value := 1.0 if item.has("player") else (1.7 if item.boss else 0.8)
 		var size := Vector2(34, 12.92) * scale_value
 		draw_texture_rect(SHADOW, Rect2(item.pos + world_offset - size / 2, size), false)
+	Presentation.draw_player_ground(self, run, world_offset, anim_time, reduced)
 	for item in actors:
 		if item.has("player"):
-			actor(run.player, false, int(anim_time * 8) % 4 if moving else 1, 1.0, -1.0 if run.facing.x < 0 else 1.0)
+			var breath := 0.0 if reduced else sin(anim_time * (12.0 if moving else 2.8)) * (1.3 if moving else 0.6)
+			actor(run.player - Vector2(0,breath), false, int(anim_time * 8) % 4 if moving else 1, 1.0, -1.0 if run.facing.x < 0 else 1.0)
 		elif item.boss and run.mission > 0:
 			BossArt.draw_boss(self, item, run.mission, world_offset)
 		else:
 			var scale_value := 1.7 if item.boss else (0.65 if item.kind == "runner" else 0.8)
 			var tint := Color("ffac87") if item.kind == "runner" else (Color("b6c8ff") if item.kind == "spitter" else Color.WHITE)
-			actor(item.pos, true, (int(anim_time * 7) + item.id) % 4, scale_value, item.face, tint)
+			var flash: float = item.get("hit_flash", 0.0) / 0.12
+			if not reduced:
+				tint = tint.lerp(Color(1.6,1.6,1.7), flash)
+			var recoil: Vector2 = item.get("hit_push", Vector2.ZERO) * flash if not reduced else Vector2.ZERO
+			if run.mission == 1 and run.mode == "campaign" and run.benchmark_count == 0:
+				var source: Rect2 = GARAGE_REGIONS.get(item.kind, GARAGE_REGIONS.drifter)
+				var height := 43.0 if item.kind == "runner" else 48.0
+				var stride := 0.0 if reduced else sin(anim_time * (12.0 if item.kind == "runner" else 7.0) + item.id * 1.7)
+				var size := Vector2(height * source.size.x / source.size.y, height)
+				var at: Vector2 = item.pos + recoil + world_offset - Vector2(0, absf(stride) * 1.8)
+				var rect := Rect2(at - Vector2(size.x / 2 - stride * 0.6, size.y), size)
+				if item.face < 0:
+					rect.size.x = -rect.size.x
+				draw_texture_rect_region(GARAGE_ENEMIES, rect, source, Color.WHITE.lerp(Color(1.6,1.6,1.7), flash) if not reduced else Color.WHITE)
+			else:
+				actor(item.pos + recoil, true, (int(anim_time * 7) + item.id) % 4, scale_value, item.face, tint)
 	for item in run.enemies:
-		var mark: Vector2 = item.pos + world_offset - Vector2(0, 42)
+		var mark: Vector2 = item.pos + world_offset - Vector2(0, 56 if run.mission == 1 else 42)
 		if item.boss and run.mission == 4:
 			var angle: float = item.forward.angle()
 			draw_arc(item.pos + world_offset, 42, angle - 1.2, angle + 1.2, 24, Color("92c2ff"), 5)
-		if item.kind == "runner":
+		if item.kind == "runner" and run.mission != 1:
 			draw_polyline(PackedVector2Array([mark + Vector2(-5, 0), mark + Vector2(0, -5), mark + Vector2(5, 0)]), GOLD, 2)
-		elif item.kind == "spitter":
+		elif item.kind == "spitter" and run.mission != 1:
 			draw_arc(mark, 5, 0, TAU, 12, Color("adceff"), 2)
 		if item.hp < item.max_hp or item.boss:
-			var at: Vector2 = item.pos + world_offset - Vector2(20, 57 if item.boss else 38)
+			var at: Vector2 = item.pos + world_offset - Vector2(20, 85 if item.boss else (52 if run.mission == 1 else 38))
 			draw_rect(Rect2(at, Vector2(40, 4)), INK)
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
 	for shot in run.shots:
@@ -1026,6 +1061,7 @@ func _draw() -> void:
 				for ray in 6:
 					var axis := Vector2.from_angle(ray * TAU / 6 + anim_time)
 					draw_line(from + axis * 12, from + axis * radius * 0.8 * fade, Color(0.7, 0.6, 1, fade * 0.5), 2)
+	Presentation.draw_feedback(self, run, world_offset, reduced)
 	if run.pulse_flash > 0:
 		draw_arc(run.player + world_offset, 145 * (1.0 - run.pulse_flash / 0.35), 0, TAU, 64, VIOLET, 4, true)
 	if run.hurt_wait > 0.55 and not profile.data.settings.reduced_effects:
