@@ -25,6 +25,7 @@ if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/power_ui_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/haven_ui_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/expedition_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/salvage_test.gd')
     exit
 }
 if ($Action -eq 'Play') {

@@ -5,6 +5,7 @@ signal resume_requested
 signal abandon_requested
 signal practice_requested
 signal diagnostics_requested
+signal contract_requested(slot: String)
 
 const Content = preload("res://haven_content.gd")
 const LootUI = preload("res://loot_ui.gd")
@@ -24,6 +25,7 @@ var title: Label
 var navigation: HBoxContainer
 var status_label: Label
 var cache_receipt := false
+var contract_slot := "weapon"
 
 func _ready() -> void:
 	size = Vector2(430, 760)
@@ -151,6 +153,7 @@ func rebuild() -> void:
 		"cache": LootUI.show(self)
 		"rewards": LootUI.mission_rewards(self)
 		"rare_choice": LootUI.rare_choice(self)
+		"contracts": contracts_page()
 	status_label.text = profile.error if not profile.error.is_empty() else message
 	for index in navigation.get_child_count():
 		var tab: Button = navigation.get_child(index)
@@ -279,7 +282,27 @@ func haven_page() -> void:
 		var complete: bool = profile.data.facilities[id] >= 2
 		var node := button("Built" if complete else "Improve • %d credits + %d parts" % [facility.credits, facility.parts], func(): refresh(func(): return profile.upgrade_facility(id), "%s improved." % facility.name), null, 40)
 		node.disabled = complete or not profile.can_change_loadout() or profile.data.credits < facility.credits or profile.data.parts < facility.parts
-	button("Training yard • boss practice", func(): practice_requested.emit(), null, 40)
+	var activities := HBoxContainer.new()
+	body.add_child(activities)
+	button("Training Yard", func(): practice_requested.emit(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button("Contracts", func(): page = "contracts"; rebuild(), activities).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+func contracts_page() -> void:
+	text_line("SALVAGE CONTRACTS", 22, Color("ffd27c"))
+	text_line("A short material run for your next upgrade.")
+	text_line("Open 3 caches, survive until the beacon powers up at 90 seconds, then hold its central ring for 3 seconds. Leave before the 3-minute deadline.", 15)
+	text_line("There is no boss in this side mode. Campaign missions still require a boss kill.", 13, Color("ba92ff"))
+	text_line("Choose your guaranteed equipment slot", 16)
+	var target_button := button(contract_slot.capitalize() + " • tap to change", func(): contract_slot = Content.SLOTS[(Content.SLOTS.find(contract_slot) + 1) % Content.SLOTS.size()]; rebuild(), null, 58)
+	decorate_item_button(target_button, contract_slot)
+	text_line("Clear: 80 credits + 2 Parts, 45 Survivor XP, 25 Mastery XP, and equipment for this slot (75% Common / 25% Uncommon). Collected loot is extra.", 13)
+	text_line("Every 3 contract clears: +1 supply key\nProgress: %d/3 • %d total clears" % [profile.data.contract_clears % 3, profile.data.contract_clears], 13, Color("ba92ff"))
+	var unlocked: bool = profile.Salvage.unlocked(profile)
+	var start := button("Start contract" if unlocked else "Clear Garage Lights to unlock", func(): contract_requested.emit(contract_slot))
+	start.disabled = not unlocked or not profile.can_change_loadout()
+	if not profile.data.active_attempt.is_empty():
+		text_line("Finish or resume your saved expedition before starting another.", 13)
+	button("Back to Haven", func(): page = "haven"; rebuild(), null, 40)
 
 func class_page() -> void:
 	text_line("YOUR SURVIVOR", 22, Color("ffd27c"))

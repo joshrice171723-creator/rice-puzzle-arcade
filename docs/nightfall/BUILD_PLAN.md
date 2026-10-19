@@ -2,7 +2,7 @@
 
 October 18, 2026. Joshua subsequently authorized starting this plan with “ok start.” Implementation is proceeding through the milestones below. The isolated M0 proof and its remaining acceptance gaps are recorded in [engine proof verification](ENGINE_PROOF_QA.md). Production migration, purchases, and deployment are not implied by a successful prototype build.
 
-The first M1 feature increment now includes wave composition, three enemy behaviors, three automatic spells with rank choices, and The Breaker's three-attack loop. See [combat slice verification](COMBAT_SLICE_QA.md). M1 is still in progress: final character/ability mapping, combat polish, audio, and broader balance testing remain. Existing rendering issues are deferred at Joshua's request in the [bug log](KNOWN_ISSUES.md).
+The October 18–19 feature session now implements the first five-mission zone's rules, eight automatic spell families with branching specializations/evolutions, proximity shrines, protected loot, field defenses, saved Haven equipment/facilities, earned chests, original audio and a separate Salvage Contracts mode. See the [feature session evidence](FEATURE_BUILD_SESSION.md) for implementation and automated checks. M1–M3 acceptance remains open: human combat feel, complete animation, deferred rendering defects, physical-device performance and actual rewarded-video delivery are separate from rule tests and exports. Existing rendering issues are deferred at Joshua's request in the [bug log](KNOWN_ISSUES.md).
 
 Build a polished, complete mission first, expand it into one five-mission zone, then prove that a second zone can be produced efficiently before scaling to 20 zones and 100 missions. The first technical decision is to evaluate Godot for Nightfall with real art and Android integration. Passing that evaluation precedes committing to the migration.
 
@@ -10,7 +10,7 @@ Build a polished, complete mission first, expand it into one five-mission zone, 
 
 The [main design](NIGHTFALL_MAIN_PLAN.md), [Beaconbound art direction](ART_DIRECTION.md), and [shrines and run interface](SHRINES_AND_RUN_UI.md) govern the product. This document defines delivery, not a replacement game design. All balancing numbers remain starting proposals.
 
-- Graphical, portrait mobile survival action with automatic attacks, player movement, a class ability, dodge, scavenging, and optional field defenses.
+- Graphical, portrait mobile survival action with automatic weapons, spells and class powers; player movement and Dodge are the combat controls. Scavenging, upgrade choices and optional field defenses remain player decisions.
 - Twenty zones, five missions per zone. Four-minute waves in Zone 1, five minutes in Zones 2–5, six minutes thereafter. When the wave timer ends, the boss appears. Killing it is required to win; there is no second timer.
 - Performance and collected supplies determine extra rewards. Completing the mission unlocks the next mission even without all mastery medals.
 - Persistent character progression, class mastery, equipment, Haven improvements, and secured loot are separate from temporary Combat XP, spells, traits, Relics, and Field Scrap.

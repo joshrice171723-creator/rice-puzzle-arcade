@@ -239,6 +239,7 @@ func build_ui() -> void:
 	home.abandon_requested.connect(abandon_campaign)
 	home.practice_requested.connect(begin_practice)
 	home.diagnostics_requested.connect(begin_diagnostics)
+	home.contract_requested.connect(start_contract)
 	layer.add_child(home)
 	if testing:
 		home.hide()
@@ -255,12 +256,26 @@ func show_haven() -> void:
 
 func start_campaign(mission_number: int) -> void:
 	var attempt: Dictionary = profile.start_attempt(mission_number)
+	activate_attempt(attempt)
+
+func start_contract(slot: String) -> void:
+	var attempt: Dictionary = profile.start_contract(slot)
+	activate_attempt(attempt)
+
+func configured_run(attempt: Dictionary) -> RefCounted:
+	var configured = Run.new(attempt.seed)
+	if attempt.get("mode", "campaign") == "salvage":
+		configured.configure_contract(profile.stats(), attempt.target_slot)
+	else:
+		configured.configure(attempt.mission, profile.stats())
+	return configured
+
+func activate_attempt(attempt: Dictionary) -> void:
 	if attempt.is_empty():
 		home.rebuild()
 		return
 	attempt_id = attempt.id
-	run = Run.new(attempt.seed)
-	run.configure(mission_number, profile.stats())
+	run = configured_run(attempt)
 	reward_flow = RewardFlow.new()
 	reward_receipt = {}
 	diagnostics = false
@@ -274,8 +289,7 @@ func resume_campaign() -> void:
 	if profile.data.active_attempt.is_empty():
 		return
 	var attempt: Dictionary = profile.data.active_attempt
-	var resumed = Run.new(attempt.seed)
-	resumed.configure(attempt.mission, profile.stats())
+	var resumed = configured_run(attempt)
 	var snapshot: Dictionary = profile.saved_run()
 	if not snapshot.is_empty() and not resumed.restore(snapshot):
 		profile.error = "This expedition checkpoint is incompatible. End the expedition from Haven to start a new one."
@@ -295,8 +309,7 @@ func abandon_campaign() -> void:
 	if profile.data.active_attempt.is_empty():
 		return
 	var attempt: Dictionary = profile.data.active_attempt
-	var abandoned = Run.new(attempt.seed)
-	abandoned.configure(attempt.mission, profile.stats())
+	var abandoned = configured_run(attempt)
 	var snapshot: Dictionary = profile.saved_run()
 	if not snapshot.is_empty():
 		abandoned.restore(snapshot)
@@ -411,9 +424,11 @@ func update_modal() -> void:
 		"pack": FieldUI.pack(self)
 		"build": FieldUI.build(self)
 		"pause":
-			modal_title.text = "Nightfall\nBlackout Outskirts"
+			modal_title.text = "Salvage Contract" if run.mode == "salvage" else "Nightfall\nBlackout Outskirts"
 			var description := Label.new()
 			description.text = "Survive the waves. Defeat %s.\nAttacks and magic fire automatically.\nHold shrine rings to gain temporary powers.\nMove: WASD / drag left side\nDodge: Space / Dodge button" % run.boss_name
+			if run.mode == "salvage":
+				description.text = "Open 3 caches. Beacon activates at 90s.\nThen hold its central ring for 3s to leave.\nFinish before the 3-minute deadline.\nAttacks and magic fire automatically.\nMove: WASD / drag • Dodge: Space / button"
 			description.add_theme_font_size_override("font_size", 14)
 			modal_body.add_child(description)
 			make_button("Enter courtyard" if run.elapsed == 0.0 else "Resume", func(): run.paused = false, modal_body)
@@ -456,6 +471,8 @@ func update_modal() -> void:
 			if screen == "victory":
 				bank_result()
 			modal_title.text = "Boss defeated" if screen == "victory" else "The night claimed you"
+			if run.mode == "salvage":
+				modal_title.text = "Contract completed" if screen == "victory" else ("Beacon window closed" if run.elapsed >= run.duration else "Contract failed")
 			if run.practice:
 				modal_title.text = "Practice complete" if screen == "victory" else "Practice • try another approach"
 			var result := Label.new()
@@ -472,7 +489,7 @@ func update_modal() -> void:
 				if reward_receipt.lost > 0:
 					FieldUI.label(self, "%d unprotected loot bundles lost." % reward_receipt.lost)
 			if attempt_id > 0:
-				if screen == "defeat" and not run.rescued and ad_bridge:
+				if screen == "defeat" and not run.rescued and ad_bridge and not (run.mode == "salvage" and run.elapsed >= run.duration):
 					make_button("Watch test video • rescue at 50% HP", request_rescue, modal_body)
 					FieldUI.label(self, "Once per expedition. Gear and run powers stay with you. A rescue does not earn the combat mastery medal.", 13)
 				if not reward_flow.message.is_empty():
@@ -493,6 +510,9 @@ func restart() -> void:
 
 func replay() -> void:
 	var repeat_practice: bool = run.practice
+	if not repeat_practice and run.mode == "salvage":
+		start_contract(run.target_slot)
+		return
 	if not repeat_practice and run.mission > 0:
 		start_campaign(run.mission)
 		return
@@ -593,8 +613,8 @@ func _process(delta: float) -> void:
 	xp_bar.max_value = run.level * 5
 	xp_bar.value = run.xp
 	var remaining := maxi(0, int(ceil(run.duration - run.elapsed)))
-	boss_warning.visible = in_field and run.phase == "waves" and remaining <= 10 and not modal.visible and run.benchmark_count == 0
-	boss_warning.text = "BOSS ARRIVES IN %d" % remaining
+	boss_warning.visible = in_field and run.phase == "waves" and (remaining <= 10 or run.mode == "salvage") and not modal.visible and run.benchmark_count == 0
+	boss_warning.text = run.Salvage.objective(run) if run.mode == "salvage" else "BOSS ARRIVES IN %d" % remaining
 	var time_text := "%02d:%02d" % [remaining / 60, remaining % 60]
 	if run.phase == "boss":
 		time_text = run.boss_name.to_upper()
@@ -691,6 +711,13 @@ func _draw() -> void:
 	if not run.practice and run.benchmark_count == 0:
 		draw_field_sites()
 		draw_defenses()
+	if run.mode == "salvage":
+		var at: Vector2 = Run.Salvage.EXIT + world_offset
+		var ready: bool = Run.Salvage.ready(run)
+		draw_circle(at, Run.Salvage.RADIUS, Color(1, 0.8, 0.4, 0.08) if ready else Color(0.4, 0.45, 0.6, 0.06))
+		draw_arc(at, Run.Salvage.RADIUS, 0, TAU, 48, GOLD if ready else Color("65718f"), 2)
+		draw_arc(at, Run.Salvage.RADIUS + 4, -PI / 2, -PI / 2 + TAU * run.extract_progress / Run.Salvage.CHARGE, 48, GOLD, 4)
+		draw_prop(7, at, Vector2(45, 65), Color.WHITE if ready else Color("858095"))
 	for pickup in run.pickups:
 		var at: Vector2 = pickup + world_offset
 		draw_texture_rect(EXPERIENCE, Rect2(at - Vector2(6, 6), Vector2(12, 12)), false)

@@ -7,6 +7,7 @@ const Field = preload("res://field.gd")
 const Haven = preload("res://haven_content.gd")
 const Defenses = preload("res://defenses.gd")
 const Magic = preload("res://magic.gd")
+const Salvage = preload("res://salvage.gd")
 const MAX_ENEMIES := 120
 const MAX_SHOTS := 64
 const BOUNDS := Rect2(135, 135, 930, 930)
@@ -73,6 +74,9 @@ var wisp_hits: Dictionary = {}
 var permanent_cooldown := 0.0
 var reinforcements_spawned := 0
 var offer_back: Array[Dictionary] = []
+var mode := "campaign"
+var extract_progress := 0.0
+var target_slot := "weapon"
 
 const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
 const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
@@ -103,6 +107,13 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	mastery_level = stats.get("mastery", 0)
 	permanent_cooldown = clampf(stats.get("cooldown", 0.0), 0, 0.15)
 
+func configure_contract(stats: Dictionary, slot: String) -> void:
+	configure(1, stats)
+	mode = "salvage"
+	target_slot = slot
+	duration = Salvage.DURATION
+	boss_name = "Salvage Contract"
+
 func snapshot() -> Dictionary:
 	var values := {}
 	for key in SNAPSHOT_KEYS:
@@ -113,7 +124,8 @@ func snapshot() -> Dictionary:
 	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
-		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true)}
+		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
+		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -127,6 +139,8 @@ func restore(saved: Dictionary) -> bool:
 	if saved.combat.phase not in ["waves", "boss", "upgrade", "shrine", "pack", "build", "victory", "defeat"] or saved.combat.mission not in range(1, 6):
 		return false
 	if saved.combat.enemies.size() > MAX_ENEMIES or saved.combat.shots.size() > MAX_SHOTS or saved.field.sites.size() != 7 or saved.field.bag.size() > 12:
+		return false
+	if saved.get("mode", "campaign") not in ["campaign", "salvage"] or saved.get("target_slot", "weapon") not in Haven.SLOTS:
 		return false
 	for key in SNAPSHOT_KEYS:
 		set(key, saved.combat[key])
@@ -146,6 +160,9 @@ func restore(saved: Dictionary) -> bool:
 	permanent_cooldown = saved.get("permanent_cooldown", 0.0)
 	reinforcements_spawned = saved.get("reinforcements_spawned", 0)
 	offer_back.assign(saved.get("offer_back", []))
+	mode = saved.get("mode", "campaign")
+	extract_progress = saved.get("extract_progress", 0.0)
+	target_slot = saved.get("target_slot", "weapon")
 	paused = true
 	return true
 
@@ -157,7 +174,7 @@ func result() -> Dictionary:
 		"caches": field.caches_opened, "lost": field.bag.size() - loot.size(), "rescued": rescued}
 
 func rescue() -> bool:
-	if phase != "defeat" or rescued or practice or benchmark_count > 0:
+	if phase != "defeat" or rescued or practice or benchmark_count > 0 or (mode == "salvage" and elapsed >= duration):
 		return false
 	rescued = true
 	health = max_health() * 0.5
@@ -632,6 +649,9 @@ func tick(delta: float, direction: Vector2) -> void:
 	var speed := 125.0 * minf(1.3, speed_multiplier * (1.0 + 0.05 * passive_rank("fleet"))) * (0.95 if "obsidian" in field.relics else 1.0)
 	player = clamp_position(player + move * (520.0 if dodge_left > 0.0 else speed) * delta)
 	if benchmark_count == 0 and phase == "waves" and elapsed >= duration:
+		if mode == "salvage":
+			phase = "defeat"
+			return
 		phase = "boss"
 		# Reserve a slot: the crowd cap must never prevent mandatory boss arrival.
 		if enemies.size() == MAX_ENEMIES:
@@ -641,10 +661,10 @@ func tick(delta: float, direction: Vector2) -> void:
 		while enemies.size() < benchmark_count:
 			spawn_enemy()
 	elif phase == "waves" and spawn_wait <= 0.0:
-		var wave := Content.wave_at(elapsed)
+		var wave := Content.wave_at(elapsed * (1.6 if mode == "salvage" else 1.0))
 		var roll := rng.randf()
 		spawn_enemy(false, "runner" if roll < wave.runner else ("spitter" if roll < wave.runner + wave.spitter else "drifter"))
-		spawn_wait = wave.interval / (Haven.MISSIONS[mission - 1].pressure if mission > 0 else 1.0)
+		spawn_wait = wave.interval / (1.1 if mode == "salvage" else (Haven.MISSIONS[mission - 1].pressure if mission > 0 else 1.0))
 	for effect in effects:
 		effect.life -= delta
 	effects = effects.filter(func(effect: Dictionary) -> bool: return effect.life > 0)
@@ -728,6 +748,8 @@ func tick(delta: float, direction: Vector2) -> void:
 	if phase in ["waves", "boss"] and not practice and benchmark_count == 0:
 		if field.tick(delta, player):
 			phase = "shrine"
+		if mode == "salvage":
+			Salvage.tick(self, delta)
 
 func hurt(amount: float) -> void:
 	if benchmark_count > 0 or hurt_wait > 0.0 or dodge_left > 0.0:

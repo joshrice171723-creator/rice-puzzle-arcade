@@ -10,6 +10,8 @@ var message := ""
 func begin(attempt_id: int, run: RefCounted) -> String:
 	if not pending.is_empty() or attempt_id <= 0 or run.phase != "defeat" or run.rescued:
 		return ""
+	if run.mode == "salvage" and run.elapsed >= run.duration:
+		return ""
 	sequence += 1
 	attempt = attempt_id
 	pending = "rescue-%d-%d-%d" % [attempt_id, Time.get_ticks_usec(), sequence]

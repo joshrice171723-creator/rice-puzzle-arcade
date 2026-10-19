@@ -3,6 +3,7 @@ extends RefCounted
 
 const Content = preload("res://haven_content.gd")
 const Loot = preload("res://loot.gd")
+const Salvage = preload("res://salvage.gd")
 const VERSION := 1
 var path := "user://haven.json"
 var data: Dictionary = {}
@@ -25,7 +26,7 @@ func fresh() -> Dictionary:
 		"facilities": {"workshop": 1, "quartermaster": 1, "infirmary": 1},
 		"next_attempt": 1, "active_attempt": {}, "last_result": {}, "last_banked": 0,
 		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false,
-		"cache_keys": 0, "cache_opened": 0, "rare_misses": 0, "epic_misses": 0, "cache_seed": randi(), "last_cache": {}, "rare_choices": 0,
+		"cache_keys": 0, "cache_opened": 0, "rare_misses": 0, "epic_misses": 0, "cache_seed": randi(), "last_cache": {}, "rare_choices": 0, "contract_clears": 0,
 		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false}}
 
 func valid(candidate: Variant) -> bool:
@@ -35,7 +36,7 @@ func valid(candidate: Variant) -> bool:
 	for key: String in defaults:
 		if not candidate.has(key):
 			return false
-	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates", "cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "rare_choices"]:
+	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates", "cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "rare_choices", "contract_clears"]:
 		if not (candidate[key] is int or candidate[key] is float) or candidate[key] < 0 or candidate[key] != floor(candidate[key]):
 			return false
 	if candidate["class"] not in Content.CLASSES or not candidate.inventory is Array or not candidate.equipment is Dictionary or not candidate.missions is Dictionary or not candidate.facilities is Dictionary or not candidate.mastery is Dictionary:
@@ -103,7 +104,7 @@ func read_candidate(file_path: String) -> Variant:
 		parsed.settings = fresh().settings
 	if parsed is Dictionary and parsed.get("version") == 1:
 		var defaults := fresh()
-		for key in ["cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "last_cache", "rare_choices"]:
+		for key in ["cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "last_cache", "rare_choices", "contract_clears"]:
 			if not parsed.has(key):
 				parsed[key] = defaults[key]
 	return parsed
@@ -327,7 +328,20 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 			data.next_item += 1
 			data.inventory.append(item)
 			reward.gear.append(item.name)
-	if victory:
+	if victory and attempt.get("mode", "campaign") == "salvage":
+		for key in Salvage.REWARDS:
+			reward[key] += Salvage.REWARDS[key]
+		var contract_rng := RandomNumberGenerator.new()
+		contract_rng.seed = int(attempt.seed) + 93841
+		var rarity := "uncommon" if contract_rng.randf() < 0.25 else "common"
+		var item := Loot.equipment(attempt.target_slot, rarity, int(data.next_item))
+		data.next_item += 1
+		data.inventory.append(item)
+		reward.gear.append(rarity.capitalize() + " " + item.name)
+		data.contract_clears += 1
+		if data.contract_clears % 3 == 0:
+			reward.keys += 1
+	elif victory:
 		var base := Content.clear_rewards(mission)
 		for key in base:
 			reward[key] += base[key]
@@ -387,6 +401,19 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 	if not commit(previous):
 		return {}
 	return reward.duplicate(true)
+
+func start_contract(slot: String) -> Dictionary:
+	if not can_change_loadout() or not Salvage.unlocked(self) or slot not in Content.SLOTS:
+		return {}
+	var previous := data.duplicate(true)
+	var attempt := {"id": int(data.next_attempt), "mission": 1, "class": data["class"],
+		"seed": int(Time.get_unix_time_from_system()) + int(data.next_attempt) * 7919,
+		"mode": "salvage", "target_slot": slot}
+	data.next_attempt += 1
+	data.active_attempt = attempt
+	if not commit(previous):
+		return {}
+	return attempt.duplicate(true)
 
 func open_cache(category: String) -> Dictionary:
 	if not can_change_loadout() or category not in Loot.CATEGORIES or data.cache_keys <= 0:

@@ -57,3 +57,10 @@ Google's [rewarded-ad documentation](https://developers.google.com/admob/android
 - Eight paired rank-3 evolutions. New Sanctuary healing is position-dependent and nonstacking; Collapsed Star bursts once; Phantom Flurry respects the projectile cap.
 - Read-only progression diagram appears in specialization selection and individual ability inspection. All attacks remain automatic.
 - 74 specialization checks plus 99 populated HUD/path layout checks passed. Static path screenshot: `artifacts/nightfall-godot/ability-progression.png`.
+
+## Salvage Contracts
+
+- Separate three-minute material runs unlocked by Garage Lights. Open three caches, wait for the central beacon to power at 90 seconds, then remain inside its ring for three seconds to extract. No boss in this side mode; campaign rules are unchanged.
+- Choose one equipment slot before departure. Completion grants 80 Credits, 2 Parts, 45 Survivor XP, 25 Mastery XP, and a Common (75%) or Uncommon (25%) item for that slot. Every third clear adds one earned supply key. Carried loot is additional; defeat retains protected loot.
+- Save/resume, replay, loadout locks, targeted rewards and once-only banking use the existing expedition pipeline. Deadline failure cannot offer a video that would be unable to rescue the run.
+- 33 new rules/controller checks and 754 Haven layout checks pass. Full suite: 1,353 checks, zero failures; known ObjectDB exit warnings remain logged separately.
