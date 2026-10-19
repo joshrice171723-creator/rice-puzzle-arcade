@@ -1,5 +1,7 @@
 # Nightfall Engineering and Delivery Plan
 
+**Current visual priority:** [Nightfall Visual Quality Plan](VISUAL_QUALITY_PLAN.md). The working home menus are below Joshua's requested visual standard. The next planned presentation milestone is one reference-quality Gear screen before a shared rollout. This document update is planning only.
+
 Latest home delivery: [five-tab home product and QA](HOME_PRODUCT_QA.md). Shop, Gear, centered Expedition, Base and Class are now implemented in the Godot proof, including eight-slot migration, vertical inventory, facility entrances and rewarded-key handling. Production billing, zones 2–20, and physical-device acceptance remain separate work.
 
 October 18, 2026. Joshua subsequently authorized starting this plan with “ok start.” Implementation is proceeding through the milestones below. The isolated M0 proof and its remaining acceptance gaps are recorded in [engine proof verification](ENGINE_PROOF_QA.md). Production migration, purchases, and deployment are not implied by a successful prototype build.

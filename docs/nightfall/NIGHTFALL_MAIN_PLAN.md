@@ -1,5 +1,7 @@
 # Nightfall Main Design Plan
 
+**Visual quality amendment, October 18, 2026:** [Nightfall Visual Quality Plan](VISUAL_QUALITY_PLAN.md) defines the next presentation work: faithfully realize the approved Beaconbound concepts, prove Gear first, then carry the accepted treatment through all five menus. Current functionality is not visual acceptance. This saved plan changes no gameplay, economy or build authorization.
+
 Saved October 18, 2026. Canonical planning baseline approved for preservation by Joshua. Planning and visual exploration only; this document does not authorize game implementation. Numerical balance values are proposals requiring playtesting.
 
 ## Decision precedence

@@ -1,5 +1,7 @@
 # Nightfall Art Direction Review
 
+**Current execution standard:** [Nightfall Visual Quality Plan](VISUAL_QUALITY_PLAN.md). Joshua considers the implemented menus below the approved reference quality. Use the plan's Gear-first sequence, asset requirements and visual review gates for the next authorized implementation; the historical concept and implementation entries below are not evidence of visual approval.
+
 October 18, 2026. Joshua selected Direction B (Beaconbound): "i like B lets go with that style." The original concept review is archived below. The current home implementation and its verification are documented in [HOME_PRODUCT_QA.md](HOME_PRODUCT_QA.md).
 
 ## Main design
