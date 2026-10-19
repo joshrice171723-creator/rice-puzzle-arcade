@@ -70,6 +70,7 @@ var power_view := false
 var power_page := "Attacks"
 var was_paused := false
 var boss_warning: Label
+var selected_power := ""
 
 func _ready() -> void:
 	if not testing:
@@ -386,7 +387,7 @@ func update_modal() -> void:
 		modal.hide()
 		return
 	var screen: String = "ad" if not reward_flow.pending.is_empty() else ("powers" if power_view else ("pause" if run.paused and run.phase not in ["victory", "defeat"] else run.phase))
-	var screen_key := screen + (str(run.field.revision) if screen in ["shrine", "pack"] else (str(run.build_revision) if screen == "build" else ""))
+	var screen_key := screen + (str(run.field.revision) if screen in ["shrine", "pack"] else (str(run.build_revision) if screen == "build" else (str(run.offers.hash()) if screen == "upgrade" else "")))
 	if screen_key == last_screen:
 		return
 	last_screen = screen_key
@@ -432,17 +433,25 @@ func update_modal() -> void:
 			modal_body.add_child(ad_label)
 			refresh_ad_label()
 		"upgrade":
-			modal_title.text = "Level %d • Choose your power" % run.level
+			modal_title.text = "Choose a specialization" if not run.offer_back.is_empty() else "Level %d • Choose your power" % run.level
 			if run.offers.is_empty():
 				run.make_offers()
+			if not run.offer_back.is_empty():
+				PowerHUD.add_path(self, run.offers[0].id)
 			for index in run.offers.size():
 				var offer: Dictionary = run.offers[index]
-				make_button(offer.name, func(): run.choose_offer(index), modal_body)
+				var choice := make_button(offer.name, func(): run.choose_offer(index), modal_body)
+				if offer.id in Run.Content.SPELLS:
+					choice.icon = PowerHUD.texture_for(offer.id)
+					choice.expand_icon = true
+					choice.add_theme_constant_override("icon_max_width", 34)
 				var description := Label.new()
 				description.text = offer.description
 				description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				description.add_theme_font_size_override("font_size", 13)
 				modal_body.add_child(description)
+			if not run.offer_back.is_empty():
+				make_button("Back to upgrade choices", func(): run.return_to_offers(), modal_body, 40)
 		"victory", "defeat":
 			if screen == "victory":
 				bank_result()
@@ -627,13 +636,14 @@ func capture_frame(destination: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(destination)
 
-func open_power_view(_id: String = "") -> void:
+func open_power_view(id: String = "") -> void:
 	if home.visible or run.phase not in ["waves", "boss"] or not reward_flow.pending.is_empty():
 		return
 	if not power_view:
 		was_paused = run.paused
 	power_view = true
 	power_page = "Attacks"
+	selected_power = id
 	run.paused = true
 	clear_input()
 	last_screen = ""
@@ -671,6 +681,8 @@ func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: floa
 func _draw() -> void:
 	draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
 	for zone in run.zones:
+		if zone.get("kind", "ground") == "collapse":
+			continue
 		var center: Vector2 = zone.pos + world_offset
 		draw_spell_icon("ground", center, Vector2(zone.radius * 2, zone.radius * 1.4), Color(1, 1, 1, 0.35))
 		draw_circle(center, zone.radius, Color(0.67, 0.5, 1, 0.09))
@@ -739,8 +751,9 @@ func _draw() -> void:
 		else:
 			draw_line(at - shot.velocity.normalized() * 13, at, Color("ff875e") if kind == "ember" else GOLD, 5 if kind == "ember" else 3, true)
 	if run.spells.has("wisp"):
-		var wisp: Vector2 = Run.Magic.wisp_position(run) + world_offset - Vector2(0, 18)
-		draw_spell_icon("wisp", wisp, Vector2(32, 32))
+		for index in int(run.spell_mod("wisp", "count", 1)):
+			var wisp: Vector2 = Run.Magic.wisp_position(run, index) + world_offset - Vector2(0, 18)
+			draw_spell_icon("wisp", wisp, Vector2(32, 32))
 	if run.shield > 0:
 		draw_arc(run.player + world_offset - Vector2(0, 18), 30, 0, TAU, 32, Color("b5dfff"), 2)
 	for shot in run.hostile_shots:
@@ -754,8 +767,9 @@ func _draw() -> void:
 		match effect.kind:
 			"chain": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.75, 0.6, 1, fade), 3)
 			"frost":
-				draw_arc(from, 150 * (1.0 - fade), 0, TAU, 48, Color(0.6, 0.85, 1, fade), 4)
-				draw_spell_icon("frost", from, Vector2.ONE * (70 + 150 * (1 - fade)), Color(1, 1, 1, fade * 0.35))
+				var radius: float = maxf(1, effect.from.distance_to(effect.to))
+				draw_arc(from, radius * (1.0 - fade), 0, TAU, 48, Color(0.6, 0.85, 1, fade), 4)
+				draw_spell_icon("frost", from, Vector2.ONE * (radius * 1.8 * (1 - fade)), Color(1, 1, 1, fade * 0.35))
 			"ember": draw_circle(from - Vector2(0, 18), 12 * (1.0 - fade), Color(1, 0.4, 0.2, fade))
 			"slam": draw_arc(from, 80, 0, TAU, 48, Color(1, 0.35, 0.4, fade), 5)
 			"turret": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(1, 0.82, 0.5, fade), 2)
@@ -763,10 +777,11 @@ func _draw() -> void:
 			"summon": draw_arc(from, 110, 0, TAU, 32, Color(0.7, 0.5, 1, fade), 4)
 			"lance": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.9, 0.8, 0.6, fade), 6)
 			"gravity":
-				draw_arc(from, 130 * fade, 0, TAU, 48, Color(0.65, 0.45, 1, fade), 4)
+				var radius: float = maxf(1, effect.from.distance_to(effect.to))
+				draw_arc(from, radius * fade, 0, TAU, 48, Color(0.65, 0.45, 1, fade), 4)
 				for ray in 6:
 					var axis := Vector2.from_angle(ray * TAU / 6 + anim_time)
-					draw_line(from + axis * 12, from + axis * 100 * fade, Color(0.7, 0.6, 1, fade * 0.5), 2)
+					draw_line(from + axis * 12, from + axis * radius * 0.8 * fade, Color(0.7, 0.6, 1, fade * 0.5), 2)
 	if run.pulse_flash > 0:
 		draw_arc(run.player + world_offset, 145 * (1.0 - run.pulse_flash / 0.35), 0, TAU, 64, VIOLET, 4, true)
 	if run.hurt_wait > 0.55 and not profile.data.settings.reduced_effects:

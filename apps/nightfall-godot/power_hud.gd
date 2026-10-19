@@ -3,6 +3,8 @@ extends Control
 
 signal inspect_requested(id: String)
 const Content = preload("res://combat_content.gd")
+const PathDiagram = preload("res://ability_path.gd")
+const ART = preload("res://assets/ability-icons.png")
 const ORDER := ["ember", "frost", "chain", "wisp", "lance", "ground", "blades", "gravity"]
 var slots: Array[Button] = []
 var icons: Array[TextureRect] = []
@@ -75,7 +77,7 @@ func update_run(run: RefCounted) -> void:
 				texture.region = Rect2(Vector2(n % 4, n / 4) * cell, cell)
 				icons[index].texture = texture
 		slots[index].disabled = id.is_empty()
-		slots[index].tooltip_text = "Collect XP to learn an automatic attack" if id.is_empty() else Content.SPELLS[id].name + " • tap to inspect"
+		slots[index].tooltip_text = "Collect XP to learn an automatic attack" if id.is_empty() else run.spell_name(id) + " • tap to inspect"
 		ranks[index].text = "—" if id.is_empty() else ("EVOLVED" if run.spells[id].get("evolved", false) else "◆".repeat(run.spells[id].rank) + "◇".repeat(3 - run.spells[id].rank))
 		var fraction := 0.0
 		if not id.is_empty() and Content.SPELLS[id].cooldown > 0:
@@ -87,6 +89,9 @@ func update_run(run: RefCounted) -> void:
 
 static func describe(arena: Node) -> void:
 	var run = arena.run
+	if arena.selected_power in run.spells and arena.power_page == "Attacks":
+		describe_attack(arena, arena.selected_power)
+		return
 	arena.modal_title.text = "This expedition's build"
 	arena.FieldUI.label(arena, "Attacks fire automatically. Powers below reset when the expedition ends.", 13)
 	var tabs := HBoxContainer.new()
@@ -101,8 +106,8 @@ static func describe(arena: Node) -> void:
 		for id: String in run.spells:
 			var rank: int = run.spells[id].rank
 			var evolved: bool = run.spells[id].get("evolved", false)
-			var name: String = Content.EVOLUTIONS[id].name if evolved else Content.SPELLS[id].name
-			arena.FieldUI.label(arena, "%s • %d/3%s" % [name, rank, " • Evolved" if evolved else ""], 16)
+			var name: String = run.spell_name(id)
+			arena.make_button("%s • %d/3%s" % [name, rank, " • Evolved" if evolved else ""], func(): arena.selected_power = id; arena.last_screen = "", arena.modal_body)
 			arena.FieldUI.label(arena, run.spell_offer(id, rank).description.get_slice("\n", 0), 13)
 			if not evolved and Content.EVOLUTIONS.has(id):
 				var pair: String = Content.EVOLUTIONS[id].pair
@@ -122,3 +127,36 @@ static func describe(arena: Node) -> void:
 		if run.field.relics.is_empty():
 			arena.FieldUI.label(arena, "Hold a Twinflame shrine's ring to choose a relic.")
 	arena.make_button("Back", arena.close_power_view, arena.modal_body)
+
+static func add_path(arena: Node, id: String) -> void:
+	var path := PathDiagram.new()
+	path.ability = id
+	path.rank = arena.run.spells.get(id, {}).get("rank", 0)
+	path.branch = arena.run.spells.get(id, {}).get("branch", "")
+	path.evolved = arena.run.spells.get(id, {}).get("evolved", false)
+	arena.modal_body.add_child(path)
+
+static func texture_for(id: String) -> AtlasTexture:
+	var cell := Vector2(ART.get_width() / 4.0, ART.get_height() / 2.0)
+	var texture := AtlasTexture.new()
+	texture.atlas = ART
+	var index := ORDER.find(id)
+	texture.region = Rect2(Vector2(index % 4, index / 4) * cell, cell)
+	return texture
+
+static func describe_attack(arena: Node, id: String) -> void:
+	var run = arena.run
+	arena.modal_title.text = run.spell_name(id)
+	add_path(arena, id)
+	arena.FieldUI.label(arena, "Automatic • rank %d/3" % run.spells[id].rank, 16)
+	arena.FieldUI.label(arena, run.spell_offer(id, run.spells[id].rank).description.get_slice("\n", 0), 13)
+	if id != "wisp":
+		arena.FieldUI.label(arena, "Fires automatically every %.1f seconds." % run.spell_cooldown(id), 13)
+	var branch: String = run.spells[id].get("branch", "")
+	if not branch.is_empty():
+		arena.FieldUI.label(arena, Content.BRANCHES[id][branch].description, 13)
+	var evolution: Dictionary = Content.EVOLUTIONS[id]
+	arena.FieldUI.label(arena, "%s: rank 3 + %s" % [evolution.name, Content.PASSIVES[evolution.pair].name], 14)
+	arena.FieldUI.label(arena, evolution.description, 13)
+	arena.make_button("All attacks", func(): arena.selected_power = ""; arena.last_screen = "", arena.modal_body, 40)
+	arena.make_button("Back to the field", arena.close_power_view, arena.modal_body)

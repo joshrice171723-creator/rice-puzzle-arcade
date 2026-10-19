@@ -72,6 +72,7 @@ var zones: Array[Dictionary] = []
 var wisp_hits: Dictionary = {}
 var permanent_cooldown := 0.0
 var reinforcements_spawned := 0
+var offer_back: Array[Dictionary] = []
 
 const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
 const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
@@ -112,7 +113,7 @@ func snapshot() -> Dictionary:
 	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
-		"reinforcements_spawned": reinforcements_spawned}
+		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true)}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -144,6 +145,7 @@ func restore(saved: Dictionary) -> bool:
 	wisp_hits = saved.get("wisp_hits", {}).duplicate()
 	permanent_cooldown = saved.get("permanent_cooldown", 0.0)
 	reinforcements_spawned = saved.get("reinforcements_spawned", 0)
+	offer_back.assign(saved.get("offer_back", []))
 	paused = true
 	return true
 
@@ -249,6 +251,22 @@ func spell_scale() -> float:
 
 func spell_cooldown(id: String) -> float:
 	return Content.SPELLS[id].cooldown * (1.0 - minf(0.3, permanent_cooldown + 0.06 * passive_rank("channel")))
+
+func spell_mod(id: String, key: String, fallback: float = 1.0) -> float:
+	var branch: String = spells.get(id, {}).get("branch", "")
+	return float(Content.BRANCHES.get(id, {}).get(branch, {}).get(key, fallback))
+
+func spell_name(id: String) -> String:
+	if spells.get(id, {}).get("evolved", false):
+		return Content.EVOLUTIONS[id].name
+	var branch: String = spells.get(id, {}).get("branch", "")
+	return Content.BRANCHES[id][branch].name if not branch.is_empty() else Content.SPELLS[id].name
+
+func return_to_offers() -> void:
+	if paused or phase != "upgrade" or offer_back.is_empty():
+		return
+	offers = offer_back.duplicate(true)
+	offer_back.clear()
 
 func buy_trait(id: String) -> bool:
 	if paused or phase != "shrine":
@@ -404,31 +422,42 @@ func make_offers() -> void:
 func spell_offer(id: String, current_rank: int = 0) -> Dictionary:
 	var rank := current_rank if current_rank > 0 else (int(spells[id].rank) + 1 if spells.has(id) else 1)
 	var info: Dictionary = Content.SPELLS[id]
-	var scale := (1.0 + 0.25 * (rank - 1)) * spell_scale()
+	var scale := (1.0 + 0.25 * (rank - 1)) * spell_scale() * spell_mod(id, "damage")
 	var detail := ""
 	match id:
-		"ember": detail = "%.0f impact + %.0f burn over 2s. One target." % [36 * scale, 12 * scale]
-		"frost": detail = "%.0f nearby damage. Chill foes for 3s; bosses resist." % (26 * scale)
-		"chain": detail = "%.0f / %.0f / %.0f damage across 3 nearby foes." % [28 * scale, 18 * scale, 12 * scale]
-		"wisp": detail = "%.0f contact damage; at most one hit per enemy every 1.1s." % (10 * scale)
-		"lance": detail = "%.0f damage through up to 3 targets in a narrow line." % (56 * scale)
-		"ground": detail = "%.0f damage per second in a fixed circle for 4s." % (8 * scale)
-		"blades": detail = "Two blades each deal %.0f damage." % (22 * scale)
-		"gravity": detail = "%.0f area damage and pull. Bosses resist displacement." % (16 * scale)
+		"ember": detail = "%d bolt(s), each %.0f impact + %.0f burn over 2s." % [int(spell_mod(id, "count", 1)), 36 * scale, 12 * scale * spell_mod(id, "burn") / spell_mod(id, "damage")]
+		"frost": detail = "%.0f damage within %.0f radius. Chill for 3s; bosses resist." % [26 * scale, spell_mod(id, "radius", 150)]
+		"chain": detail = "%d chained targets; %.0f first hit, then %.0f / %.0f damage; extra jumps %.0f." % [int(spell_mod(id, "count", 3)) + (1 if spells.get(id, {}).get("evolved", false) else 0), 28 * scale * spell_mod(id, "first_damage"), 18 * scale, 12 * scale, 6 * scale]
+		"wisp": detail = "%d wisp(s), %.0f contact damage. Shared per-enemy limit: once every 1.1s." % [int(spell_mod(id, "count", 1)), 10 * scale]
+		"lance": detail = "%.0f damage through up to %d targets in a line." % [56 * scale, int(spell_mod(id, "hits", 3)) + (2 if spells.get(id, {}).get("evolved", false) else 0)]
+		"ground": detail = "%.0f damage per second for 4s. Fixed circle, %.0f radius." % [8 * scale, spell_mod(id, "radius", 90)]
+		"blades": detail = "%d blades each deal %.0f damage." % [int(spell_mod(id, "count", 2)) + (1 if spells.get(id, {}).get("evolved", false) else 0), 22 * scale]
+		"gravity": detail = "%.0f damage within %.0f radius, plus pull. Bosses resist displacement." % [16 * scale, spell_mod(id, "radius", 130)]
 	if rank == 3 and Content.EVOLUTIONS.has(id) and passive_rank(Content.EVOLUTIONS[id].pair) > 0:
-		return {"id": id, "name": Content.EVOLUTIONS[id].name + " • Evolve", "description": Content.EVOLUTIONS[id].description}
-	return {"id": id, "name": "%s  •  Rank %d/3" % [info.name, rank],
+		return {"id": id, "name": Content.EVOLUTIONS[id].name + (" • Evolved" if current_rank > 0 else " • Evolve"), "description": detail + "\n" + Content.EVOLUTIONS[id].description}
+	if rank == 2 and current_rank == 0:
+		return {"id": id, "name": info.name + " • Specialize", "description": "Choose one path: %s or %s. Preview both before committing." % [Content.BRANCHES[id].focus.name, Content.BRANCHES[id].spread.name]}
+	return {"id": id, "name": "%s  •  Rank %d/3" % [spell_name(id), rank],
 		"description": "%s\n%s • %s" % [detail, "Learn" if rank == 1 else "Upgrade", "continuous orbit" if id == "wisp" else "every %.1fs" % spell_cooldown(id)]}
 
 func choose_offer(index: int) -> void:
 	if paused or phase != "upgrade" or index < 0 or index >= offers.size():
 		return
 	var id: String = offers[index].id
+	if spells.has(id) and spells[id].rank == 1 and not offers[index].has("branch"):
+		offer_back = offers.duplicate(true)
+		offers.clear()
+		for branch: String in Content.BRANCHES[id]:
+			var info: Dictionary = Content.BRANCHES[id][branch]
+			offers.append({"id": id, "branch": branch, "name": info.name + " • Rank 2/3", "description": info.description + "\nIncludes the rank-2 base damage increase."})
+		return
 	if id == "heal" or Content.PASSIVES.has(id):
 		if not apply_passive(id):
 			return
 	elif Content.SPELLS.has(id):
 		if spells.has(id):
+			if offers[index].has("branch"):
+				spells[id].branch = offers[index].branch
 			spells[id].rank = mini(3, spells[id].rank + 1)
 			if spells[id].rank == 3 and Content.EVOLUTIONS.has(id) and passive_rank(Content.EVOLUTIONS[id].pair) > 0:
 				spells[id].evolved = true
@@ -439,6 +468,7 @@ func choose_offer(index: int) -> void:
 	else:
 		return
 	refresh_evolutions()
+	offer_back.clear()
 	phase = "boss" if boss_id >= 0 else "waves"
 	offers.clear()
 
@@ -459,37 +489,47 @@ func add_effect(kind: String, from: Vector2, to: Vector2, duration: float = 0.3)
 func cast_spell(id: String) -> bool:
 	if paused or phase not in ["waves", "boss"] or not spells.has(id):
 		return false
-	var target := nearest_enemy(player, 425.0 if id != "frost" else 150.0)
+	var target := nearest_enemy(player, 425.0 if id != "frost" else spell_mod(id, "radius", 150.0))
 	if target.is_empty():
 		return false
-	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * spell_scale()
+	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * spell_scale() * spell_mod(id, "damage")
 	match id:
 		"ember":
-			if shots.size() >= MAX_SHOTS:
+			var count := int(spell_mod(id, "count"))
+			if shots.size() > MAX_SHOTS - count:
 				return false
-			shots.append({"pos": player, "velocity": player.direction_to(target.pos) * 500.0,
-				"life": 0.85, "kind": "ember", "damage": 36.0 * multiplier, "burn_dps": 6.0 * multiplier,
-				"splash": 8.0 * spell_scale() if spells[id].get("evolved", false) else 0.0})
+			for index in count:
+				var angle := (index - (count - 1) / 2.0) * 0.14
+				shots.append({"pos": player, "velocity": player.direction_to(target.pos).rotated(angle) * 500.0,
+					"life": 0.85, "kind": "ember", "damage": 36.0 * multiplier,
+					"burn_dps": 6.0 * multiplier * spell_mod(id, "burn") / spell_mod(id, "damage"),
+					"pierce": int(spell_mod(id, "pierce", 0)), "hits": [],
+					"splash": 8.0 * spell_scale() if spells[id].get("evolved", false) else 0.0})
 		"frost":
 			for enemy in enemies:
-				if enemy.hp > 0 and player.distance_to(enemy.pos) <= 150.0:
+				if enemy.hp > 0 and player.distance_to(enemy.pos) <= spell_mod(id, "radius", 150.0):
 					damage_enemy(enemy, 26.0 * multiplier, player, true)
 					enemy.chill = maxf(enemy.chill, 1.5 if enemy.boss else 3.0)
-			add_effect("frost", player, player, 0.45)
+			add_effect("frost", player, player + Vector2(spell_mod(id, "radius", 150.0), 0), 0.45)
 			if spells[id].get("evolved", false):
 				shield = maxf(shield, max_health() * 0.08)
 				shield_left = maxf(shield_left, 3.0)
 		"chain":
 			var hit: Array[int] = []
 			var from := player
-			for amount in ([28.0, 18.0, 12.0, 6.0] if spells[id].get("evolved", false) else [28.0, 18.0, 12.0]):
+			var amounts: Array[float] = [28.0 * spell_mod(id, "first_damage"), 18.0, 12.0]
+			if int(spell_mod(id, "count", 3)) > 3:
+				amounts.append(6.0)
+			if spells[id].get("evolved", false):
+				amounts.append(6.0)
+			for amount in amounts:
 				if target.is_empty():
 					break
 				damage_enemy(target, amount * multiplier, from, true)
 				hit.append(target.id)
 				add_effect("chain", from, target.pos)
 				from = target.pos
-				target = nearest_enemy(from, 180.0, hit)
+				target = nearest_enemy(from, spell_mod(id, "range", 180.0), hit)
 		_:
 			return Magic.cast(self, id, multiplier, target)
 	return true

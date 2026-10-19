@@ -63,6 +63,23 @@ func verify() -> void:
 			event.pressed = true
 			arena._unhandled_input(event)
 		check(arena.run.class_wait == before and arena.run.pulse_flash == 0, "Old attack keys do not manually trigger abilities")
+		for id: String in arena.Run.Content.SPELLS:
+			arena.run.spells = {id: {"rank": 1, "wait": 0.0}}
+			arena.run.phase = "upgrade"
+			arena.run.offers.assign([arena.run.spell_offer(id)])
+			arena.run.choose_offer(0)
+			arena.last_screen = ""
+			arena.update_modal()
+			await settle()
+			check(root.get_visible_rect().encloses(arena.modal.get_global_rect()), "%s specialization diagram and both choices fit the phone" % id)
+			arena.run.choose_offer(0)
+			arena.open_power_view(id)
+			arena.update_modal()
+			await settle()
+			check(root.get_visible_rect().encloses(arena.modal.get_global_rect()), "%s detailed progression path fits the phone" % id)
+			arena.close_power_view()
+		# Restore the shared populated fixture for the next viewport.
+		arena.run.spells = {"frost": {"rank": 3, "wait": 2.0, "evolved": true}, "wisp": {"rank": 2, "wait": 0.0}, "ground": {"rank": 2, "wait": 6.0}}
 	# Optional rendered fixture: static state, no gameplay or real save interaction.
 	arena.run.phase = "waves"
 	arena.run.paused = false
@@ -80,6 +97,13 @@ func verify() -> void:
 		if arg.begins_with("--capture="):
 			await RenderingServer.frame_post_draw
 			root.get_texture().get_image().save_png(arg.trim_prefix("--capture="))
+		if arg.begins_with("--capture-path="):
+			arena.run.spells.frost.branch = "spread"
+			arena.open_power_view("frost")
+			arena.update_modal()
+			await settle()
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png(arg.trim_prefix("--capture-path="))
 	print("Nightfall ability HUD: %d checks, %d failures" % [checks, failures])
 	arena.queue_free()
 	await process_frame

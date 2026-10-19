@@ -33,7 +33,35 @@ const EVOLUTIONS := {
 	"frost": {"name": "Winter Halo", "pair": "vital", "description": "Rank 3 Frost Ring also shields 8% maximum HP for 3 seconds."},
 	"chain": {"name": "Thunder Relay", "pair": "mechanic", "description": "Rank 3 Chain Spark gains a fourth jump at 15% Power."},
 	"wisp": {"name": "Soul Lantern", "pair": "magnet", "description": "Rank 3 Orbiting Wisp circles farther out and adds 20% XP pickup reach."},
-	"lance": {"name": "Rift Spear", "pair": "pierce", "description": "Rank 3 Stone Lance can pierce five targets instead of three."}}
+	"lance": {"name": "Rift Spear", "pair": "pierce", "description": "Rank 3 Stone Lance pierces two additional targets."},
+	"ground": {"name": "Sanctuary", "pair": "vital", "description": "Your damage circle also heals 0.5% maximum HP per second while you stand inside. Healing circles do not stack."},
+	"blades": {"name": "Phantom Flurry", "pair": "quick", "description": "Each automatic volley gains one extra blade. Your chosen spread still applies."},
+	"gravity": {"name": "Collapsed Star", "pair": "channel", "description": "After the pull, the knot bursts once for an additional 20% Power in its area."}}
+const BRANCHES := {
+	"ember": {
+		"focus": {"name": "Cinder Spear", "description": "+20% impact, pierces one extra foe. Burn is 25% weaker.", "damage": 1.2, "burn": 0.75, "count": 1, "pierce": 1},
+		"spread": {"name": "Ember Volley", "description": "Two spreading bolts, each at 65% impact and burn. Aim through groups.", "damage": 0.65, "burn": 0.65, "count": 2}},
+	"frost": {
+		"focus": {"name": "Cold Snap", "description": "+30% damage, but radius shrinks from 150 to 115.", "damage": 1.3, "radius": 115.0},
+		"spread": {"name": "Winter Reach", "description": "Radius grows from 150 to 190. Damage is 20% lower; chill stays effective.", "damage": 0.8, "radius": 190.0}},
+	"chain": {
+		"focus": {"name": "Charged Arc", "description": "First hit deals 35% more damage. Jump reach narrows from 180 to 140.", "first_damage": 1.35, "range": 140.0, "count": 3},
+		"spread": {"name": "Forked Current", "description": "Adds a fourth jump. Every hit is 20% weaker.", "damage": 0.8, "range": 180.0, "count": 4}},
+	"wisp": {
+		"focus": {"name": "Hunting Wisp", "description": "+35% contact damage. Orbit tightens from 75 to 60.", "damage": 1.35, "radius": 60.0, "count": 1},
+		"spread": {"name": "Twin Wisps", "description": "Two opposite wisps, each at 65% damage. They share the per-enemy hit limit.", "damage": 0.65, "radius": 75.0, "count": 2}},
+	"lance": {
+		"focus": {"name": "Obsidian Needle", "description": "+30% damage. Narrower aim and only two targets per cast.", "damage": 1.3, "width": 14.0, "hits": 2},
+		"spread": {"name": "Stone Fan", "description": "Twice the line width. Three targets, each taking 20% less damage.", "damage": 0.8, "width": 40.0, "hits": 3}},
+	"ground": {
+		"focus": {"name": "Sanctum", "description": "+25% damage per second. Radius shrinks from 90 to 70.", "damage": 1.25, "radius": 70.0},
+		"spread": {"name": "Beacon Field", "description": "Radius grows from 90 to 120. Damage per second is 25% lower.", "damage": 0.75, "radius": 120.0}},
+	"blades": {
+		"focus": {"name": "Spectral Daggers", "description": "Two faster blades with 20% more damage each. Normal attack reach.", "damage": 1.2, "count": 2, "speed": 650.0},
+		"spread": {"name": "Fan of Knives", "description": "Three blades in a wide spread. Each deals 70% damage.", "damage": 0.7, "count": 3, "speed": 500.0}},
+	"gravity": {
+		"focus": {"name": "Crushing Knot", "description": "+50% impact, stronger pull. Radius shrinks from 130 to 100.", "damage": 1.5, "radius": 100.0, "pull": 90.0},
+		"spread": {"name": "Wide Orbit", "description": "Radius grows from 130 to 170. Damage is 25% lower; pull is gentler.", "damage": 0.75, "radius": 170.0, "pull": 55.0}}}
 const WAVES := [
 	{"at": 0.0, "name": "Dusk patrol", "interval": 1.4, "runner": 0.0, "spitter": 0.0},
 	{"at": 45.0, "name": "Runners arrive", "interval": 1.05, "runner": 0.25, "spitter": 0.0},

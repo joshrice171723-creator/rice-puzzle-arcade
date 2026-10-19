@@ -49,3 +49,11 @@ Google's [rewarded-ad documentation](https://developers.google.com/admob/android
 - Original item artwork, comparison stats, saved chest receipts, transactional opening, mission reward previews and a selectable Rare ten-medal reward.
 - Missions 1–4 have a separate seeded 35% equipment roll; mission 5 keeps its guaranteed Uncommon vest. First-clear and repeat rewards stay distinct.
 - Ten-second boss warning, nearby drop collection on victory, six living / twenty-four total Caller reinforcement limits.
+
+## Visible ability progression
+
+- Each of eight attacks now has two rank-2 specializations: focused versus broader coverage, changed projectile counts, orbit counts, pierce limits or pull strength. Damage/coverage tradeoffs are applied to the simulation.
+- Choosing an upgrade first previews both specializations without spending the level. Back restores the original choices without rerolling; pending branch selection survives saving.
+- Eight paired rank-3 evolutions. New Sanctuary healing is position-dependent and nonstacking; Collapsed Star bursts once; Phantom Flurry respects the projectile cap.
+- Read-only progression diagram appears in specialization selection and individual ability inspection. All attacks remain automatic.
+- 74 specialization checks plus 99 populated HUD/path layout checks passed. Static path screenshot: `artifacts/nightfall-godot/ability-progression.png`.
