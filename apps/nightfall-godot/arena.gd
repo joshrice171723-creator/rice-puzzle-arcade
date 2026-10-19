@@ -19,6 +19,7 @@ var anim_time := 0.0
 var hud: Label
 var health_bar: ProgressBar
 var xp_bar: ProgressBar
+var boss_bar: ProgressBar
 var metrics: Label
 var dodge_button: Button
 var pulse_button: Button
@@ -121,6 +122,14 @@ func build_ui() -> void:
 	xp_style.bg_color = VIOLET
 	xp_bar.add_theme_stylebox_override("fill", xp_style)
 	box.add_child(xp_bar)
+	boss_bar = ProgressBar.new()
+	boss_bar.show_percentage = false
+	boss_bar.custom_minimum_size.y = 10
+	var boss_style := StyleBoxFlat.new()
+	boss_style.bg_color = GOLD
+	boss_bar.add_theme_stylebox_override("fill", boss_style)
+	boss_bar.visible = false
+	box.add_child(boss_bar)
 	metrics = Label.new()
 	metrics.position = Vector2(16, 124)
 	metrics.add_theme_font_size_override("font_size", 12)
@@ -185,9 +194,9 @@ func update_modal() -> void:
 	modal.size.y = 0
 	match screen:
 		"pause":
-			modal_title.text = "Nightfall\nBlackout District"
+			modal_title.text = "Nightfall\nBlackout Outskirts"
 			var description := Label.new()
-			description.text = "Survive the waves. Defeat the boss.\nMove: WASD / drag left side\nDodge: Space  •  Pulse: E\nPrototype — progress is not saved."
+			description.text = "Survive 4 minutes. Defeat The Breaker.\nCollect XP to learn automatic magic.\nMove: WASD / drag left side\nDodge: Space  •  Pulse: E\nPrototype — progress is not saved."
 			description.add_theme_font_size_override("font_size", 14)
 			modal_body.add_child(description)
 			make_button("Enter courtyard" if run.elapsed == 0.0 else "Resume", func(): run.paused = false, modal_body)
@@ -197,6 +206,7 @@ func update_modal() -> void:
 				var b := make_button("%d foes" % count, func(): run.set_benchmark(count); run.paused = false, row)
 				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			make_button("New survival run", restart, modal_body)
+			make_button("Practice The Breaker • no rewards", func(): restart(); run.start_boss_practice(), modal_body)
 			if ad_bridge:
 				make_button("Test rewarded video", func(): ad_bridge.testRewarded(), modal_body)
 				make_button("Ad privacy options", func(): ad_bridge.privacyOptions(), modal_body, 40)
@@ -206,21 +216,36 @@ func update_modal() -> void:
 			modal_body.add_child(ad_label)
 			refresh_ad_label()
 		"upgrade":
-			modal_title.text = "Level %d • Choose a boost" % run.level
-			make_button("Rune rounds  •  +4 damage", func(): run.upgrade(0), modal_body)
-			make_button("Quick chamber  •  faster fire", func(): run.upgrade(1), modal_body)
-			make_button("Field dressing  •  heal 35 HP", func(): run.upgrade(2), modal_body)
+			modal_title.text = "Level %d • Choose your power" % run.level
+			if run.offers.is_empty():
+				run.make_offers()
+			for index in run.offers.size():
+				var offer: Dictionary = run.offers[index]
+				make_button(offer.name, func(): run.choose_offer(index), modal_body)
+				var description := Label.new()
+				description.text = offer.description
+				description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				description.add_theme_font_size_override("font_size", 13)
+				modal_body.add_child(description)
 		"victory", "defeat":
 			modal_title.text = "Boss defeated" if screen == "victory" else "The night claimed you"
+			if run.practice:
+				modal_title.text = "Practice complete" if screen == "victory" else "Practice • try another approach"
 			var result := Label.new()
 			result.text = "%d enemies defeated • Level %d\n%.0f seconds survived" % [run.kills, run.level, run.elapsed]
 			modal_body.add_child(result)
-			make_button("Try again", restart, modal_body)
+			make_button("Practice again" if run.practice else "Try again", replay, modal_body)
 
 func restart() -> void:
 	run = Run.new()
 	frames.clear()
 	clear_input()
+
+func replay() -> void:
+	var repeat_practice: bool = run.practice
+	restart()
+	if repeat_practice:
+		run.start_boss_practice()
 
 func _input(event: InputEvent) -> void:
 	# Release the stick even when a drag ends over a GUI button.
@@ -270,7 +295,7 @@ func _physics_process(delta: float) -> void:
 	if automated:
 		direction = Vector2.from_angle(run.elapsed * 0.7)
 		if run.phase == "upgrade":
-			run.upgrade(0)
+			run.choose_offer(0)
 	moving = direction.length_squared() > 0.01
 	var start := Time.get_ticks_usec()
 	run.tick(delta, direction)
@@ -286,10 +311,15 @@ func _process(delta: float) -> void:
 	var remaining := maxi(0, int(ceil(Run.DURATION - run.elapsed)))
 	var time_text := "%02d:%02d" % [remaining / 60, remaining % 60]
 	if run.phase == "boss":
-		time_text = "DEFEAT THE BOSS"
+		time_text = "THE BREAKER"
 	if run.benchmark_count > 0:
 		time_text = "CROWD TEST"
 	hud.text = "%s  •  Lv %d   |   %d HP" % [time_text, run.level, run.health]
+	boss_bar.visible = run.boss_id >= 0 and run.phase not in ["victory", "defeat"]
+	for enemy in run.enemies:
+		if enemy.boss:
+			boss_bar.max_value = enemy.max_hp
+			boss_bar.value = enemy.hp
 	dodge_button.text = "%.1fs" % run.dodge_wait if run.dodge_wait > 0 else "DODGE"
 	pulse_button.text = "%.1fs" % run.pulse_wait if run.pulse_wait > 0 else "PULSE"
 	frames.append(delta * 1000.0)
@@ -299,7 +329,13 @@ func _process(delta: float) -> void:
 	if sample_time >= 0.5:
 		var sorted := frames.duplicate()
 		sorted.sort()
-		metrics.text = "%d FPS  •  p95 %.1f ms  •  %d enemies\nPhysics peak %.2f ms  •  %d shots  •  %d defeated" % [Engine.get_frames_per_second(), sorted[int((sorted.size() - 1) * 0.95)], run.enemies.size(), physics_ms, run.shots.size(), run.kills]
+		if run.benchmark_count > 0:
+			metrics.text = "%d FPS  •  p95 %.1f ms  •  %d enemies\nPhysics peak %.2f ms  •  %d shots  •  %d defeated" % [Engine.get_frames_per_second(), sorted[int((sorted.size() - 1) * 0.95)], run.enemies.size(), physics_ms, run.shots.size(), run.kills]
+		else:
+			var learned: PackedStringArray = []
+			for id: String in run.spells:
+				learned.append("%s %d" % [Run.Content.SPELLS[id].name, run.spells[id].rank])
+			metrics.text = "%s  •  %d defeated\n%s" % ["Defeat The Breaker" if run.boss_id >= 0 else Run.Content.wave_at(run.elapsed).name, run.kills, "  /  ".join(learned) if not learned.is_empty() else "Collect violet XP to learn magic"]
 		sample_time = 0.0
 		physics_ms = 0.0
 	update_modal()
@@ -331,7 +367,7 @@ func finish_report() -> void:
 			file.store_string(JSON.stringify(report, "\t"))
 	get_tree().quit()
 
-func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: float = 1.0) -> void:
+func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: float = 1.0, tint: Color = Color.WHITE) -> void:
 	# Generated atlas rows have different occupied bounds; exclude neighboring feet.
 	var width := ACTORS.get_width() / 4.0
 	var source := Rect2(frame * width, 535 if enemy else 20, width, 315 if enemy else 480)
@@ -341,7 +377,7 @@ func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: floa
 	if face < 0:
 		rect.position.x += rect.size.x
 		rect.size.x = -rect.size.x
-	draw_texture_rect_region(ACTORS, rect, source)
+	draw_texture_rect_region(ACTORS, rect, source, tint)
 
 func _draw() -> void:
 	draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
@@ -351,8 +387,18 @@ func _draw() -> void:
 	for enemy in run.enemies:
 		if enemy.tell > 0:
 			var at: Vector2 = enemy.target + world_offset
-			draw_circle(at, 72, Color(1, 0.25, 0.35, 0.15))
-			draw_arc(at, 72, 0, TAU * (1.0 - enemy.tell), 48, Color("ff7181"), 3)
+			var from: Vector2 = enemy.pos + world_offset
+			if enemy.attack == "slam":
+				draw_circle(at, 80, Color(1, 0.25, 0.35, 0.15))
+				draw_arc(at, 80, 0, TAU * (1.0 - enemy.tell / 0.95), 48, Color("ff7181"), 3)
+			else:
+				var direction := from.direction_to(at)
+				if enemy.attack == "rush":
+					draw_line(from, from + direction * 234, Color(1, 0.3, 0.35, 0.22), 60)
+					draw_line(from, from + direction * 234, Color("ff7181"), 2)
+				else:
+					for angle in ([-0.22, 0.0, 0.22] if enemy.attack == "toss" else [0.0]):
+						draw_line(from, from + direction.rotated(angle) * 210, Color("ffad7c"), 2)
 	var actors: Array[Dictionary] = []
 	for enemy in run.enemies:
 		actors.append(enemy)
@@ -367,15 +413,35 @@ func _draw() -> void:
 		if item.has("player"):
 			actor(run.player, false, int(anim_time * 8) % 4 if moving else 1, 1.0, -1.0 if run.facing.x < 0 else 1.0)
 		else:
-			actor(item.pos, true, (int(anim_time * 7) + item.id) % 4, 1.7 if item.boss else 0.8, item.face)
+			var scale_value := 1.7 if item.boss else (0.65 if item.kind == "runner" else 0.8)
+			var tint := Color("ffac87") if item.kind == "runner" else (Color("b6c8ff") if item.kind == "spitter" else Color.WHITE)
+			actor(item.pos, true, (int(anim_time * 7) + item.id) % 4, scale_value, item.face, tint)
 	for item in run.enemies:
+		var mark: Vector2 = item.pos + world_offset - Vector2(0, 42)
+		if item.kind == "runner":
+			draw_polyline(PackedVector2Array([mark + Vector2(-5, 0), mark + Vector2(0, -5), mark + Vector2(5, 0)]), GOLD, 2)
+		elif item.kind == "spitter":
+			draw_arc(mark, 5, 0, TAU, 12, Color("adceff"), 2)
 		if item.hp < item.max_hp or item.boss:
 			var at: Vector2 = item.pos + world_offset - Vector2(20, 57 if item.boss else 38)
 			draw_rect(Rect2(at, Vector2(40, 4)), INK)
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
 	for shot in run.shots:
 		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
-		draw_line(at - shot.velocity.normalized() * 13, at, GOLD, 3, true)
+		draw_line(at - shot.velocity.normalized() * 13, at, Color("ff875e") if shot.get("kind", "pistol") == "ember" else GOLD, 5 if shot.get("kind", "pistol") == "ember" else 3, true)
+	for shot in run.hostile_shots:
+		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
+		draw_circle(at, 6, Color("ff7181"))
+		draw_arc(at, 8, 0, TAU, 12, Color("ffe1b0"), 1)
+	for effect in run.effects:
+		var from: Vector2 = effect.from + world_offset
+		var to: Vector2 = effect.to + world_offset
+		var fade: float = effect.life / effect.duration
+		match effect.kind:
+			"chain": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.75, 0.6, 1, fade), 3)
+			"frost": draw_arc(from, 150 * (1.0 - fade), 0, TAU, 48, Color(0.6, 0.85, 1, fade), 4)
+			"ember": draw_circle(from - Vector2(0, 18), 12 * (1.0 - fade), Color(1, 0.4, 0.2, fade))
+			"slam": draw_arc(from, 80, 0, TAU, 48, Color(1, 0.35, 0.4, fade), 5)
 	if run.pulse_flash > 0:
 		draw_arc(run.player + world_offset, 145 * (1.0 - run.pulse_flash / 0.35), 0, TAU, 64, VIOLET, 4, true)
 	if run.hurt_wait > 0.55:

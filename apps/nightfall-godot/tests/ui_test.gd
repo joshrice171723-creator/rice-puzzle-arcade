@@ -34,6 +34,22 @@ func verify_layout() -> void:
 			failures += 1
 			push_error("Upgrade menu outside viewport")
 		arena.run.paused = true
+		arena.run.phase = "boss"
+		arena.run.level = 12
+		for frame in 8:
+			await process_frame
+		checks += 1
+		var header: Control = arena.hud.get_parent().get_parent()
+		if not bounds.encloses(header.get_global_rect()):
+			failures += 1
+			push_error("Boss header outside viewport: %s" % header.get_global_rect())
 		arena.run.phase = "waves"
+	arena.run.start_boss_practice()
+	arena.run.phase = "victory"
+	arena.replay()
+	checks += 1
+	if not arena.run.practice or arena.run.phase != "boss" or arena.run.health != 120.0:
+		failures += 1
+		push_error("Practice replay must restart practice with fresh health")
 	print("Nightfall layout: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

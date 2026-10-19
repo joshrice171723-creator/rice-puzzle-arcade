@@ -2,6 +2,8 @@
 
 October 18, 2026. Joshua authorized implementation of the delivery plan with “ok start.” Android installation, native rendering, touch controls, background pause, and genuine Google sample-video earned callbacks now have emulator evidence. M0 remains provisional pending the remaining cancellation, sustained-performance, and physical-phone checks described below. Production ads and inventory rewards are not enabled by this diagnostic.
 
+The evidence and hashes below describe the earlier M0 rendering/ad build. Subsequent M1 feature exports replace the local artifact filenames; their current hashes and acceptance are recorded in [combat slice verification](COMBAT_SLICE_QA.md). Existing bugs are now deferred at Joshua's request in the [bug log](KNOWN_ISSUES.md).
+
 ## Delivered
 
 `apps/nightfall-godot/` contains an isolated Godot 4.7.2 Compatibility-renderer project. It has original Beaconbound prototype actor/floor artwork, movement, dodge, automatic projectiles, a pulse ability, experience pickups, three upgrade choices, escalating spawning, a four-minute wave timer followed by a mandatory boss, pause/background handling, and result/restart screens.

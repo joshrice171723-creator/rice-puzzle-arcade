@@ -2,7 +2,7 @@
 
 Isolated, playable technical prototype using Godot **4.7.2 stable**, Compatibility rendering, and typed GDScript. The existing Expo Nightfall and three puzzle games are untouched. See [delivery plan](../../docs/nightfall/BUILD_PLAN.md) for the full product scope.
 
-This is an M0 evaluation, with a small combat slice to exercise the renderer. It is not the first production zone. No persistent progress, real purchases, production publisher IDs, mediation, telemetry upload, or earned loot economy is enabled.
+This is the M0 engine evaluation plus the first M1 combat feature increment. It is not the first production zone. No persistent progress, real purchases, production publisher IDs, mediation, telemetry upload, or earned loot economy is enabled. See [combat slice verification](../../docs/nightfall/COMBAT_SLICE_QA.md) and the [deferred bug log](../../docs/nightfall/KNOWN_ISSUES.md).
 
 ## Play
 
@@ -19,7 +19,11 @@ The helper defaults to the locally installed portable executable under `%LOCALAP
 - E / Pulse: area damage and knockback, eight-second cooldown.
 - Escape / pause button: pause. Backgrounding also pauses; resume is explicit.
 - Collect violet experience drops to choose a temporary upgrade.
+- Learn Ember Bolt, Frost Ring, or Chain Spark at the first level-up. Later choices upgrade spells to rank three, improve the pistol, or restore missing health. Spells cast automatically while enemies are in range.
+- Four wave phases introduce Drifters, fast Rift Runners, and ranged Ash Spitters. Spitter aim lines lock before firing, leaving time to move away.
 - Four minutes of waves, then a mandatory boss kill. Boss fight has no time limit.
+- The Breaker marks a charge lane, slams the ground around itself, and throws three projectiles. Its attack interval shortens below half health. A gold HUD bar tracks its health.
+- **Practice The Breaker** starts a separate no-reward fight with three rank-one spells; it does not skip or complete a campaign mission.
 - The pause menu's 30/60/120-foe buttons are **invulnerable diagnostic modes**, not balanced missions.
 
 Android has a separate **Test rewarded video** diagnostic in the pause menu. It uses Google sample identifiers and shows an earned-callback counter. It does not grant inventory or imply production revenue. Consent/network failures appear in the diagnostic; they never manufacture a reward. Desktop has no simulated ad-success fallback.
@@ -62,7 +66,7 @@ Create the output directory first. The first three seconds are excluded from tim
 
 - AI-generated four-frame, one-view walking art uses mirrored horizontal facing. It is an animation/layout sample, not the planned eight-direction production rig.
 - One floor texture; walkable bounds are explicit and tall environmental collisions/occlusion are not implemented.
-- The boss currently reuses enlarged enemy artwork and a telegraphed ground attack. It does not represent the finished Breaker design.
+- Enemy variants currently reuse tinted/scaled atlas artwork and small shape markers. The boss also uses enlarged enemy artwork; production silhouettes and animation remain unfinished.
 - No shrines, Haven, field building, equipment, classes, stash, saves, or sound yet. These remain subsequent milestones.
 - Entity caps: 120 enemies, 64 shots, 40 pickups. Dense crowds overlap; separation/pathing still needs production work.
 - All HUD controls fit a 430×760 logical canvas; differing aspect ratios letterbox rather than introduce scrolling. Physical safe-area and accessibility acceptance remains separate.
