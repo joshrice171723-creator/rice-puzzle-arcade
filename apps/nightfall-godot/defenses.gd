@@ -45,7 +45,7 @@ func place(kind: String, position: Vector2, power: float, engineer: bool) -> voi
 	next_id += 1
 	notice = "%s placed." % TYPES[kind].name
 
-func repair_nearest(position: Vector2) -> bool:
+func repair_nearest(position: Vector2, strength: float = 1.0) -> bool:
 	var target: Dictionary = {}
 	var distance := 300.0
 	for structure in structures:
@@ -59,6 +59,7 @@ func repair_nearest(position: Vector2) -> bool:
 		notice = "No damaged structure within repair range."
 		return false
 	target.repair_left = 4.0
+	target.repair_rate = 0.05 * strength
 	notice = "Repair Swarm is restoring %s." % TYPES[target.kind].name
 	return true
 
@@ -85,12 +86,12 @@ func tick(delta: float, run: RefCounted) -> void:
 		structure.wait = maxf(0, structure.wait - delta)
 		structure.hurt_wait = maxf(0, structure.hurt_wait - delta)
 		if structure.repair_left > 0:
-			structure.hp = minf(structure.max_hp, structure.hp + structure.max_hp * 0.05 * minf(delta, structure.repair_left))
+			structure.hp = minf(structure.max_hp, structure.hp + structure.max_hp * structure.get("repair_rate", 0.05) * minf(delta, structure.repair_left))
 			structure.repair_left = maxf(0, structure.repair_left - delta)
 		if structure.kind == "turret" and structure.wait == 0:
 			var target: Dictionary = run.nearest_enemy(structure.pos, 240)
 			if not target.is_empty():
-				run.damage_enemy(target, 8 * structure.power, structure.pos)
+				run.damage_enemy(target, 8 * structure.power * (1.0 + 0.06 * run.passive_rank("mechanic")), structure.pos)
 				run.add_effect("turret", structure.pos, target.pos, 0.12)
 				structure.target = target.pos
 				structure.wait = 0.8
@@ -99,7 +100,7 @@ func tick(delta: float, run: RefCounted) -> void:
 			if not target.is_empty():
 				for enemy in run.enemies:
 					if enemy.hp > 0 and enemy.pos.distance_to(structure.pos) <= 80:
-						run.damage_enemy(enemy, 48 * structure.power, structure.pos, true)
+						run.damage_enemy(enemy, 48 * structure.power * (1.0 + 0.06 * run.passive_rank("mechanic")), structure.pos, true)
 				run.add_effect("trap", structure.pos, structure.pos, 0.45)
 				structure.hp = 0.0
 		for enemy in run.enemies:

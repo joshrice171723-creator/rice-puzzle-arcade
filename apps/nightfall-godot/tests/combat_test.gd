@@ -55,8 +55,9 @@ func _initialize() -> void:
 	r.cast_spell("frost")
 	check(first.hp == 22 and first.chill == 3.0 and boss.hp == 974 and boss.chill == 1.5, "Frost damage matches Power and boss control duration is reduced")
 	var before: Vector2 = boss.pos
-	r.pulse()
-	check(boss.pos == before, "Boss cannot be pushed around by Pulse")
+	r.class_id = "arcanist"
+	r.class_ability()
+	check(boss.pos == before, "Automatic class pulse cannot push the boss")
 	r = Run.new()
 	var spitter := target_at(r, r.player + Vector2(200, 0), "spitter")
 	spitter.attack_wait = 0
@@ -96,8 +97,6 @@ func _initialize() -> void:
 	r.start_boss_practice()
 	check(r.practice and r.phase == "boss" and r.boss_id >= 0 and r.spells.size() == 3, "Boss practice starts the encounter with three rank-one spells")
 	for frame in 60 * 120:
-		if frame % 480 == 0:
-			r.pulse()
 		r.tick(1.0 / 60, Vector2.from_angle(r.elapsed * 0.65))
 		if r.phase in ["victory", "defeat"]:
 			break
@@ -108,8 +107,6 @@ func _initialize() -> void:
 	for frame in 60 * 480:
 		if r.phase == "upgrade":
 			r.choose_offer(0)
-		if frame % 480 == 0:
-			r.pulse()
 		r.tick(1.0 / 60, Vector2.from_angle(r.elapsed * 0.65))
 		if r.phase in ["victory", "defeat"]:
 			break

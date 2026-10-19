@@ -34,3 +34,10 @@ Field defenses and Engineer ability; distinguish the five boss encounters; finis
 - Android exports succeeded before and after the request-ID native bridge change. These exports are intermediate builds; no manual native play or actual video playback was performed in this feature session.
 
 Google's [rewarded-ad documentation](https://developers.google.com/admob/android/rewarded) states that Google-served ads deliver the earned callback before dismissal. This bridge uses Google's sample ad unit only. Mediation adapter ordering and production server verification remain separate acceptance work.
+
+## Automatic combat and spell builds
+
+- Latest user direction applied: Dodge is the sole manually triggered combat ability. Removed Pulse/class buttons and E/Q actions. Phase Step enhances a requested Dodge; other class powers trigger only with suitable nearby targets.
+- Eight attacks: Ember Bolt, Frost Ring, Chain Spark, Orbiting Wisp, Stone Lance, Consecrated Ground, Spectral Blades, Gravity Knot. Three attack slots, three passive slots, bounded ranks, five paired evolutions, separate offer RNG, checkpointed area and orbit state.
+- Upper-left artwork strip with rank diamonds, evolved label and cooldown shading; paused Attacks/Passives/Relics inspection pages. Original transparent eight-icon atlas, also used in world effects.
+- 54 new automatic-combat checks, 51 populated phone HUD checks; full current suite 740 checks passing. Static rendered fixture: `artifacts/nightfall-godot/ability-hud.png`. No manual gameplay.

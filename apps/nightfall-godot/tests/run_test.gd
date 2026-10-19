@@ -15,7 +15,7 @@ func _initialize() -> void:
 	r.paused = true
 	r.tick(1.0, Vector2.RIGHT)
 	check(r.elapsed == 0.0 and r.player == Vector2(600, 600), "Pause freezes movement and time")
-	check(not r.dodge() and not r.pulse(), "Pause rejects active abilities")
+	check(not r.dodge() and not r.class_ability(), "Pause rejects active abilities")
 	r.paused = false
 	r.elapsed = Run.DURATION - 0.01
 	for i in Run.MAX_ENEMIES:

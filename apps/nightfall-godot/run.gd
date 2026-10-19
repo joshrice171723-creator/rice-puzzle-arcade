@@ -6,6 +6,7 @@ const Content = preload("res://combat_content.gd")
 const Field = preload("res://field.gd")
 const Haven = preload("res://haven_content.gd")
 const Defenses = preload("res://defenses.gd")
+const Magic = preload("res://magic.gd")
 const MAX_ENEMIES := 120
 const MAX_SHOTS := 64
 const BOUNDS := Rect2(135, 135, 930, 930)
@@ -65,6 +66,10 @@ var build_revision := 0
 var blueprints: Array[String] = ["barricade", "trap"]
 var mastery_level := 0
 var rescued := false
+var passives: Dictionary = {}
+var offer_rng := RandomNumberGenerator.new()
+var zones: Array[Dictionary] = []
+var wisp_hits: Dictionary = {}
 
 const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
 const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
@@ -72,6 +77,7 @@ const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_cap
 func _init(seed_value: int = 41) -> void:
 	rng.seed = seed_value
 	field = Field.new(seed_value)
+	offer_rng.seed = seed_value + 3217
 
 func configure(mission_number: int, stats: Dictionary) -> void:
 	mission = clampi(mission_number, 1, Haven.MISSIONS.size())
@@ -101,7 +107,8 @@ func snapshot() -> Dictionary:
 	for key in FIELD_KEYS:
 		exploration[key] = field.get(key)
 	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
-		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level}
+		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
+		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate()}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -127,6 +134,10 @@ func restore(saved: Dictionary) -> bool:
 	blueprints.assign(saved.get("blueprints", ["barricade", "trap"]))
 	mastery_level = saved.get("mastery", 0)
 	rescued = saved.get("rescued", false)
+	passives = saved.get("passives", {}).duplicate(true)
+	offer_rng.state = saved.get("offer_rng", offer_rng.state)
+	zones.assign(saved.get("zones", []))
+	wisp_hits = saved.get("wisp_hits", {}).duplicate()
 	paused = true
 	return true
 
@@ -162,20 +173,25 @@ func class_ability() -> bool:
 		return false
 	match class_id:
 		"scavenger":
-			dodge_left = maxf(dodge_left, 0.30)
-			ability_notice = "Phase Step"
+			return false # Phase Step empowers Dodge instead of moving automatically.
 		"warden":
+			if nearest_enemy(player, 120).is_empty() and not hostile_shots.any(func(s: Dictionary): return s.pos.distance_to(player) < 100):
+				return false
 			shield = max_health() * 0.2
 			shield_left = 4.0
 		"arcanist":
+			if nearest_enemy(player, 145).is_empty():
+				return false
 			for enemy in enemies:
 				if player.distance_to(enemy.pos) <= 145:
-					enemy.hp -= 48 * spell_multiplier
+					damage_enemy(enemy, 48 * spell_scale(), player, true)
 			pulse_flash = 0.35
 		"engineer":
-			if not defenses.repair_nearest(player):
-				ability_notice = defenses.notice
+			if not defenses.repair_nearest(player, 1.0 + 0.1 * passive_rank("mechanic")):
 				return false
+		_:
+			return false
+	ability_notice = Haven.CLASSES[class_id].ability
 	class_wait = Haven.CLASSES[class_id].cooldown
 	return true
 
@@ -217,7 +233,13 @@ func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: 
 	enemy.hp -= amount * mitigation
 
 func max_health() -> float:
-	return base_health * field.health_multiplier()
+	return base_health * (field.health_multiplier() + 0.08 * passive_rank("vital"))
+
+func passive_rank(id: String) -> int:
+	return int(passives.get(id, 0))
+
+func spell_scale() -> float:
+	return spell_multiplier * (1.0 + 0.06 * passive_rank("focus")) * (1.08 if "cinder" in field.relics else 1.0)
 
 func buy_trait(id: String) -> bool:
 	if paused or phase != "shrine":
@@ -255,7 +277,7 @@ func start_boss_practice() -> void:
 	practice = true
 	phase = "boss"
 	spawn_enemy(true)
-	for id: String in Content.SPELLS:
+	for id: String in ["ember", "frost", "chain"]:
 		spells[id] = {"rank": 1, "wait": 1.0}
 
 func spawn_enemy(boss: bool = false, kind: String = "drifter") -> void:
@@ -304,84 +326,112 @@ func dodge() -> bool:
 		return false
 	dodge_wait = 3.0 * (0.85 if "feather" in field.relics else 1.0)
 	dodge_left = 0.18
-	return true
-
-func pulse() -> bool:
-	if paused or phase not in ["waves", "boss"] or pulse_wait > 0.0:
-		return false
-	pulse_wait = 8.0
-	pulse_flash = 0.35
-	for enemy in enemies:
-		if player.distance_to(enemy.pos) <= 145.0:
-			damage_enemy(enemy, 55.0, player, true)
-			if not enemy.boss:
-				enemy.pos = clamp_position(enemy.pos + player.direction_to(enemy.pos) * 45.0)
+	if class_id == "scavenger" and class_wait <= 0:
+		dodge_left = 0.30
+		class_wait = Haven.CLASSES.scavenger.cooldown
+		ability_notice = "Phase Step"
 	return true
 
 func upgrade(choice: int) -> void:
 	if phase != "upgrade" or choice not in [0, 1, 2]:
 		return
-	match choice:
-		0: damage = minf(48.0, damage + 4.0)
-		1: fire_interval = maxf(0.18, fire_interval - 0.025)
-		2: health = minf(max_health(), health + 35.0)
+	apply_passive(["rounds", "quick", "heal"][choice])
 	phase = "boss" if boss_id >= 0 else "waves"
 	offers.clear()
 
+func apply_passive(id: String) -> bool:
+	if id == "heal":
+		health = minf(max_health(), health + 35)
+		return true
+	if id not in Content.PASSIVES or passive_rank(id) >= Content.PASSIVES[id].max_rank or (not passives.has(id) and passives.size() >= 3):
+		return false
+	var previous := max_health()
+	passives[id] = passive_rank(id) + 1
+	if id == "rounds":
+		damage = minf(maxf(48.0, damage), damage + 4.0)
+	elif id == "quick":
+		fire_interval = maxf(0.18, fire_interval - 0.025)
+	health = minf(max_health(), health + max_health() - previous)
+	refresh_evolutions()
+	return true
+
+func refresh_evolutions() -> void:
+	for id: String in spells:
+		if spells[id].rank == 3 and Content.EVOLUTIONS.has(id) and passive_rank(Content.EVOLUTIONS[id].pair) > 0:
+			spells[id].evolved = true
+
 func make_offers() -> void:
 	offers.clear()
-	var available: Array[String] = []
-	for id: String in Content.SPELLS:
-		if not spells.has(id) or spells[id].rank < 3:
-			available.append(id)
 	if level == 2:
-		for id in available:
+		for id in ["ember", "frost", "chain"]:
 			offers.append(spell_offer(id))
 		return
-	if not available.is_empty():
-		offers.append(spell_offer(available[(level - 3) % available.size()]))
-	if damage < 48.0:
-		offers.append({"id": "rounds", "name": "Heavy Rounds", "description": "+4 pistol damage this run (maximum 48)."})
+	var pool: Array[Dictionary] = []
+	var learned: Array[Dictionary] = []
+	for id: String in Content.SPELLS:
+		if spells.has(id) and spells[id].rank < 3:
+			learned.append(spell_offer(id))
+		elif not spells.has(id) and spells.size() < 3:
+			pool.append(spell_offer(id))
+	# At least one current spell upgrade when possible; the other slots vary.
+	if not learned.is_empty():
+		var index := offer_rng.randi_range(0, learned.size() - 1)
+		offers.append(learned[index])
+		learned.remove_at(index)
+	pool.append_array(learned)
+	for id: String in Content.PASSIVES:
+		if passive_rank(id) >= Content.PASSIVES[id].max_rank or (not passives.has(id) and passives.size() >= 3):
+			continue
+		if (id == "rounds" and damage >= 48) or (id == "quick" and fire_interval <= 0.18):
+			continue
+		pool.append({"id": id, "name": "%s • Rank %d/%d" % [Content.PASSIVES[id].name, passive_rank(id) + 1, Content.PASSIVES[id].max_rank], "description": Content.PASSIVES[id].description})
 	if health < max_health():
-		offers.append({"id": "heal", "name": "Field Dressing", "description": "Recover 35 HP now, up to %.0f." % max_health()})
-	if offers.size() < 3 and fire_interval > 0.18:
-		offers.append({"id": "quick", "name": "Quick Hands", "description": "Fire 0.025s faster (minimum 0.18s)."})
-	for id in available:
-		if offers.size() >= 3:
-			break
-		if not offers.any(func(offer: Dictionary) -> bool: return offer.id == id):
-			offers.append(spell_offer(id))
-	# Level 12 allows only eleven selections, so upgrades cannot all be exhausted.
-	offers = offers.slice(0, 3)
+		pool.append({"id": "heal", "name": "Field Dressing", "description": "Recover 35 HP now, up to %.0f. Does not use a passive slot." % max_health()})
+	while offers.size() < 3 and not pool.is_empty():
+		var index := offer_rng.randi_range(0, pool.size() - 1)
+		offers.append(pool[index])
+		pool.remove_at(index)
 
-func spell_offer(id: String) -> Dictionary:
-	var rank := int(spells[id].rank) + 1 if spells.has(id) else 1
+func spell_offer(id: String, current_rank: int = 0) -> Dictionary:
+	var rank := current_rank if current_rank > 0 else (int(spells[id].rank) + 1 if spells.has(id) else 1)
 	var info: Dictionary = Content.SPELLS[id]
-	var scale := 1.0 + 0.25 * (rank - 1)
+	var scale := (1.0 + 0.25 * (rank - 1)) * spell_scale()
 	var detail := ""
 	match id:
 		"ember": detail = "%.0f impact + %.0f burn over 2s. One target." % [36 * scale, 12 * scale]
 		"frost": detail = "%.0f nearby damage. Chill foes for 3s; bosses resist." % (26 * scale)
 		"chain": detail = "%.0f / %.0f / %.0f damage across 3 nearby foes." % [28 * scale, 18 * scale, 12 * scale]
+		"wisp": detail = "%.0f contact damage; at most one hit per enemy every 1.1s." % (10 * scale)
+		"lance": detail = "%.0f damage through up to 3 targets in a narrow line." % (56 * scale)
+		"ground": detail = "%.0f damage per second in a fixed circle for 4s." % (8 * scale)
+		"blades": detail = "Two blades each deal %.0f damage." % (22 * scale)
+		"gravity": detail = "%.0f area damage and pull. Bosses resist displacement." % (16 * scale)
+	if rank == 3 and Content.EVOLUTIONS.has(id) and passive_rank(Content.EVOLUTIONS[id].pair) > 0:
+		return {"id": id, "name": Content.EVOLUTIONS[id].name + " • Evolve", "description": Content.EVOLUTIONS[id].description}
 	return {"id": id, "name": "%s  •  Rank %d/3" % [info.name, rank],
-		"description": "%s\n%s • automatic, every %.0fs" % [detail,
-			"Learn" if rank == 1 else "Upgrade", info.cooldown]}
+		"description": "%s\n%s • %s" % [detail, "Learn" if rank == 1 else "Upgrade", "continuous orbit" if id == "wisp" else "every %.1fs" % (info.cooldown * (1.0 - minf(0.3, 0.06 * passive_rank("channel"))))]}
 
 func choose_offer(index: int) -> void:
 	if paused or phase != "upgrade" or index < 0 or index >= offers.size():
 		return
 	var id: String = offers[index].id
-	match id:
-		"rounds": upgrade(0)
-		"quick": upgrade(1)
-		"heal": upgrade(2)
-		_:
-			if spells.has(id):
-				spells[id].rank = mini(3, spells[id].rank + 1)
-			else:
-				spells[id] = {"rank": 1, "wait": 0.25}
-			phase = "boss" if boss_id >= 0 else "waves"
-			offers.clear()
+	if id == "heal" or Content.PASSIVES.has(id):
+		if not apply_passive(id):
+			return
+	elif Content.SPELLS.has(id):
+		if spells.has(id):
+			spells[id].rank = mini(3, spells[id].rank + 1)
+			if spells[id].rank == 3 and Content.EVOLUTIONS.has(id) and passive_rank(Content.EVOLUTIONS[id].pair) > 0:
+				spells[id].evolved = true
+		elif spells.size() < 3:
+			spells[id] = {"rank": 1, "wait": 0.25}
+		else:
+			return
+	else:
+		return
+	refresh_evolutions()
+	phase = "boss" if boss_id >= 0 else "waves"
+	offers.clear()
 
 func nearest_enemy(from: Vector2, radius: float, excluded: Array[int] = []) -> Dictionary:
 	var found: Dictionary = {}
@@ -403,23 +453,27 @@ func cast_spell(id: String) -> bool:
 	var target := nearest_enemy(player, 425.0 if id != "frost" else 150.0)
 	if target.is_empty():
 		return false
-	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * (1.08 if "cinder" in field.relics else 1.0) * spell_multiplier
+	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * spell_scale()
 	match id:
 		"ember":
 			if shots.size() >= MAX_SHOTS:
 				return false
 			shots.append({"pos": player, "velocity": player.direction_to(target.pos) * 500.0,
-				"life": 0.85, "kind": "ember", "damage": 36.0 * multiplier, "burn_dps": 6.0 * multiplier})
+				"life": 0.85, "kind": "ember", "damage": 36.0 * multiplier, "burn_dps": 6.0 * multiplier,
+				"splash": 8.0 * spell_scale() if spells[id].get("evolved", false) else 0.0})
 		"frost":
 			for enemy in enemies:
 				if enemy.hp > 0 and player.distance_to(enemy.pos) <= 150.0:
 					damage_enemy(enemy, 26.0 * multiplier, player, true)
 					enemy.chill = maxf(enemy.chill, 1.5 if enemy.boss else 3.0)
 			add_effect("frost", player, player, 0.45)
+			if spells[id].get("evolved", false):
+				shield = maxf(shield, max_health() * 0.08)
+				shield_left = maxf(shield_left, 3.0)
 		"chain":
 			var hit: Array[int] = []
 			var from := player
-			for amount in [28.0, 18.0, 12.0]:
+			for amount in ([28.0, 18.0, 12.0, 6.0] if spells[id].get("evolved", false) else [28.0, 18.0, 12.0]):
 				if target.is_empty():
 					break
 				damage_enemy(target, amount * multiplier, from, true)
@@ -427,6 +481,8 @@ func cast_spell(id: String) -> bool:
 				add_effect("chain", from, target.pos)
 				from = target.pos
 				target = nearest_enemy(from, 180.0, hit)
+		_:
+			return Magic.cast(self, id, multiplier, target)
 	return true
 
 func hostile_projectile(from: Vector2, direction: Vector2, amount: float, speed: float = 170.0) -> void:
@@ -520,7 +576,7 @@ func tick(delta: float, direction: Vector2) -> void:
 	if direction.length_squared() > 0.01:
 		facing = direction.normalized()
 	var move := facing if dodge_left > 0.0 else direction.limit_length()
-	var speed := 125.0 * speed_multiplier * (0.95 if "obsidian" in field.relics else 1.0)
+	var speed := 125.0 * minf(1.3, speed_multiplier * (1.0 + 0.05 * passive_rank("fleet"))) * (0.95 if "obsidian" in field.relics else 1.0)
 	player = clamp_position(player + move * (520.0 if dodge_left > 0.0 else speed) * delta)
 	if benchmark_count == 0 and phase == "waves" and elapsed >= duration:
 		phase = "boss"
@@ -539,16 +595,20 @@ func tick(delta: float, direction: Vector2) -> void:
 	for effect in effects:
 		effect.life -= delta
 	effects = effects.filter(func(effect: Dictionary) -> bool: return effect.life > 0)
+	class_ability()
 	for id: String in spells:
+		if id == "wisp":
+			continue
 		spells[id].wait = maxf(0, spells[id].wait - delta)
 		if spells[id].wait == 0 and cast_spell(id):
-			spells[id].wait = Content.SPELLS[id].cooldown
+			spells[id].wait = Content.SPELLS[id].cooldown * (1.0 - minf(0.3, 0.06 * passive_rank("channel")))
+	Magic.tick(self, delta)
 	if fire_wait <= 0.0 and not enemies.is_empty() and shots.size() < MAX_SHOTS:
 		var nearest: Dictionary = enemies[0]
 		for enemy in enemies:
 			if player.distance_squared_to(enemy.pos) < player.distance_squared_to(nearest.pos):
 				nearest = enemy
-		shots.append({"pos": player, "velocity": player.direction_to(nearest.pos) * 500.0, "life": 0.85})
+		shots.append({"pos": player, "velocity": player.direction_to(nearest.pos) * 500.0, "life": 0.85, "pierce": passive_rank("pierce"), "hits": []})
 		fire_wait = fire_interval
 	for enemy in enemies:
 		tick_enemy(enemy, delta)
@@ -564,13 +624,21 @@ func tick(delta: float, direction: Vector2) -> void:
 		shot.life -= delta
 		shot.pos += shot.velocity * delta
 		for enemy in enemies:
-			if enemy.hp > 0.0 and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
-				damage_enemy(enemy, shot.get("damage", damage * field.damage_multiplier()), shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") == "ember")
+			if enemy.hp > 0.0 and enemy.id not in shot.get("hits", []) and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
+				damage_enemy(enemy, shot.get("damage", damage * field.damage_multiplier()), shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol")
 				if shot.get("kind", "pistol") == "ember":
 					enemy.burn = maxf(enemy.burn, 2.0)
 					enemy.burn_dps = maxf(enemy.burn_dps, shot.burn_dps)
 					add_effect("ember", enemy.pos, enemy.pos)
-				shot.life = 0.0
+					if shot.get("splash", 0.0) > 0:
+						for nearby in enemies:
+							if nearby.id != enemy.id and nearby.pos.distance_to(enemy.pos) <= 65:
+								damage_enemy(nearby, shot.splash, enemy.pos, true)
+				if shot.get("pierce", 0) > 0:
+					shot.pierce -= 1
+					shot.hits.append(enemy.id)
+				else:
+					shot.life = 0.0
 				break
 	shots = shots.filter(func(s: Dictionary) -> bool: return s.life > 0.0)
 	for i in range(enemies.size() - 1, -1, -1):
@@ -592,7 +660,7 @@ func tick(delta: float, direction: Vector2) -> void:
 	if phase not in ["waves", "boss"]:
 		return
 	for i in range(pickups.size() - 1, -1, -1):
-		if pickups[i].distance_to(player) < 70.0 * field.pickup_multiplier() * pickup_multiplier:
+		if pickups[i].distance_to(player) < 70.0 * field.pickup_multiplier() * pickup_multiplier * (1.0 + 0.2 * passive_rank("magnet") + (0.2 if spells.get("wisp", {}).get("evolved", false) else 0.0)):
 			pickups[i] = pickups[i].move_toward(player, 220.0 * delta)
 		if pickups[i].distance_to(player) < 14.0:
 			xp += 1
@@ -615,8 +683,9 @@ func hurt(amount: float) -> void:
 	var absorbed := minf(shield, reduced)
 	shield -= absorbed
 	health = maxf(0.0, health - (reduced - absorbed))
-	damage_taken += 1
-	last_damage_at = elapsed
+	if reduced > absorbed:
+		damage_taken += 1
+		last_damage_at = elapsed
 	hurt_wait = 0.8
 	if health > 0 and health <= max_health() * 0.25 and medkit_fraction > 0 and not medkit_used:
 		medkit_used = true

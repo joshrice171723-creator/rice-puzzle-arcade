@@ -6,11 +6,13 @@ const Profile = preload("res://profile.gd")
 const HavenUI = preload("res://haven_ui.gd")
 const RewardFlow = preload("res://reward_flow.gd")
 const Soundscape = preload("res://soundscape.gd")
+const PowerHUD = preload("res://power_hud.gd")
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const SHADOW = preload("res://assets/shadow.svg")
 const EXPERIENCE = preload("res://assets/experience.svg")
 const PROPS = preload("res://assets/field-props.png")
+const SPELL_ICONS = preload("res://assets/ability-icons.png")
 const PROP_RECTS := [Rect2(0, 0, 440, 455), Rect2(455, 0, 435, 455), Rect2(915, 45, 390, 400), Rect2(1350, 0, 420, 455), Rect2(0, 475, 500, 410), Rect2(500, 475, 430, 410), Rect2(940, 520, 430, 350), Rect2(1430, 450, 330, 435)]
 const INK := Color("101a32")
 const GOLD := Color("ffd27c")
@@ -29,7 +31,6 @@ var xp_bar: ProgressBar
 var boss_bar: ProgressBar
 var metrics: Label
 var dodge_button: Button
-var pulse_button: Button
 var pause_button: Button
 var modal: PanelContainer
 var modal_body: VBoxContainer
@@ -59,12 +60,15 @@ var attempt_id := 0
 var checkpoint_wait := 0.0
 var reward_receipt: Dictionary = {}
 var diagnostics := false
-var class_button: Button
 var last_checkpoint_key := ""
 var build_button: Button
 var reward_flow = RewardFlow.new()
 var soundscape: Node
 var previous_health := 0.0
+var power_hud: Control
+var power_view := false
+var power_page := "Attacks"
+var was_paused := false
 
 func _ready() -> void:
 	if not testing:
@@ -174,12 +178,14 @@ func build_ui() -> void:
 	metrics.add_theme_font_size_override("font_size", 12)
 	metrics.add_theme_color_override("font_color", Color("d9def0"))
 	layer.add_child(metrics)
+	power_hud = PowerHUD.new()
+	power_hud.position = Vector2(16, 149)
+	power_hud.size = Vector2(230, 54)
+	power_hud.inspect_requested.connect(open_power_view)
+	layer.add_child(power_hud)
 	pause_button = make_button("II", func(): run.paused = not run.paused; clear_input(), layer, 44)
 	pause_button.position = Vector2(366, 157)
 	pause_button.size.x = 48
-	pulse_button = make_button("PULSE", func(): run.pulse(), layer, 64)
-	pulse_button.position = Vector2(250, 600)
-	pulse_button.size.x = 78
 	dodge_button = make_button("DODGE", func(): run.dodge(), layer, 64)
 	dodge_button.position = Vector2(330, 668)
 	dodge_button.size.x = 88
@@ -215,9 +221,6 @@ func build_ui() -> void:
 	modal_title.add_theme_color_override("font_color", GOLD)
 	modal_body.add_child(modal_title)
 	modal_body.minimum_size_changed.connect(func(): fit_modal.call_deferred())
-	class_button = make_button("PHASE", func(): run.class_ability(), layer, 54)
-	class_button.position = Vector2(330, 594)
-	class_button.size.x = 88
 	home = HavenUI.new()
 	home.profile = profile
 	home.mission_requested.connect(start_campaign)
@@ -230,6 +233,7 @@ func build_ui() -> void:
 		home.hide()
 
 func show_haven() -> void:
+	power_view = false
 	run.paused = true
 	clear_input()
 	save_checkpoint()
@@ -371,12 +375,12 @@ func update_modal() -> void:
 	if is_instance_valid(home) and home.visible:
 		modal.hide()
 		return
-	var screen: String = "ad" if not reward_flow.pending.is_empty() else ("pause" if run.paused and run.phase not in ["victory", "defeat"] else run.phase)
+	var screen: String = "ad" if not reward_flow.pending.is_empty() else ("powers" if power_view else ("pause" if run.paused and run.phase not in ["victory", "defeat"] else run.phase))
 	var screen_key := screen + (str(run.field.revision) if screen in ["shrine", "pack"] else (str(run.build_revision) if screen == "build" else ""))
 	if screen_key == last_screen:
 		return
 	last_screen = screen_key
-	modal.visible = screen in ["pause", "upgrade", "victory", "defeat", "shrine", "pack", "build", "ad"]
+	modal.visible = screen in ["pause", "upgrade", "victory", "defeat", "shrine", "pack", "build", "ad", "powers"]
 	if not modal.visible:
 		return
 	clear_input()
@@ -386,6 +390,7 @@ func update_modal() -> void:
 			child.queue_free()
 	modal.size.y = 0
 	match screen:
+		"powers": PowerHUD.describe(self)
 		"ad":
 			modal_title.text = "Rescue video"
 			FieldUI.label(self, reward_flow.message)
@@ -397,7 +402,7 @@ func update_modal() -> void:
 		"pause":
 			modal_title.text = "Nightfall\nBlackout Outskirts"
 			var description := Label.new()
-			description.text = "Survive the waves. Defeat %s.\nHold shrine rings to gain temporary powers.\nProtect valuable loot in your field pack.\nMove: WASD / drag left side\nDodge: Space  •  Ability: Q" % run.boss_name
+			description.text = "Survive the waves. Defeat %s.\nAttacks and magic fire automatically.\nHold shrine rings to gain temporary powers.\nMove: WASD / drag left side\nDodge: Space / Dodge button" % run.boss_name
 			description.add_theme_font_size_override("font_size", 14)
 			modal_body.add_child(description)
 			make_button("Enter courtyard" if run.elapsed == 0.0 else "Resume", func(): run.paused = false, modal_body)
@@ -459,6 +464,7 @@ func update_modal() -> void:
 			make_button("Return to Haven", finish_to_haven, modal_body)
 
 func restart() -> void:
+	power_view = false
 	run = Run.new()
 	reward_flow = RewardFlow.new()
 	frames.clear()
@@ -489,14 +495,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE:
-			run.paused = not run.paused
+			if power_view:
+				close_power_view()
+			else:
+				run.paused = not run.paused
 			clear_input()
 		elif event.keycode == KEY_SPACE:
 			run.dodge()
-		elif event.keycode == KEY_E:
-			run.pulse()
-		elif event.keycode == KEY_Q:
-			run.class_ability()
 		elif event.keycode == KEY_TAB:
 			run.open_pack()
 		elif event.keycode == KEY_B:
@@ -546,9 +551,9 @@ func _process(delta: float) -> void:
 	previous_health = run.health
 	for control in [hud.get_parent().get_parent(), metrics, dodge_button, pause_button]:
 		control.visible = in_field
-	pulse_button.visible = in_field and run.mission == 0
-	class_button.visible = in_field and run.mission > 0
-	class_button.text = "%.1fs" % run.class_wait if run.class_wait > 0 else ("PHASE" if run.class_id == "scavenger" else "REPAIR")
+	pause_button.disabled = power_view or not reward_flow.pending.is_empty()
+	power_hud.visible = in_field and not diagnostics and run.benchmark_count == 0
+	power_hud.update_run(run)
 	if in_field and attempt_id > 0:
 		checkpoint_wait += delta
 		if checkpoint_wait >= 10.0 or (run.phase in ["upgrade", "shrine", "pack", "build"] and last_checkpoint_key != run.phase + str(run.field.revision)):
@@ -579,7 +584,6 @@ func _process(delta: float) -> void:
 			boss_bar.max_value = enemy.max_hp
 			boss_bar.value = enemy.hp
 	dodge_button.text = "%.1fs" % run.dodge_wait if run.dodge_wait > 0 else "DODGE"
-	pulse_button.text = "%.1fs" % run.pulse_wait if run.pulse_wait > 0 else "PULSE"
 	frames.append(delta * 1000.0)
 	if frames.size() > 300:
 		frames.pop_front()
@@ -590,10 +594,7 @@ func _process(delta: float) -> void:
 		if run.benchmark_count > 0:
 			metrics.text = "%d FPS  •  p95 %.1f ms  •  %d enemies\nPhysics peak %.2f ms  •  %d shots  •  %d defeated" % [Engine.get_frames_per_second(), sorted[int((sorted.size() - 1) * 0.95)], run.enemies.size(), physics_ms, run.shots.size(), run.kills]
 		else:
-			var learned: PackedStringArray = []
-			for id: String in run.spells:
-				learned.append("%s %d" % [Run.Content.SPELLS[id].name, run.spells[id].rank])
-			metrics.text = "%s  •  %d defeated\n%s" % ["Defeat The Breaker" if run.boss_id >= 0 else Run.Content.wave_at(run.elapsed).name, run.kills, "  /  ".join(learned) if not learned.is_empty() else "Collect violet XP to learn magic"]
+			metrics.text = "%s  •  %d defeated" % ["Defeat " + run.boss_name if run.boss_id >= 0 else Run.Content.wave_at(run.elapsed).name, run.kills]
 		sample_time = 0.0
 		physics_ms = 0.0
 	update_modal()
@@ -611,6 +612,22 @@ func _process(delta: float) -> void:
 func capture_frame(destination: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(destination)
+
+func open_power_view(_id: String = "") -> void:
+	if home.visible or run.phase not in ["waves", "boss"] or not reward_flow.pending.is_empty():
+		return
+	if not power_view:
+		was_paused = run.paused
+	power_view = true
+	power_page = "Attacks"
+	run.paused = true
+	clear_input()
+	last_screen = ""
+
+func close_power_view() -> void:
+	power_view = false
+	run.paused = was_paused
+	last_screen = ""
 
 func finish_report() -> void:
 	measured_frames.sort()
@@ -639,6 +656,12 @@ func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: floa
 
 func _draw() -> void:
 	draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
+	for zone in run.zones:
+		var center: Vector2 = zone.pos + world_offset
+		draw_spell_icon("ground", center, Vector2(zone.radius * 2, zone.radius * 1.4), Color(1, 1, 1, 0.35))
+		draw_circle(center, zone.radius, Color(0.67, 0.5, 1, 0.09))
+		draw_arc(center, zone.radius, 0, TAU, 48, Color(0.8, 0.65, 1, 0.45), 2)
+		draw_arc(center, zone.radius * 0.8, anim_time, anim_time + TAU * zone.life / 4.0, 40, VIOLET, 2)
 	if not run.practice and run.benchmark_count == 0:
 		draw_field_sites()
 		draw_defenses()
@@ -695,7 +718,17 @@ func _draw() -> void:
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
 	for shot in run.shots:
 		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
-		draw_line(at - shot.velocity.normalized() * 13, at, Color("ff875e") if shot.get("kind", "pistol") == "ember" else GOLD, 5 if shot.get("kind", "pistol") == "ember" else 3, true)
+		var kind: String = shot.get("kind", "pistol")
+		if kind == "blade":
+			var axis: Vector2 = shot.velocity.normalized()
+			draw_colored_polygon(PackedVector2Array([at + axis * 15, at + axis.orthogonal() * 5, at - axis * 10, at - axis.orthogonal() * 5]), Color("cbd5ff"))
+		else:
+			draw_line(at - shot.velocity.normalized() * 13, at, Color("ff875e") if kind == "ember" else GOLD, 5 if kind == "ember" else 3, true)
+	if run.spells.has("wisp"):
+		var wisp: Vector2 = Run.Magic.wisp_position(run) + world_offset - Vector2(0, 18)
+		draw_spell_icon("wisp", wisp, Vector2(32, 32))
+	if run.shield > 0:
+		draw_arc(run.player + world_offset - Vector2(0, 18), 30, 0, TAU, 32, Color("b5dfff"), 2)
 	for shot in run.hostile_shots:
 		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
 		draw_circle(at, 6, Color("ff7181"))
@@ -706,12 +739,20 @@ func _draw() -> void:
 		var fade: float = effect.life / effect.duration * (0.35 if profile.data.settings.reduced_effects else 1.0)
 		match effect.kind:
 			"chain": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.75, 0.6, 1, fade), 3)
-			"frost": draw_arc(from, 150 * (1.0 - fade), 0, TAU, 48, Color(0.6, 0.85, 1, fade), 4)
+			"frost":
+				draw_arc(from, 150 * (1.0 - fade), 0, TAU, 48, Color(0.6, 0.85, 1, fade), 4)
+				draw_spell_icon("frost", from, Vector2.ONE * (70 + 150 * (1 - fade)), Color(1, 1, 1, fade * 0.35))
 			"ember": draw_circle(from - Vector2(0, 18), 12 * (1.0 - fade), Color(1, 0.4, 0.2, fade))
 			"slam": draw_arc(from, 80, 0, TAU, 48, Color(1, 0.35, 0.4, fade), 5)
 			"turret": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(1, 0.82, 0.5, fade), 2)
 			"trap": draw_arc(from, 80 * (1.0 - fade), 0, TAU, 32, Color(1, 0.48, 0.25, fade), 5)
 			"summon": draw_arc(from, 110, 0, TAU, 32, Color(0.7, 0.5, 1, fade), 4)
+			"lance": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.9, 0.8, 0.6, fade), 6)
+			"gravity":
+				draw_arc(from, 130 * fade, 0, TAU, 48, Color(0.65, 0.45, 1, fade), 4)
+				for ray in 6:
+					var axis := Vector2.from_angle(ray * TAU / 6 + anim_time)
+					draw_line(from + axis * 12, from + axis * 100 * fade, Color(0.7, 0.6, 1, fade * 0.5), 2)
 	if run.pulse_flash > 0:
 		draw_arc(run.player + world_offset, 145 * (1.0 - run.pulse_flash / 0.35), 0, TAU, 64, VIOLET, 4, true)
 	if run.hurt_wait > 0.55 and not profile.data.settings.reduced_effects:
@@ -774,3 +815,8 @@ func draw_defenses() -> void:
 
 func draw_prop(index: int, position_value: Vector2, size_value: Vector2, tint: Color = Color.WHITE) -> void:
 	draw_texture_rect_region(PROPS, Rect2(position_value - Vector2(size_value.x / 2, size_value.y * 0.86), size_value), PROP_RECTS[index], tint)
+
+func draw_spell_icon(id: String, at: Vector2, size_value: Vector2, tint: Color = Color.WHITE) -> void:
+	var index := PowerHUD.ORDER.find(id)
+	var cell := Vector2(SPELL_ICONS.get_width() / 4.0, SPELL_ICONS.get_height() / 2.0)
+	draw_texture_rect_region(SPELL_ICONS, Rect2(at - size_value / 2, size_value), Rect2(Vector2(index % 4, index / 4) * cell, cell), tint)

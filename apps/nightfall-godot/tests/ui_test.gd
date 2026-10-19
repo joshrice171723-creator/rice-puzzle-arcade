@@ -20,7 +20,7 @@ func verify_layout() -> void:
 		for frame in 8:
 			await process_frame
 		var bounds := root.get_visible_rect()
-		for control in [arena.modal, arena.dodge_button, arena.pulse_button, arena.pause_button]:
+		for control in [arena.modal, arena.dodge_button, arena.build_button, arena.pause_button]:
 			checks += 1
 			if not bounds.encloses(control.get_global_rect()):
 				failures += 1

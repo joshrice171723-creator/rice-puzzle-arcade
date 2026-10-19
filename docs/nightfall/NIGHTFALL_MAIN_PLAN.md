@@ -4,6 +4,8 @@ Saved October 18, 2026. Canonical planning baseline approved for preservation by
 
 ## Decision precedence
 
+**Combat input amendment, October 18, 2026:** Joshua requested automatic attacks and Dodge as the only manually activated combat ability. Weapons, learned spells, turrets, and offensive/support class powers activate automatically when appropriate. Scavenger Phase Step enhances the player's next Dodge when ready; it never moves the character without input. Movement, upgrade selections, equipment, shrine choices, and construction remain player decisions. This supersedes earlier manual class-power controls. The upper-left attack strip displays selected abilities, ranks/evolutions and cooldowns; tapping inspects a paused run-build panel. Area attacks must communicate their coverage visually.
+
 Implementation status, October 18, 2026: Joshua authorized starting the engineering plan. The isolated Godot proof is underway; see [engine proof verification](ENGINE_PROOF_QA.md) for what is built and tested. Historical planning-only statements preserved below describe the design discussion at the time, not a reversal of this later authorization.
 
 The [Nightfall engineering and delivery plan](BUILD_PLAN.md) defines the proposed toolchain, first playable milestone, production order, and acceptance gates. It is planning only; its Godot evaluation is a proposed architecture revision, not an implemented migration.

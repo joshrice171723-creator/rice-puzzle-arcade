@@ -13,10 +13,10 @@ const BASE_STATS := {
 	"charm": {"power": 0.0, "hp": 10.0, "armor": 0.0},
 	"gadget": {"power": 0.0, "hp": 0.0, "armor": 0.0}}
 const CLASSES := {
-	"scavenger": {"name": "Scavenger", "description": "+5% movement speed, +15% XP pickup reach.", "unlock": "Available", "ability": "Phase Step", "cooldown": 12.0},
-	"engineer": {"name": "Engineer", "description": "Structures gain +10% health. Repair Swarm restores a structure.", "unlock": "Clear Outskirts mission 4", "ability": "Repair Swarm", "cooldown": 24.0},
-	"warden": {"name": "Warden", "description": "+10% maximum health and +18 armor. Aegis absorbs damage.", "unlock": "Clear Zone 2 (future content)", "ability": "Aegis", "cooldown": 22.0},
-	"arcanist": {"name": "Arcanist", "description": "+8% elemental damage. Rift Pulse strikes nearby enemies.", "unlock": "Zone 3 mission 3 (future content)", "ability": "Rift Pulse", "cooldown": 16.0}}
+	"scavenger": {"name": "Scavenger", "description": "+5% speed, +15% XP reach. Every 12s, your next Dodge becomes a longer Phase Step.", "unlock": "Available", "ability": "Phase Step", "cooldown": 12.0},
+	"engineer": {"name": "Engineer", "description": "Structures gain +10% HP. Repair Swarm automatically repairs a nearby damaged structure.", "unlock": "Clear Outskirts mission 4", "ability": "Repair Swarm", "cooldown": 24.0},
+	"warden": {"name": "Warden", "description": "+10% HP, +18 armor. Aegis automatically shields you when threats approach.", "unlock": "Clear Zone 2 (future content)", "ability": "Aegis", "cooldown": 22.0},
+	"arcanist": {"name": "Arcanist", "description": "+8% elemental damage. Rift Pulse automatically strikes nearby enemies.", "unlock": "Zone 3 mission 3 (future content)", "ability": "Rift Pulse", "cooldown": 16.0}}
 const MISSIONS := [
 	{"name": "Garage Lights", "boss": "Garage Mauler", "duration": 240.0, "health": 700.0, "pressure": 0.85, "attacks": ["slam", "rush"], "intro": "Scavenge the garages before the Mauler arrives."},
 	{"name": "Beyond the Fence", "boss": "Fence Runner", "duration": 240.0, "health": 820.0, "pressure": 0.95, "attacks": ["rush", "rush", "toss"], "intro": "Keep a path open through the yard."},
