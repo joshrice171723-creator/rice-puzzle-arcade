@@ -79,7 +79,34 @@ The latest visual set covers proximity charging for the fast shop and slow Relic
 
 ![Mission preview and rescue](art-concepts/nightfall-b-mission-rescue.png)
 
-## Current target: simpler Haven and equipment layout
+## Four destinations and sharper interface proposal — October 18
+
+The four individual screen concepts preserve the navigation and feature destinations below. Joshua then requested a less bulky, slightly sharper presentation. The Base/Gear refinement is the latest proposed visual treatment for all four screens, pending review: slimmer borders, restrained highlights, crisper illustrated silhouettes, smaller headings and navigation icons, and an amber active-tab underline instead of a large gold tile. Keep generous invisible touch targets (at least 44 logical pixels) and readable text; smaller artwork must not make controls harder to tap.
+
+![Sharper Base and Gear proposal](art-concepts/nightfall-b-sharper-base-gear.png)
+
+| Tab | Illustrated icon | Destination |
+| --- | --- | --- |
+| Venture | Parchment map and compass | Expeditions, zone selection, five mission nodes, rewards, contracts and boss practice |
+| Gear | Armored vest | Selected hero, eight equipped slots, Power/HP and five-column vertically scrolling inventory |
+| Base | Beacon keep | Haven buildings and explicit Workshop, Infirmary, Storehouse, Training, Arcanum and Expeditions shortcuts |
+| Class | Fanned class crests | Character selection, permanent mastery and talent milestones |
+
+Base's Expeditions shortcut opens Venture; Training opens existing boss practice; Arcanum opens the ability guide. Infirmary remains an explicit destination. Avoid duplicating the campaign selector on Base. Gear keeps Weapon/Ring/Pendant/Gadget on the left and Head/Chest/Pants/Boots on the right. Only its inventory scrolls; hero, equipped slots, stats, header and navigation remain fixed. Class mastery is permanent and separate from experience gained during a mission. Its unlock labels are Engineer: mission 1-4, Warden: Zone 2, Arcanist: mission 3-3. These concepts add no new unlock or economy rules.
+
+The following individual screens establish content and routes; their heavier frames are superseded by the sharper proposal above if approved. Wallet values and item statistics are illustrative. Zone 1/20 represents the planned campaign, not proof that all twenty zones exist. Use one zone-selection control in implementation, even where the Venture illustration repeats arrows.
+
+![Venture screen concept](art-concepts/nightfall-b-venture-screen.png)
+
+![Gear screen concept](art-concepts/nightfall-b-gear-screen.png)
+
+![Base screen concept](art-concepts/nightfall-b-base-screen.png)
+
+![Class screen concept](art-concepts/nightfall-b-class-screen.png)
+
+All five images were made with built-in image_gen. Exact prompts are recorded in [BEACONBOUND_PROMPTS.md](art-concepts/BEACONBOUND_PROMPTS.md). These are saved visual previews, not installed screens. This pass changes no runtime code or gameplay. The Base tab rename already exists; the visual overhaul and eight-slot system still require implementation.
+
+## Earlier target: simpler Haven and equipment layout
 
 Joshua supplied simpler home/equipment references after the detailed courtyard concepts below. This steering supersedes the elaborate scenic presentation: use a clean cobalt background, a compact central base model or character, large readable icons, short labels, and four bottom tabs. Keep Nightfall's original characters and magical scavenger identity. Do not reproduce the reference game's shop clutter or green interface.
 
