@@ -1,0 +1,135 @@
+{
+  "runtime_path": "apps/nightfall-godot/assets/polish-v2/chests.png",
+  "runtime_dimensions": [
+    1536,
+    1536
+  ],
+  "source_path": "docs/nightfall/visual-iterations/menu-v2/chests-source.png",
+  "source_dimensions": [
+    1254,
+    1254
+  ],
+  "prompt_path": "CHESTS_PROMPT.txt",
+  "production": "built-in imagegen, true transparency; original retained; components cropped with 6 source pixels padding then uniformly scaled by one common factor and aligned at cell y640. No code or material redraw.",
+  "common_scale": 1.0546875,
+  "alpha_range": [
+    0,
+    255
+  ],
+  "minimum_fully_transparent_gutter": 70,
+  "atlas_note": "Use cell_region for identical optical scaling and baseline in equal UI rectangles. Use tight_region when individually fitting icon art. Regions are [x,y,width,height]. Do not nine-slice illustrated icons.",
+  "elements": [
+    {
+      "name": "supply_crate",
+      "cell_region": [
+        0,
+        0,
+        768,
+        768
+      ],
+      "tight_region": [
+        87,
+        135,
+        593,
+        505
+      ],
+      "alpha_bounds": [
+        88,
+        138,
+        589,
+        498
+      ],
+      "source_crop": [
+        58,
+        124,
+        620,
+        603
+      ],
+      "bottom_alignment_in_cell": 640
+    },
+    {
+      "name": "weapons_cache",
+      "cell_region": [
+        768,
+        0,
+        768,
+        768
+      ],
+      "tight_region": [
+        853,
+        185,
+        598,
+        455
+      ],
+      "alpha_bounds": [
+        856,
+        185,
+        595,
+        455
+      ],
+      "source_crop": [
+        652,
+        175,
+        1219,
+        606
+      ],
+      "bottom_alignment_in_cell": 640
+    },
+    {
+      "name": "armor_locker",
+      "cell_region": [
+        0,
+        768,
+        768,
+        768
+      ],
+      "tight_region": [
+        90,
+        868,
+        587,
+        540
+      ],
+      "alpha_bounds": [
+        94,
+        869,
+        580,
+        538
+      ],
+      "source_crop": [
+        57,
+        657,
+        614,
+        1169
+      ],
+      "bottom_alignment_in_cell": 640
+    },
+    {
+      "name": "engineers_case",
+      "cell_region": [
+        768,
+        768,
+        768,
+        768
+      ],
+      "tight_region": [
+        847,
+        968,
+        610,
+        440
+      ],
+      "alpha_bounds": [
+        847,
+        968,
+        609,
+        440
+      ],
+      "source_crop": [
+        646,
+        742,
+        1224,
+        1159
+      ],
+      "bottom_alignment_in_cell": 640
+    }
+  ]
+}

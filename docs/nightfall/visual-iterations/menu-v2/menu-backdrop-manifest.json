@@ -1,0 +1,16 @@
+{
+  "generated_source": "docs/nightfall/visual-iterations/menu-v2/menu-backdrop-source.png",
+  "source_dimensions": [
+    941,
+    1672
+  ],
+  "runtime": "apps/nightfall-godot/assets/polish-v2/menu-backdrop.png",
+  "runtime_dimensions": [
+    864,
+    1536
+  ],
+  "runtime_aspect": "9:16",
+  "production": "built-in imagegen, opaque output; original preserved; Lanczos runtime normalization only",
+  "prompt": "MENU_BACKDROP_PROMPT.txt",
+  "approval": "Unused alternate. User subsequently preferred retaining the existing forest backdrop; this quiet cobalt asset is not the selected menu background."
+}

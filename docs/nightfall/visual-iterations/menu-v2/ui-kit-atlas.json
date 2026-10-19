@@ -1,0 +1,315 @@
+{
+  "source_dimensions": [
+    1254,
+    1254
+  ],
+  "runtime_dimensions": [
+    1536,
+    1536
+  ],
+  "runtime_path": "apps/nightfall-godot/assets/polish-v2/ui-kit.png",
+  "generation": "built-in imagegen, transparent_background true",
+  "packing": "Individual generated connected components cropped with 6px source padding, uniformly scaled and centered in 512px cells. Original source retained. No material redrawn or replaced.",
+  "alpha_extrema": [
+    0,
+    255
+  ],
+  "elements": [
+    {
+      "name": "blue_panel",
+      "cell": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "region": [
+        46,
+        98,
+        420,
+        315
+      ],
+      "source_crop": [
+        29,
+        91,
+        413,
+        379
+      ],
+      "alpha_bounds": [
+        46,
+        98,
+        420,
+        315
+      ],
+      "nine_slice_source_insets": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "notes": "Plain center supports nine-slice. Insets are [left,top,right,bottom] source pixels; tune Godot destination border scale separately."
+    },
+    {
+      "name": "lavender_inset",
+      "cell": [
+        512,
+        0,
+        512,
+        512
+      ],
+      "region": [
+        558,
+        95,
+        420,
+        322
+      ],
+      "source_crop": [
+        440,
+        90,
+        817,
+        379
+      ],
+      "alpha_bounds": [
+        558,
+        99,
+        420,
+        318
+      ],
+      "nine_slice_source_insets": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "notes": "Plain center supports nine-slice. Insets are [left,top,right,bottom] source pixels; tune Godot destination border scale separately."
+    },
+    {
+      "name": "gold_button",
+      "cell": [
+        1024,
+        0,
+        512,
+        512
+      ],
+      "region": [
+        1095,
+        171,
+        370,
+        170
+      ],
+      "source_crop": [
+        842,
+        150,
+        1227,
+        327
+      ],
+      "alpha_bounds": [
+        1095,
+        172,
+        367,
+        166
+      ],
+      "nine_slice_source_insets": [
+        56,
+        40,
+        56,
+        40
+      ],
+      "notes": "Plain center supports nine-slice. Insets are [left,top,right,bottom] source pixels; tune Godot destination border scale separately."
+    },
+    {
+      "name": "blue_button",
+      "cell": [
+        0,
+        512,
+        512,
+        512
+      ],
+      "region": [
+        71,
+        683,
+        370,
+        170
+      ],
+      "source_crop": [
+        28,
+        526,
+        411,
+        702
+      ],
+      "alpha_bounds": [
+        71,
+        685,
+        369,
+        168
+      ],
+      "nine_slice_source_insets": [
+        56,
+        40,
+        56,
+        40
+      ],
+      "notes": "Plain center supports nine-slice. Insets are [left,top,right,bottom] source pixels; tune Godot destination border scale separately."
+    },
+    {
+      "name": "violet_button",
+      "cell": [
+        512,
+        512,
+        512,
+        512
+      ],
+      "region": [
+        583,
+        683,
+        369,
+        170
+      ],
+      "source_crop": [
+        437,
+        524,
+        821,
+        701
+      ],
+      "alpha_bounds": [
+        583,
+        686,
+        369,
+        167
+      ],
+      "nine_slice_source_insets": [
+        56,
+        40,
+        56,
+        40
+      ],
+      "notes": "Plain center supports nine-slice. Insets are [left,top,right,bottom] source pixels; tune Godot destination border scale separately."
+    },
+    {
+      "name": "disabled_button",
+      "cell": [
+        1024,
+        512,
+        512,
+        512
+      ],
+      "region": [
+        1098,
+        683,
+        364,
+        170
+      ],
+      "source_crop": [
+        845,
+        524,
+        1228,
+        703
+      ],
+      "alpha_bounds": [
+        1098,
+        683,
+        361,
+        170
+      ],
+      "nine_slice_source_insets": [
+        56,
+        40,
+        56,
+        40
+      ],
+      "notes": "Plain center supports nine-slice. Insets are [left,top,right,bottom] source pixels; tune Godot destination border scale separately."
+    },
+    {
+      "name": "blue_medallion",
+      "cell": [
+        0,
+        1024,
+        512,
+        512
+      ],
+      "region": [
+        96,
+        1122,
+        320,
+        316
+      ],
+      "source_crop": [
+        49,
+        818,
+        384,
+        1149
+      ],
+      "alpha_bounds": [
+        96,
+        1122,
+        320,
+        316
+      ],
+      "nine_slice_source_insets": null,
+      "notes": "Circular element: scale uniformly; do not nine-slice."
+    },
+    {
+      "name": "gold_medallion",
+      "cell": [
+        512,
+        1024,
+        512,
+        512
+      ],
+      "region": [
+        608,
+        1122,
+        320,
+        316
+      ],
+      "source_crop": [
+        459,
+        818,
+        795,
+        1150
+      ],
+      "alpha_bounds": [
+        610,
+        1122,
+        318,
+        316
+      ],
+      "nine_slice_source_insets": null,
+      "notes": "Circular element: scale uniformly; do not nine-slice."
+    },
+    {
+      "name": "title_ribbon",
+      "cell": [
+        1024,
+        1024,
+        512,
+        512
+      ],
+      "region": [
+        1070,
+        1197,
+        420,
+        166
+      ],
+      "source_crop": [
+        825,
+        900,
+        1239,
+        1064
+      ],
+      "alpha_bounds": [
+        1070,
+        1197,
+        418,
+        163
+      ],
+      "nine_slice_source_insets": [
+        82,
+        40,
+        82,
+        40
+      ],
+      "notes": "Plain center supports nine-slice. Insets are [left,top,right,bottom] source pixels; tune Godot destination border scale separately."
+    }
+  ]
+}

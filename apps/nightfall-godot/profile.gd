@@ -6,6 +6,7 @@ const Loot = preload("res://loot.gd")
 const Salvage = preload("res://salvage.gd")
 const Skills = preload("res://skill_tree.gd")
 const Daily = preload("res://daily_progress.gd")
+const ZoneOne = preload("res://zone_one.gd")
 const VERSION := 4
 const BUILD_SLOTS := ["1", "2", "3"]
 const SHOP_OFFERS := {"key": {"name": "Supply key", "cost": 25, "currency": "gems", "grant": "cache_keys", "amount": 1}, "parts": {"name": "10 Workshop Parts", "cost": 200, "currency": "credits", "grant": "parts", "amount": 10}}
@@ -695,6 +696,22 @@ func claim_rare_choice(slot: String) -> Dictionary:
 	var item := Loot.equipment(slot, "rare", int(data.next_item))
 	data.next_item += 1
 	data.rare_choices -= 1
+	data.inventory.append(item)
+	if not commit(previous):
+		return {}
+	return item.duplicate(true)
+
+func craft_zone_item(slot: String) -> Dictionary:
+	if not can_change_loadout() or slot not in Content.SLOTS or not ZoneOne.craft_unlocked(data.missions):
+		return {}
+	for currency: String in ZoneOne.CRAFT_COST:
+		if data[currency] < ZoneOne.CRAFT_COST[currency]:
+			return {}
+	var previous := data.duplicate(true)
+	var item := Loot.equipment(slot, "rare", int(data.next_item))
+	for currency: String in ZoneOne.CRAFT_COST:
+		data[currency] -= ZoneOne.CRAFT_COST[currency]
+	data.next_item += 1
 	data.inventory.append(item)
 	if not commit(previous):
 		return {}

@@ -8,6 +8,9 @@ const RewardFlow = preload("res://reward_flow.gd")
 const Soundscape = preload("res://soundscape.gd")
 const PowerHUD = preload("res://power_hud.gd")
 const BossArt = preload("res://boss_art.gd")
+const MenuSkin = preload("res://menu_skin.gd")
+const MenuArt = preload("res://haven_art.gd")
+const MENU_KEY = preload("res://assets/menu-key.svg")
 const ACTORS = preload("res://assets/actors.png")
 const ENGINEER = preload("res://assets/engineer.png")
 const FLOOR = preload("res://assets/courtyard.png")
@@ -40,6 +43,7 @@ var pause_button: Button
 var modal: PanelContainer
 var modal_body: VBoxContainer
 var modal_title: Label
+var menu_shade: ColorRect
 var last_screen := ""
 var frames: Array[float] = []
 var sample_time := 0.0
@@ -265,6 +269,11 @@ func build_ui() -> void:
 	boss_warning.add_theme_color_override("font_outline_color", INK)
 	boss_warning.add_theme_constant_override("outline_size", 6)
 	layer.add_child(boss_warning)
+	menu_shade = ColorRect.new()
+	menu_shade.color = Color(0.015,0.025,0.075,0.68)
+	menu_shade.size = Vector2(430,760)
+	menu_shade.visible = false
+	layer.add_child(menu_shade)
 	modal = PanelContainer.new()
 	modal.position = Vector2(28, 204)
 	modal.size = Vector2(374, 0)
@@ -475,6 +484,7 @@ func mission_progress() -> String:
 func update_modal() -> void:
 	if is_instance_valid(home) and home.visible:
 		modal.hide()
+		menu_shade.hide()
 		return
 	var screen: String = "ad" if not reward_flow.pending.is_empty() else ("powers" if power_view else ("pause" if run.paused and run.phase not in ["victory", "defeat"] else run.phase))
 	var screen_key := screen + (str(run.field.revision) if screen in ["shrine", "pack"] else (str(run.build_revision) if screen == "build" else (str(run.offers.hash()) if screen == "upgrade" else "")))
@@ -482,6 +492,7 @@ func update_modal() -> void:
 		return
 	last_screen = screen_key
 	modal.visible = screen in ["pause", "upgrade", "victory", "defeat", "shrine", "pack", "build", "ad", "powers"]
+	menu_shade.visible = screen in ["pause", "victory", "defeat", "ad"]
 	if not modal.visible:
 		return
 	clear_input()
@@ -518,7 +529,7 @@ func update_modal() -> void:
 				modal_body.add_child(information)
 				make_button("Progress", func(): progress_view = true; last_screen = "", information, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				make_button("How to play", func(): help_view = true; last_screen = "", information, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				make_button("Save & return to Haven", show_haven, modal_body)
+				make_button("Save & return to Base", show_haven, modal_body)
 			if diagnostics:
 				var row := HBoxContainer.new()
 				modal_body.add_child(row)
@@ -562,23 +573,38 @@ func update_modal() -> void:
 				modal_title.text = "Contract completed" if screen == "victory" else ("Beacon window closed" if run.elapsed >= run.duration else "Contract failed")
 			if run.practice:
 				modal_title.text = "Practice complete" if screen == "victory" else "Practice • try another approach"
-			var result := Label.new()
-			result.text = "%d enemies defeated • Level %d\n%.0f seconds survived" % [run.kills, run.level, run.elapsed]
-			modal_body.add_child(result)
+			result_stats()
+			var details := result_details()
 			if not reward_receipt.is_empty():
-				FieldUI.label(self, "Banked: %d credits • %d parts • %d gems\n+%d Survivor XP • +%d Mastery XP" % [reward_receipt.credits, reward_receipt.parts, reward_receipt.gems, reward_receipt.survivor_xp, reward_receipt.mastery_xp])
+				MenuSkin.label(details, "REWARDS BANKED", 13, GOLD, true)
+				var wallet_row := HBoxContainer.new()
+				wallet_row.alignment = BoxContainer.ALIGNMENT_CENTER
+				details.add_child(wallet_row)
+				for currency in ["credits", "parts", "gems"]:
+					MenuSkin.icon(wallet_row, MenuArt.item(currency), Vector2(25,27))
+					MenuSkin.label(wallet_row, "+%d" % reward_receipt[currency], 17, GOLD)
+				MenuSkin.label(details, "+%d Survivor XP · +%d Mastery XP" % [reward_receipt.survivor_xp, reward_receipt.mastery_xp], 14, VIOLET, true)
 				if reward_receipt.get("keys", 0) > 0:
-					FieldUI.label(self, "+%d supply key • open a chest in your armory" % reward_receipt.keys)
+					var key_row := HBoxContainer.new()
+					details.add_child(key_row)
+					MenuSkin.icon(key_row, MENU_KEY, Vector2(25,27))
+					MenuSkin.label(key_row, "+%d supply key · Open chests in Shop" % reward_receipt.keys, 14, GOLD)
 				if not reward_receipt.new_medals.is_empty():
-					FieldUI.label(self, "New medals: " + ", ".join(reward_receipt.new_medals))
+					MenuSkin.label(details, "New medals: " + ", ".join(reward_receipt.new_medals), 14, GOLD)
 				if not reward_receipt.gear.is_empty():
-					FieldUI.label(self, "Equipment: " + ", ".join(reward_receipt.gear))
+					MenuSkin.label(details, "Equipment: " + ", ".join(reward_receipt.gear), 14)
 				if reward_receipt.lost > 0:
-					FieldUI.label(self, "%d unprotected loot bundles lost." % reward_receipt.lost)
+					MenuSkin.label(details, "%d unprotected loot bundles lost." % reward_receipt.lost, 13, Color("efb9c2"))
+			elif run.practice:
+				MenuSkin.label(details, "Training complete", 20, GOLD, true)
+				MenuSkin.label(details, "Practice grants no loot or progression. Try another build in the Training Yard.", 14, Color("dbe6ff"), true)
+			else:
+				MenuSkin.label(details, "Your secure stash is protected", 20, GOLD, true)
+				MenuSkin.label(details, "Finish the expedition to bank the rewards you earned.", 14, Color("dbe6ff"), true)
 			if attempt_id > 0:
 				if screen == "defeat" and not run.rescued and ad_bridge and not (run.mode == "salvage" and run.elapsed >= run.duration):
 					make_button("Watch test video • rescue at 50% HP", request_rescue, modal_body)
-					FieldUI.label(self, "Once per expedition. Gear and run powers stay with you. A rescue does not earn the combat mastery medal.", 13)
+					MenuSkin.label(details, "One rescue per expedition. Gear and run powers stay. A rescue does not earn the combat mastery medal.", 13)
 				if not reward_flow.message.is_empty():
 					FieldUI.label(self, reward_flow.message, 13)
 				if not profile.error.is_empty():
@@ -586,7 +612,63 @@ func update_modal() -> void:
 				make_button("Finish expedition & bank rewards", func(): bank_result(); last_screen = "", modal_body)
 			else:
 				make_button("Practice again" if run.practice else "Try again", replay, modal_body)
-			make_button("Return to Haven", finish_to_haven, modal_body)
+			make_button("Return to Base", finish_to_haven, modal_body)
+	if screen in ["pause", "victory", "defeat", "ad"]:
+		polish_menu_modal(screen)
+	else:
+		modal.add_theme_stylebox_override("panel", panel_style(Color("111b34"), Color("8d72b3")))
+		modal_title.remove_theme_font_override("font")
+		modal_title.add_theme_font_size_override("font_size", 22)
+		modal_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		modal_title.remove_theme_color_override("font_outline_color")
+		modal_title.remove_theme_constant_override("outline_size")
+		modal_title.remove_theme_constant_override("shadow_offset_y")
+		modal_title.remove_theme_color_override("font_shadow_color")
+
+func result_stats() -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	modal_body.add_child(row)
+	for entry in [[MenuArt.SWORD, str(run.kills), "Defeated"], [EXPERIENCE, str(run.level), "Run level"], [MenuArt.MOON, "%d:%02d" % [int(run.elapsed)/60, int(run.elapsed)%60], "Survived"]]:
+		var tile := MenuSkin.panel(row, "panel", 14)
+		tile.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var line := HBoxContainer.new()
+		line.alignment = BoxContainer.ALIGNMENT_CENTER
+		tile.add_child(line)
+		MenuSkin.icon(line, entry[0], Vector2(20,22))
+		MenuSkin.label(line, entry[1], 20, GOLD, true)
+		MenuSkin.label(tile, entry[2], 12, Color("b9cbe9"), true)
+
+func result_details() -> VBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.name = "ResultRewardsScroll"
+	scroll.custom_minimum_size.y = 158
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	modal_body.add_child(scroll)
+	var details := MenuSkin.panel(scroll, "panel", 14)
+	details.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return details
+
+func polish_menu_modal(screen: String) -> void:
+	modal.add_theme_stylebox_override("panel", MenuSkin.surface("panel"))
+	modal_title.add_theme_font_override("font", MenuSkin.DISPLAY)
+	modal_title.add_theme_font_size_override("font_size", 26 if screen in ["victory","defeat"] else 25)
+	modal_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	modal_title.add_theme_color_override("font_outline_color", Color("122654"))
+	modal_title.add_theme_constant_override("outline_size", 4)
+	modal_title.add_theme_constant_override("shadow_offset_y", 2)
+	modal_title.add_theme_color_override("font_shadow_color", Color("10234a"))
+	polish_menu_children(modal_body)
+
+func polish_menu_children(parent: Node) -> void:
+	for child in parent.get_children():
+		if child is Button:
+			var primary: bool = child.text in ["Resume", "Finish expedition & bank rewards"] or (child.text == "Return to Base" and attempt_id <= 0)
+			MenuSkin.action(child, "gold" if primary else ("violet" if child.text.begins_with("Watch test video") else "blue"))
+		elif child is Label and child != modal_title:
+			child.add_theme_font_override("font", MenuSkin.body_font())
+			child.autowrap_mode = TextServer.AUTOWRAP_OFF if child.get_parent() is HBoxContainer else TextServer.AUTOWRAP_WORD_SMART
+		polish_menu_children(child)
 
 func restart() -> void:
 	power_view = false

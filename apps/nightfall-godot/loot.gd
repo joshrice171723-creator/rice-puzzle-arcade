@@ -42,8 +42,8 @@ static func roll(category: String, seed_value: int, rare_misses: int, epic_misse
 		rarity = "rare"
 	var slots: Array = CATEGORIES[category].slots
 	var slot: String = slots[rng.randi_range(0, slots.size() - 1)]
-	var armor_set: String = Content.SETS.keys()[rng.randi_range(0, Content.SETS.size() - 1)] if slot in Content.ARMOR_SLOTS else "outrider"
-	var item := equipment(slot, rarity, identity, armor_set)
+	# Future-zone sets remain valid in owned saves, but are not new Outskirts drops.
+	var item := equipment(slot, rarity, identity)
 	return {"item": item, "rare_misses": 0 if Content.RARITIES.find(rarity) >= 2 else rare_misses + 1,
 		"epic_misses": 0 if Content.RARITIES.find(rarity) >= 3 else epic_misses + 1}
 

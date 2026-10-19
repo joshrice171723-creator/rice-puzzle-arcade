@@ -1,0 +1,48 @@
+{
+  "panel-main": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      253
+    ],
+    "bbox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "center_rgba": [
+      14,
+      115,
+      237,
+      249
+    ]
+  },
+  "panel-inset": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      9,
+      251
+    ],
+    "bbox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "center_rgba": [
+      1,
+      60,
+      156,
+      247
+    ]
+  }
+}

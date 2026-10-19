@@ -8,6 +8,10 @@ signal diagnostics_requested
 signal contract_requested(slot: String)
 
 const Art = preload("res://haven_art.gd")
+const MenuSkin = preload("res://menu_skin.gd")
+const MenuMotion = preload("res://menu_motion.gd")
+const ClassShowcase = preload("res://class_showcase.gd")
+const Services = preload("res://haven_services_ui.gd")
 const ShopReward = preload("res://shop_reward.gd")
 const TABS := [["shop", "Shop"], ["gear", "Gear"], ["mission", "Expedition"], ["haven", "Base"], ["class", "Class"]]
 const ZONES := ["Blackout Outskirts", "Freight Yard", "Silent Suburbs", "Flooded Market", "Ironworks", "Orchard County", "Coldwater Docks", "Whiteout Village", "Dead Signal", "Buried Transit", "Ashfall Quarry", "Quarantine Ward", "Glasshouse Labs", "Rustwater Refinery", "Rooftop District", "Broken Reservoir", "Hollow Bunker", "Storm Coast", "Nightfall Core", "Last Beacon"]
@@ -65,18 +69,18 @@ func _ready() -> void:
 	size = Vector2(430, 760)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = Theme.new()
-	theme.default_font = Art.BODY_FONT
+	theme.default_font = MenuSkin.body_font()
 	theme.default_font_size = 16
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	var background := Art.picture(self, Art.BACKDROP, Rect2(Vector2.ZERO, size))
 	background.stretch_mode = TextureRect.STRETCH_SCALE
-	Art.picture(self, Art.CHROME.header, Rect2(0, 0, 430, 58))
+
 	Art.picture(self, Art.MOON, Rect2(12, 14, 29, 34))
 	var heading := Label.new()
 	heading.text = "Nightfall"
-	heading.position = Vector2(44, 18)
-	heading.add_theme_font_override("font", Art.DISPLAY_FONT)
-	heading.add_theme_font_size_override("font_size", 21)
+	heading.position = Vector2(40, 18)
+	heading.add_theme_font_override("font", MenuSkin.DISPLAY)
+	heading.add_theme_font_size_override("font_size", 23)
 	heading.add_theme_color_override("font_color", Color("e6efff"))
 	heading.add_theme_color_override("font_shadow_color", Color("203586"))
 	heading.add_theme_constant_override("shadow_offset_y", 2)
@@ -88,9 +92,7 @@ func _ready() -> void:
 	settings.expand_icon = true
 	settings.add_theme_constant_override("icon_max_width", 24)
 	settings.tooltip_text = "Settings"
-	settings.add_theme_stylebox_override("normal", Art.chrome_style("settings"))
-	settings.add_theme_stylebox_override("hover", Art.chrome_style("settings"))
-	settings.add_theme_stylebox_override("pressed", Art.chrome_style("pressed"))
+	MenuSkin.action(settings)
 	wallet = HBoxContainer.new()
 	wallet.position = Vector2(168, 15)
 	wallet.size = Vector2(211, 34)
@@ -125,7 +127,7 @@ func _ready() -> void:
 		tab.name = entry[0]
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.add_theme_font_size_override("font_size", 13)
-		tab.add_theme_font_override("font", Art.strong_font())
+		tab.add_theme_font_override("font", MenuSkin.DISPLAY)
 		tab.icon = Art.icon(entry[0])
 		tab.expand_icon = true
 		tab.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -156,7 +158,7 @@ func active_tab() -> String:
 
 func request_shop_video() -> void:
 	if not ads_available:
-		message = "Videos are available in the Android build when connected."
+		message = "Videos are unavailable right now. Please try again later."
 		rebuild()
 		return
 	var token: String = shop_flow.begin(profile)
@@ -190,7 +192,7 @@ func icon_button(label: String, art_id: String, action: Callable, parent: Node, 
 	node.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	node.add_theme_constant_override("icon_max_width", 60)
 	node.add_theme_font_size_override("font_size", 14)
-	var face := style(Color("082c60"), Color("468ed5"))
+	var face := MenuSkin.surface("blue")
 	face.set_content_margin_all(3)
 	node.add_theme_stylebox_override("normal", face)
 	node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -210,29 +212,37 @@ func button(text_value: String, action: Callable, parent: Node = null, height: i
 	node.text = text_value
 	node.clip_text = true
 	node.tooltip_text = text_value
-	node.custom_minimum_size.y = height
-	node.add_theme_font_size_override("font_size", 15)
-	node.add_theme_color_override("font_color", Color("f5e9d8"))
-	node.add_theme_stylebox_override("normal", style(Color("123b79")))
-	node.add_theme_stylebox_override("hover", style(Color("2259a4"), Color("ffd27c")))
-	node.add_theme_stylebox_override("pressed", style(Color("453084"), Color("ba92ff")))
+	node.custom_minimum_size.y = maxi(44, height)
+	MenuSkin.action(node)
 	node.pressed.connect(action)
-	(parent if parent != null else body).add_child(node)
+	var host: Node = parent if parent != null else body
+	host.add_child(node)
+	if host == body:
+		node.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		node.custom_minimum_size.x = 280
+		node.custom_minimum_size.y = 56 if height >= 48 else 48
 	return node
 
 func text_line(value: String, font_size: int = 14, color: Color = Color("d6daea")) -> Label:
-	var node := Label.new()
-	node.text = value
-	node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	node.add_theme_font_size_override("font_size", font_size)
-	node.add_theme_color_override("font_color", color)
 	if font_size >= 21:
-		node.add_theme_font_override("font", Art.DISPLAY_FONT)
-		node.add_theme_color_override("font_color", Color("f3f5ff"))
-		node.add_theme_color_override("font_shadow_color", Color("102451"))
-		node.add_theme_constant_override("shadow_offset_y", 2)
-	body.add_child(node)
-	return node
+		var ribbon := PanelContainer.new()
+		ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		ribbon.custom_minimum_size.x = 310
+		var face := MenuSkin.surface("ribbon")
+		face.set_content_margin_all(3)
+		ribbon.add_theme_stylebox_override("panel", face)
+		body.add_child(ribbon)
+		return MenuSkin.label(ribbon, value, mini(font_size,26), color, true)
+	return MenuSkin.label(body, value, font_size, color)
+
+func page_heading(parent: Node, text: String) -> void:
+	var ribbon := PanelContainer.new()
+	ribbon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var face := MenuSkin.surface("ribbon")
+	face.set_content_margin_all(3)
+	ribbon.add_theme_stylebox_override("panel", face)
+	parent.add_child(ribbon)
+	MenuSkin.label(ribbon, text, 25, Color.WHITE, true)
 
 func item_texture(slot: String) -> AtlasTexture:
 	if slot in Art.ITEM_NAMES:
@@ -269,6 +279,13 @@ func rebuild() -> void:
 	if has_meta("detail_previous_back_quit"):
 		get_tree().quit_on_go_back = get_meta("detail_previous_back_quit")
 		remove_meta("detail_previous_back_quit")
+	var ambient := get_node_or_null("BackgroundMotion")
+	if profile.data.settings.reduced_effects and ambient != null:
+		remove_child(ambient)
+		ambient.queue_free()
+	elif not profile.data.settings.reduced_effects and ambient == null:
+		ambient = MenuMotion.background(self)
+		move_child(ambient, 1)
 	ItemDetail.restore_background_focus(self)
 	var old_detail := get_node_or_null("ItemDetailOverlay")
 	if old_detail != null:
@@ -279,9 +296,11 @@ func rebuild() -> void:
 	for child in body.get_children():
 		body.remove_child(child)
 		child.queue_free()
-	frame_panel.position.y = 64 if page == "gear" else 80
-	frame_panel.size = Vector2(402, 594 if page == "gear" else 578)
-	var surface := style(Color("071c42") if page == "gear" else Color(0.02, 0.12, 0.35, 0.24), Color("254c83") if page == "gear" else Color(0.30, 0.56, 0.95, 0.35))
+	frame_panel.position.y = 48 if page == "class" else 64
+	body.add_theme_constant_override("separation", 5 if page == "arcanum" else 7)
+	frame_panel.size = Vector2(402, 594)
+	var surface := StyleBoxEmpty.new()
+	surface.set_content_margin_all(8)
 	frame_panel.add_theme_stylebox_override("panel", surface)
 	for child in wallet.get_children():
 		wallet.remove_child(child)
@@ -289,7 +308,8 @@ func rebuild() -> void:
 	for currency in ["credits", "parts", "gems"]:
 		var chip := PanelContainer.new()
 		chip.custom_minimum_size = Vector2(68, 34)
-		var chip_style := Art.chrome_style("wallet")
+		var chip_style := MenuSkin.surface("blue")
+		chip_style.set_texture_margin_all(7)
 		chip_style.set_content_margin_all(2)
 		chip.add_theme_stylebox_override("panel", chip_style)
 		chip.tooltip_text = "%s: %d" % [currency.capitalize(), profile.data[currency]]
@@ -304,7 +324,7 @@ func rebuild() -> void:
 		var value: int = profile.data[currency]
 		amount.text = compact_amount(value)
 		amount.add_theme_font_size_override("font_size", 17)
-		amount.add_theme_font_override("font", Art.strong_font())
+		amount.add_theme_font_override("font", MenuSkin.DISPLAY)
 		row.add_child(amount)
 	match page:
 		"mission": mission_page()
@@ -317,6 +337,7 @@ func rebuild() -> void:
 		"builds": Armory.builds(self)
 		"filters": Armory.filters(self)
 		"merge": EquipmentWorkshop.merge(self)
+		"craft": EquipmentWorkshop.crafting(self)
 		"substats": EquipmentWorkshop.substats(self)
 		"sets": EquipmentWorkshop.sets(self)
 		"haven": haven_page()
@@ -337,12 +358,13 @@ func rebuild() -> void:
 		var tab: Button = navigation.get_child(index)
 		tab.disabled = not shop_flow.pending.is_empty()
 		var selected: bool = TABS[index][0] == active_tab()
-		var tab_style := Art.chrome_style("selected" if selected else "tab")
+		var tab_style := MenuSkin.surface("gold" if selected else "panel")
 		tab_style.set_content_margin_all(4)
 		tab.add_theme_stylebox_override("normal", tab_style)
 		tab.add_theme_stylebox_override("hover", tab_style)
-		tab.add_theme_stylebox_override("pressed", Art.chrome_style("pressed"))
-		tab.add_theme_color_override("font_color", Color("ffd27c") if TABS[index][0] == active_tab() else Color("d6daea"))
+		tab.add_theme_stylebox_override("pressed", MenuSkin.surface("violet"))
+		tab.add_theme_color_override("font_color", Color("fff5dc") if TABS[index][0] == active_tab() else Color("dce9ff"))
+	ClassShowcase.decorate_navigation(self)
 	queue_redraw()
 
 func compact_amount(value: int) -> String:
@@ -353,95 +375,94 @@ func compact_amount(value: int) -> String:
 	return str(value)
 
 func mission_page() -> void:
-	var top := HBoxContainer.new()
-	body.add_child(top)
-	var heading := Label.new()
-	heading.text = "Blackout Outskirts"
-	heading.add_theme_font_size_override("font_size", 20)
-	heading.add_theme_font_override("font", Art.DISPLAY_FONT)
-	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(heading)
-	var zones := button("Zones", func(): page = "zones"; rebuild(), top, 36)
-	zones.custom_minimum_size.x = 62
-	zones.add_theme_font_size_override("font_size", 12)
+	var heading := HBoxContainer.new()
+	body.add_child(heading)
+	page_heading(heading, "Expedition")
+	button("Zones", func(): navigate("zones"), heading, 36).custom_minimum_size.x = 72
+	MenuSkin.label(body, "1 · Blackout Outskirts", 21, Color("ffe4a5"), true)
 	var stage := Control.new()
-	stage.custom_minimum_size.y = 221
+	stage.custom_minimum_size.y = 138 if not profile.data.active_attempt.is_empty() else 194
 	body.add_child(stage)
-	Art.picture(stage, Art.OUTSKIRTS, Rect2(20, -5, 346, 226))
-	text_line("Zone 1 · %d / 15 mastery medals" % profile.total_medals(), 13, Color("ba92ff"))
+	var island_rect := Rect2(32, -15, 322, stage.custom_minimum_size.y + 21)
+	Art.picture(stage, Art.OUTSKIRTS, island_rect)
+	if not profile.data.settings.reduced_effects:
+		var motion = MenuMotion.island(stage, fitted_art_rect(Art.OUTSKIRTS, island_rect))
+		motion.beacon_uv = Vector2(0.558,0.09)
+		motion.warm_uv = [Vector2(0.28,0.45), Vector2(0.475,0.38)]
 	var nodes := HBoxContainer.new()
-	nodes.add_theme_constant_override("separation", 5)
+	nodes.alignment = BoxContainer.ALIGNMENT_CENTER
+	nodes.add_theme_constant_override("separation", 16)
 	body.add_child(nodes)
 	for number in range(1, 6):
 		var medals: Array = profile.data.missions.get(str(number), [])
-		var node := button(str(number) + (" ◆" if "clear" in medals else ""), func(): mission = number; rebuild(), nodes, 44)
-		node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		node.add_theme_color_override("font_color", Color("ffd27c") if number == mission else Color("b8c5df"))
-		node.tooltip_text = Content.MISSIONS[number - 1].name
+		var node := button(str(number), func(): mission = number; rebuild(), nodes, 48)
+		node.custom_minimum_size.x = 48
+		var face := StyleBoxTexture.new()
+		face.texture = MenuSkin.texture("selected" if number == mission else "medallion")
+		face.set_content_margin_all(0)
+		node.add_theme_stylebox_override("normal", face)
+		node.add_theme_stylebox_override("hover", face)
+		node.add_theme_font_size_override("font_size", 24)
+		node.modulate = Color.WHITE if profile.mission_unlocked(number) else Color("8493b4")
+		node.tooltip_text = "%s · %d/3 mastery medals%s" % [Content.MISSIONS[number - 1].name, medals.size(), "" if profile.mission_unlocked(number) else " · Clear the previous mission"]
 	var definition: Dictionary = Content.MISSIONS[mission - 1]
-	text_line("%d. %s" % [mission, definition.name], 21)
-	text_line("4 min survival · Defeat %s" % definition.boss, 13)
-	var progress_actions := HBoxContainer.new()
-	body.add_child(progress_actions)
-	button("Rewards & mastery", func(): page = "rewards"; rebuild(), progress_actions, 32).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button("Daily objectives", func(): page = "daily"; rebuild(), progress_actions, 32).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	MenuSkin.label(body, "%d. %s" % [mission, definition.name], 22, Color.WHITE, true)
+	MenuSkin.label(body, "Survive 4 minutes · Defeat " + definition.boss, 13, Color("d7e6ff"), true)
+	var modes := HBoxContainer.new()
+	modes.add_theme_constant_override("separation", 8)
+	body.add_child(modes)
+	icon_button("Salvage contracts", "quartermaster", func(): navigate("contracts"), modes, 67).add_theme_constant_override("icon_max_width", 38)
+	icon_button("Boss training", "training", func(): navigate("training"), modes, 67).add_theme_constant_override("icon_max_width", 38)
+	var rewards := HBoxContainer.new()
+	rewards.add_theme_constant_override("separation", 8)
+	body.add_child(rewards)
+	var chest := button("Rewards · %d/15" % profile.total_medals(), func(): navigate("rewards"), rewards, 44)
+	chest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chest.icon = item_texture("chest")
+	chest.expand_icon = true
+	chest.add_theme_constant_override("icon_max_width", 35)
+	button("Daily objectives", func(): navigate("daily"), rewards, 44).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if not profile.data.active_attempt.is_empty():
-		button("Resume expedition", func(): resume_requested.emit())
+		var resume := button("Resume expedition", func(): resume_requested.emit(), null, 48)
+		MenuSkin.action(resume, "gold")
 		button("End expedition", func():
 			if confirmation == "abandon":
 				abandon_requested.emit()
 			else:
-				confirmation = "abandon"; message = "Tap End expedition again. Only protected loot returns."; rebuild(), null, 36)
+				confirmation = "abandon"; message = "Tap End expedition again. Only protected loot returns."; rebuild(), null, 32)
 	else:
 		var unlocked: bool = profile.mission_unlocked(mission)
-		var start := button("Start expedition" if unlocked else "Clear the previous mission", func(): mission_requested.emit(mission), null, 48)
-		start.add_theme_stylebox_override("normal", style(Color("ffbe32"), Color("ffe38d")))
-		start.add_theme_color_override("font_color", Color("33244b"))
+		var start := button("Start expedition" if unlocked else "Clear the previous mission", func(): mission_requested.emit(mission), null, 52)
+		MenuSkin.action(start, "gold")
+		start.add_theme_font_size_override("font_size", 25)
 		start.disabled = not unlocked or profile.blocked
-		var modes := HBoxContainer.new()
-		body.add_child(modes)
-		button("Salvage contracts", func(): page = "contracts"; rebuild(), modes, 38).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button("Boss training", func(): page = "training"; rebuild(), modes, 38).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func zones_page() -> void:
-	text_line("Expedition zones", 24)
-	text_line("Blackout Outskirts is playable. Later zones are planned.", 13)
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 5)
-	grid.add_theme_constant_override("v_separation", 4)
-	body.add_child(grid)
-	for index in ZONES.size():
-		var node := button("%02d  %s" % [index + 1, ZONES[index]], func(): page = "mission"; rebuild(), grid, 44)
-		node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		node.add_theme_font_size_override("font_size", 11)
-		node.disabled = index > 0
+	Services.zones(self)
 
 func gear_page() -> void:
 	var heading_row := HBoxContainer.new()
 	body.add_child(heading_row)
-	var heading := Label.new()
-	heading.text = "Equipment"
-	heading.add_theme_font_size_override("font_size", 24)
-	heading.add_theme_font_override("font", Art.DISPLAY_FONT)
-	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading_row.add_child(heading)
+	page_heading(heading_row, "Equipment")
 	button("Sets", func(): navigate("sets"), heading_row, 32).custom_minimum_size.x = 54
 	button("Builds", func(): Armory.pick_build(self, build_slot), heading_row, 32).custom_minimum_size.x = 70
 	var stage := Control.new()
 	stage.custom_minimum_size.y = 252
 	body.add_child(stage)
-	Art.picture(stage, Art.GEAR_HALO, Rect2(64, -10, 258, 237))
+	var hall_view := Control.new()
+	hall_view.position = Vector2(72,0)
+	hall_view.size = Vector2(242,245)
+	hall_view.clip_contents = true
+	hall_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.add_child(hall_view)
+	var hall := Art.picture(hall_view, ClassShowcase.HALL, Rect2(-34,-26,310,300))
+	hall.stretch_mode = TextureRect.STRETCH_SCALE
 	Art.picture(stage, Art.GEAR_PLINTH, Rect2(85, 170, 216, 80))
 	Art.picture(stage, Art.CONTACT_SHADOW, Rect2(122, 210, 143, 17))
 	var hero := Art.picture(stage, Art.hero(profile.data["class"]), Rect2(79, -9, 228, 238))
 	hero.name = "EquippedHero"
 	if not profile.data.settings.reduced_effects:
-		# Keep the boots on the contact plane while the upper silhouette breathes.
-		hero.pivot_offset = Vector2(114, 226)
-		var idle := hero.create_tween().set_loops()
-		idle.tween_property(hero, "scale", Vector2(1.003, 1.006), 1.8).set_trans(Tween.TRANS_SINE)
-		idle.tween_property(hero, "scale", Vector2.ONE, 1.8).set_trans(Tween.TRANS_SINE)
+		MenuMotion.hero(hero)
 	var columns := [["weapon", "ring", "charm", "gadget"], ["helmet", "body", "pants", "boots"]]
 	for column in 2:
 		for index in 4:
@@ -456,7 +477,8 @@ func gear_page() -> void:
 	for entry in [["Power", stats.power, Art.SWORD], ["HP", stats.hp, Art.item("hp")], ["Armor", stats.armor, Art.SHIELD]]:
 		var stat_panel := PanelContainer.new()
 		stat_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var stat_style := style(Color("0a244c"), Color("294c7b"))
+		var stat_style := MenuSkin.surface("panel")
+		stat_style.set_texture_margin_all(7)
 		stat_style.content_margin_top = 1
 		stat_style.content_margin_bottom = 1
 		stat_style.content_margin_left = 5
@@ -502,7 +524,8 @@ func gear_page() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	var inventory_well := style(Color("04152e"), Color("16365f"))
+	var inventory_well := MenuSkin.surface("panel")
+	inventory_well.set_texture_margin_all(12)
 	inventory_well.set_content_margin_all(5)
 	scroll.add_theme_stylebox_override("panel", inventory_well)
 	body.add_child(scroll)
@@ -538,21 +561,22 @@ func equipment_tile(item: Dictionary, parent: Node, dimensions: Vector2) -> Butt
 	var rank: int = Content.RARITIES.find(item.rarity)
 	var face := StyleBoxTexture.new()
 	face.texture = Art.GEAR_FRAMES[rank]
-	face.set_texture_margin_all(12)
+	face.set_texture_margin_all(9)
 	face.set_content_margin_all(4)
 	tile.add_theme_stylebox_override("normal", face)
 	var hover := face.duplicate()
-	hover.modulate_color = Color(1.2, 1.2, 1.2)
+	hover.modulate_color = face.modulate_color.lightened(0.18)
 	tile.add_theme_stylebox_override("hover", hover)
 	var pressed := face.duplicate()
-	pressed.modulate_color = Color(0.72, 0.72, 0.85)
+	pressed.modulate_color = face.modulate_color.darkened(0.18)
 	tile.add_theme_stylebox_override("pressed", pressed)
 	tile.icon = item_texture(item.slot)
 	tile.expand_icon = true
 	tile.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tile.add_theme_constant_override("icon_max_width", int(dimensions.y - 8))
 	var tier := Label.new()
-	tier.text = ["I", "II", "III", "IV", "V", "VI"][rank]
+	tier.text = Content.RARITIES[rank].left(1).to_upper()
+	tier.tooltip_text = Content.RARITIES[rank].capitalize()
 	tier.position = Vector2(5, 3)
 	tier.add_theme_font_size_override("font_size", 9)
 	tier.add_theme_color_override("font_color", Color("c4d6ef"))
@@ -561,7 +585,7 @@ func equipment_tile(item: Dictionary, parent: Node, dimensions: Vector2) -> Butt
 	tier.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tile.add_child(tier)
 	var caption := Label.new()
-	caption.text = ("◆ " if profile.data.equipment[item.slot] == item.id else "") + "Lv.%d" % item.level
+	caption.text = ("\u25C6 " if profile.data.equipment[item.slot] == item.id else "") + "Lv.%d" % item.level
 	caption.add_theme_font_size_override("font_size", 12)
 	caption.add_theme_color_override("font_outline_color", Color("0a1020"))
 	caption.add_theme_constant_override("outline_size", 3)
@@ -573,7 +597,7 @@ func equipment_tile(item: Dictionary, parent: Node, dimensions: Vector2) -> Butt
 	if item.id in profile.data.locked_items:
 		var lock_label := Label.new()
 		lock_label.text = "LOCK"
-		lock_label.position = Vector2(3, 1)
+		lock_label.position = Vector2(22, 1)
 		lock_label.add_theme_font_size_override("font_size", 10)
 		lock_label.add_theme_color_override("font_color", Color("ffd27c"))
 		lock_label.add_theme_color_override("font_outline_color", Color("0a1020"))
@@ -597,213 +621,117 @@ func _notification(what: int) -> void:
 		ItemDetail.close.call_deferred(self)
 
 func haven_page() -> void:
-	text_line("Haven", 26)
+	text_line("Base", 30)
 	var scene := Control.new()
-	scene.custom_minimum_size.y = 306
+	scene.custom_minimum_size.y = 328
 	body.add_child(scene)
-	Art.picture(scene, Art.BASE, Rect2(0, -7, 386, 318))
-	var hero := Art.picture(scene, Art.hero(profile.data["class"]), Rect2(157, 166, 82, 110))
+	Art.picture(scene, preload("res://assets/polish-v2/haven-island.png"), Rect2(-4, -13, 394, 343))
+	var hero := Art.picture(scene, Art.hero(profile.data["class"]), Rect2(163, 162, 68, 86))
+	hero.pivot_offset = Vector2(34, 80)
 	if not profile.data.settings.reduced_effects:
-		var idle := hero.create_tween().set_loops()
-		idle.tween_property(hero, "position:y", 164.0, 1.5)
-		idle.tween_property(hero, "position:y", 166.0, 1.5)
-	for entry in [["workshop", Vector2(93, 111)], ["infirmary", Vector2(306, 96)], ["quartermaster", Vector2(305, 233)]]:
+		MenuMotion.island(scene, fitted_art_rect(preload("res://assets/polish-v2/haven-island.png"), Rect2(-4,-13,394,343)))
+		MenuMotion.hero(hero)
+	for entry in [["workshop", Vector2(67, 123)], ["infirmary", Vector2(279, 104)], ["quartermaster", Vector2(286, 245)]]:
 		var id: String = entry[0]
-		var node := button("II" if profile.data.facilities[id] == 2 else "I", func(): facility = id; page = "facility"; rebuild(), scene, 34)
+		var node := button("II" if profile.data.facilities[id] == 2 else "I", func(): facility = id; page = "facility"; rebuild(), scene, 40)
 		node.position = entry[1]
-		node.size.x = 34
+		node.custom_minimum_size = Vector2(40,40)
+		node.size = Vector2(40,40)
 		node.tooltip_text = Content.FACILITIES[id].name
-		node.add_theme_font_size_override("font_size", 20)
-		node.add_theme_font_override("font", Art.DISPLAY_FONT)
-		var plaque := style(Color(0.04, 0.08, 0.16, 0.78), Color("6c82a4"))
-		plaque.set_content_margin_all(4)
-		node.add_theme_stylebox_override("normal", plaque)
+		var face := StyleBoxTexture.new()
+		face.texture = MenuSkin.texture("selected")
+		face.set_content_margin_all(0)
+		node.add_theme_stylebox_override("normal", face)
+		node.add_theme_stylebox_override("hover", face)
 	var grid := GridContainer.new()
 	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 5)
-	grid.add_theme_constant_override("v_separation", 5)
+	grid.add_theme_constant_override("h_separation", 7)
+	grid.add_theme_constant_override("v_separation", 7)
 	body.add_child(grid)
 	for entry in [["workshop", "Workshop"], ["infirmary", "Infirmary"], ["quartermaster", "Storehouse"], ["training", "Training"], ["arcanum", "Arcanum"], ["mission", "Expedition"]]:
 		var id: String = entry[0]
 		icon_button(entry[1], id, func():
 			if id in Content.FACILITIES:
-				facility = id
-				page = "facility"
+				facility = id; page = "facility"
 			else:
 				page = id
 			rebuild(), grid, 86)
 
 func facility_page() -> void:
-	var definition: Dictionary = Content.FACILITIES[facility]
-	text_line(definition.name, 25)
-	var art := Control.new()
-	art.custom_minimum_size.y = 165
-	body.add_child(art)
-	Art.picture(art, Art.icon(facility), Rect2(90, 0, 200, 160))
-	text_line("Rank %d / 2" % profile.data.facilities[facility], 18, Color("ffd27c"))
-	text_line(definition.description, 15)
-	var summary := "Upgrade costs: 100% → 90% credits; Parts unchanged."
-	if facility == "infirmary":
-		summary = "Medkit healing: 20% → 25% maximum HP. Once per run."
-	elif facility == "quartermaster":
-		summary = "Backpack: 8 → 9 slots. Secure stash: 2 slots."
-	text_line(summary, 14, Color("ba92ff"))
-	var complete: bool = profile.data.facilities[facility] >= 2
-	var improve := button("Fully upgraded" if complete else "Upgrade · %d credits + %d Parts" % [definition.credits, definition.parts], func(): refresh(func(): return profile.upgrade_facility(facility), definition.name + " improved."))
-	improve.disabled = complete or not profile.can_change_loadout() or profile.data.credits < definition.credits or profile.data.parts < definition.parts
-	if facility == "workshop":
-		button("Open equipment", func(): navigate("gear"))
-	elif facility == "quartermaster":
-		button("Find materials · Salvage contracts", func(): navigate("contracts"))
-	button("Back to Base", func(): navigate("haven"))
+	Services.facility(self)
 
 func contracts_page() -> void:
-	text_line("SALVAGE CONTRACTS", 22, Color("ffd27c"))
-	text_line("A short material run for your next upgrade.")
-	text_line("Open 3 caches, survive until the beacon powers up at 90 seconds, then hold its central ring for 3 seconds. Leave before the 3-minute deadline.", 15)
-	text_line("There is no boss in this side mode. Campaign missions still require a boss kill.", 13, Color("ba92ff"))
-	text_line("Choose your guaranteed equipment slot", 16)
-	var target_button := button(contract_slot.capitalize() + " • tap to change", func(): contract_slot = Content.SLOTS[(Content.SLOTS.find(contract_slot) + 1) % Content.SLOTS.size()]; rebuild(), null, 58)
-	decorate_item_button(target_button, contract_slot)
-	text_line("Clear: 80 credits + 2 Parts, 45 Survivor XP, 25 Mastery XP, and equipment for this slot (75% Common / 25% Uncommon). Collected loot is extra.", 13)
-	text_line("Every 3 contract clears: +1 supply key\nProgress: %d/3 • %d total clears" % [profile.data.contract_clears % 3, profile.data.contract_clears], 13, Color("ba92ff"))
-	var unlocked: bool = profile.Salvage.unlocked(profile)
-	var start := button("Start contract" if unlocked else "Clear Garage Lights to unlock", func(): contract_requested.emit(contract_slot))
-	start.disabled = not unlocked or not profile.can_change_loadout()
-	if not profile.data.active_attempt.is_empty():
-		text_line("Finish or resume your saved expedition before starting another.", 13)
-	button("Back to Base", func(): page = "haven"; rebuild(), null, 40)
+	Services.contracts(self)
 
 func class_page() -> void:
-	var id: String = inspected_class if not inspected_class.is_empty() else profile.data["class"]
-	var info: Dictionary = Content.CLASSES[id]
-	var unlocked: bool = profile.class_unlocked(id)
-	text_line(info.name, 25)
-	var stage := Control.new()
-	stage.custom_minimum_size.y = 198
-	body.add_child(stage)
-	Art.picture(stage, Art.GEAR_HALO, Rect2(88, -8, 210, 195))
-	Art.picture(stage, Art.GEAR_PLINTH, Rect2(113, 154, 160, 58))
-	Art.picture(stage, Art.CONTACT_SHADOW, Rect2(145, 179, 96, 12))
-	Art.picture(stage, Art.hero(id), Rect2(90, 0, 204, 193))
-	var xp: int = profile.data.mastery[id]
-	var level: int = Content.mastery_level(xp)
-	text_line("Permanent mastery %d / 20" % level, 17, Color("ffd27c"))
-	var progress := ProgressBar.new()
-	progress.custom_minimum_size.y = 8
-	progress.show_percentage = false
-	progress.max_value = (level + 1) * 100
-	progress.value = xp - level * (level + 1) * 50
-	if level == 20:
-		progress.value = progress.max_value
-	progress.add_theme_stylebox_override("background", style(Color("0a1224")))
-	progress.add_theme_stylebox_override("fill", style(Color("8d6be8")))
-	body.add_child(progress)
-	text_line(info.description, 13)
-	var roster := HBoxContainer.new()
-	body.add_child(roster)
-	for class_id: String in Content.CLASSES:
-		var node := button(Content.CLASSES[class_id].name, func(): inspected_class = class_id; rebuild(), roster, 54)
-		node.add_theme_font_size_override("font_size", 12)
-		node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		node.icon = Art.hero(class_id)
-		node.expand_icon = true
-		node.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		node.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-		node.add_theme_constant_override("icon_max_width", 27)
-		node.add_theme_color_override("font_color", Color("ffd27c") if class_id == id else Color("bcc5dc"))
-	var selected: bool = profile.data["class"] == id
-	var choose := button("Selected" if selected else ("Select " + info.name if unlocked else info.unlock), func(): refresh(func(): return profile.select_class(id), info.name + " selected."))
-	choose.disabled = selected or not unlocked or not profile.can_change_loadout()
-	var progression := HBoxContainer.new()
-	body.add_child(progression)
-	button("Skill tree · %d points" % profile.skill_points(id), func(): page = "skills"; tree_ability = ""; rebuild(), progression, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button("Mastery talents", func(): page = "mastery"; rebuild(), progression, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_line("Survivor level %d / 40 · %d lifetime XP" % [Content.survivor_level(profile.data.survivor_xp), profile.data.survivor_xp], 12)
+	ClassShowcase.show_page(self)
 
 func settings_page() -> void:
-	text_line("SETTINGS", 22, Color("ffd27c"))
-	text_line("Original instrumental music and sound effects. Your preferences are saved on this device.")
-	for key in ["music", "sound"]:
-		text_line("%s volume • %.0f%%" % [key.capitalize(), profile.data.settings[key] * 100], 17)
-		var row := HBoxContainer.new()
-		body.add_child(row)
-		for volume in [0.0, 0.25, 0.5, 1.0]:
-			var node := button("Off" if volume == 0 else "%.0f%%" % (volume * 100), func(): refresh(func(): return profile.set_setting(key, volume), "Audio preference saved."), row)
-			node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for entry in [["haptics", "Vibration"], ["reduced_effects", "Reduced effects"]]:
-		var enabled: bool = profile.data.settings[entry[0]]
-		button("%s: %s" % [entry[1], "On" if enabled else "Off"], func(): refresh(func(): return profile.set_setting(entry[0], not enabled), "Preference saved."))
-	text_line("Reduced effects hides screen flashes and softens spell effects. Attack warnings remain visible.", 13)
-	button("Internal test tools & ad privacy", func(): diagnostics_requested.emit())
-	button("Back to Haven", func(): page = "haven"; message = ""; rebuild())
+	Services.settings(self)
+
 func shop_page() -> void:
-	text_line("Shop", 25)
+	text_line("Shop", 30)
 	if not shop_flow.pending.is_empty():
-		item_portrait("chest", 110)
-		text_line(shop_flow.message, 16)
+		item_portrait("chest", 180)
+		var pending_card := MenuSkin.panel(body)
+		MenuSkin.label(pending_card, "Your supply reward", 24, Color.WHITE, true)
+		MenuSkin.label(pending_card, shop_flow.message, 16, Color("dbe8ff"), true)
 		if shop_flow.earned and not shop_flow.granted:
-			button("Retry saving earned reward", func(): shop_earned(shop_flow.pending))
+			MenuSkin.action(button("Retry saving earned reward", func(): shop_earned(shop_flow.pending)), "gold")
 		elif not shop_flow.earned:
 			button("Cancel loading", func(): shop_video_cancelled.emit(shop_flow.pending))
 		return
-	var card := Panel.new()
-	card.custom_minimum_size.y = 120
-	card.add_theme_stylebox_override("panel", style(Color("10264e"), Color("6375af")))
-	body.add_child(card)
-	Art.picture(card, Art.GEAR_HALO, Rect2(0, 0, 145, 120))
-	Art.picture(card, Art.icon("shop"), Rect2(10, 7, 115, 108))
-	var heading := Label.new()
-	heading.position = Vector2(142, 20)
-	heading.text = "Supply chests"
-	heading.add_theme_font_override("font", Art.strong_font())
-	heading.add_theme_font_size_override("font_size", 24)
-	card.add_child(heading)
-	Art.picture(card, DailyUI.KEY_ICON, Rect2(144, 61, 25, 28))
-	var key_count := Label.new()
-	key_count.position = Vector2(175, 61)
-	key_count.text = str(profile.data.cache_keys)
-	key_count.add_theme_font_size_override("font_size", 22)
-	card.add_child(key_count)
-	button("Open chests", func(): page = "cache"; cache_receipt = false; rebuild())
+	var stage := Control.new()
+	stage.custom_minimum_size.y = 112 if profile.data.rare_choices > 0 else 166
+	body.add_child(stage)
+	Art.picture(stage, Art.GEAR_HALO, Rect2(70,-15,246,200))
+	Art.picture(stage, Art.icon("shop"), Rect2(98,-7,190,stage.custom_minimum_size.y-4))
+	var key_badge := HBoxContainer.new()
+	key_badge.position = Vector2(166,stage.custom_minimum_size.y-30)
+	stage.add_child(key_badge)
+	MenuSkin.icon(key_badge, DailyUI.KEY_ICON, Vector2(29,30))
+	MenuSkin.label(key_badge, str(profile.data.cache_keys), 24)
+	var open := button("Open supply chests", func(): page = "cache"; cache_receipt = false; rebuild(), null, 48)
+	MenuSkin.action(open, "gold")
+	var video_card := MenuSkin.panel(body, "panel", 10)
 	var remaining: int = profile.shop_videos_left()
-	var video := button("Watch video · earn 1 supply key  (%d/2 left)" % remaining, request_shop_video)
+	var video_row := HBoxContainer.new()
+	video_card.add_child(video_row)
+	MenuSkin.icon(video_row, DailyUI.KEY_ICON, Vector2(39,41))
+	var video_text := VBoxContainer.new()
+	video_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	video_row.add_child(video_text)
+	MenuSkin.label(video_text, "A key on the house", 20)
+	MenuSkin.label(video_text, "Optional video · %d / 2 available today" % remaining, 12)
+	var video := button("Watch video · +1 key", request_shop_video, video_card, 40)
+	MenuSkin.action(video, "blue")
 	video.disabled = remaining <= 0 or profile.blocked or not ads_available
-	video.add_theme_color_override("font_disabled_color", Color("b7c8e4"))
-	video.tooltip_text = "Optional video. Reward on completion. Resets daily at 00:00 UTC."
-	text_line("Complete a video to claim your key.", 12, Color("c3d0e8"))
+	video.tooltip_text = "Reward on completion. Resets daily at 00:00 UTC."
 	if not ads_available:
-		text_line("Videos are unavailable right now.", 12, Color("c6a9ed"))
+		MenuSkin.label(video_card, "Videos are unavailable right now.", 12, Color("c9cbe7"), true)
 	var offers := HBoxContainer.new()
 	offers.add_theme_constant_override("separation", 8)
 	body.add_child(offers)
 	for id: String in profile.SHOP_OFFERS:
 		var offer: Dictionary = profile.SHOP_OFFERS[id]
-		var offer_card := PanelContainer.new()
-		offer_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		offer_card.add_theme_stylebox_override("panel", style(Color("0d2450"), Color("4564a2")))
-		offers.add_child(offer_card)
-		var offer_content := VBoxContainer.new()
-		var offer_art := TextureRect.new()
-		offer_art.texture = DailyUI.KEY_ICON if id == "key" else Art.item("parts")
-		offer_art.custom_minimum_size.y = 64
-		offer_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		offer_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		offer_card.add_child(offer_content)
-		offer_content.add_child(offer_art)
-		var caption := "%s · %d" % [offer.name, offer.cost]
-		var buy := button(("Confirm:\n" if confirmation == id else "") + caption, func():
+		var offer_content := MenuSkin.panel(offers, "panel", 8)
+		MenuSkin.icon(offer_content, DailyUI.KEY_ICON if id == "key" else Art.item("parts"), Vector2(55,55))
+		MenuSkin.label(offer_content, offer.name, 16, Color.WHITE, true)
+		var buy := button("Confirm" if confirmation == id else str(offer.cost), func():
 			if confirmation == id:
 				refresh(func(): return profile.purchase_supply(id), offer.name + " added.")
 			else:
-				confirmation = id; message = "Tap again to confirm this purchase."; rebuild(), offer_content, 48)
-		buy.add_theme_font_size_override("font_size", 12)
-		buy.add_theme_color_override("font_disabled_color", Color("bccae2"))
+				confirmation = id; message = "Tap again to confirm this purchase."; rebuild(), offer_content, 40)
+		buy.name = "Purchase_" + id
 		buy.disabled = profile.blocked or profile.data[offer.currency] < offer.cost
 		buy.icon = Art.item(offer.currency)
 		buy.expand_icon = true
-		buy.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		buy.add_theme_constant_override("icon_max_width", 27)
+		buy.add_theme_constant_override("icon_max_width", 26)
 		buy.tooltip_text = "%s: %d %s" % [offer.name, offer.cost, offer.currency]
 	if profile.data.rare_choices > 0:
-		button("Claim earned Rare equipment", func(): page = "rare_choice"; rebuild(), null, 36)
+		MenuSkin.action(button("Claim earned Rare equipment", func(): page = "rare_choice"; rebuild(), null, 36), "gold")
+
+func fitted_art_rect(image: Texture2D, frame: Rect2) -> Rect2:
+	var factor := minf(frame.size.x / image.get_width(), frame.size.y / image.get_height())
+	var fitted := Vector2(image.get_width(), image.get_height()) * factor
+	return Rect2(frame.position + (frame.size - fitted) * 0.5, fitted)

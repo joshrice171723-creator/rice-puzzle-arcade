@@ -1,20 +1,24 @@
 extends RefCounted
 const Daily = preload("res://daily_progress.gd")
 const KEY_ICON = preload("res://assets/menu-key.svg")
+const UI = preload("res://preparation_ui.gd")
 
 static func heading(home: Control, calendar_selected: bool) -> void:
-	home.text_line("Daily rewards", 23, Color("ffd27c"))
+	UI.title(home, "Daily Rewards", "quartermaster")
 	var tabs := HBoxContainer.new()
+	tabs.custom_minimum_size.x = 300
+	tabs.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tabs.add_theme_constant_override("separation", 8)
 	home.body.add_child(tabs)
-	var objectives: Button = home.button("Objectives", func(): home.navigate("daily"), tabs)
+	var objectives: Button = home.button("Objectives", func(): home.navigate("daily"), tabs, 48)
 	objectives.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	objectives.disabled = not calendar_selected
-	var supplies: Button = home.button("Supplies", func(): home.navigate("calendar"), tabs)
+	var supplies: Button = home.button("Supplies", func(): home.navigate("calendar"), tabs, 48)
 	supplies.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	supplies.disabled = calendar_selected
 	var active: Button = supplies if calendar_selected else objectives
-	active.add_theme_stylebox_override("disabled", home.style(Color("453d83"), Color("ffd27c")))
-	active.add_theme_color_override("font_disabled_color", Color("ffe3a0"))
+	active.add_theme_stylebox_override("disabled", home.MenuSkin.surface("gold"))
+	active.add_theme_color_override("font_disabled_color", Color("ffe5a7"))
 
 static func watch_day(home: Control, day: int) -> void:
 	var refresh := Timer.new()
@@ -25,87 +29,103 @@ static func watch_day(home: Control, day: int) -> void:
 		if home.page in ["daily", "calendar"] and home.profile.daily_state().day != day:
 			home.rebuild())
 
+static func reward_icons(home: Control, parent: Node, rewards: Dictionary, large: bool = false) -> void:
+	for kind: String in rewards:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 3)
+		parent.add_child(row)
+		var picture := UI.art(home, row, KEY_ICON if kind == "cache_keys" else home.Art.item(kind), Vector2(30, 30) if large else Vector2(23, 23))
+		picture.name = "RewardIcon"
+		UI.label_in(home, row, str(rewards[kind]), 19 if large else 15, Color("fff0ca")).vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row.tooltip_text = Daily.reward_text({kind: rewards[kind]})
+
 static func show_calendar(home: Control) -> void:
 	var state: Dictionary = home.profile.daily_state()
 	heading(home, true)
 	var claimed_today: bool = state.calendar_day >= state.day
 	var next_claim: int = state.calendar_count % 7
-	home.text_line("Seven-claim supplies", 17)
-	home.text_line("Missed days keep your place. Refreshes at 00:00 UTC.", 12)
-	var calendar := HBoxContainer.new()
-	calendar.add_theme_constant_override("separation", 3)
-	home.body.add_child(calendar)
 	var shown_count := 7 if next_claim == 0 and state.calendar_count > 0 and claimed_today else next_claim
-	for index in 7:
-		var card := PanelContainer.new()
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var selected := index == next_claim and not claimed_today
-		card.add_theme_stylebox_override("panel", home.style(Color("18346a"), Color("ffd27c") if selected else Color("47689e")))
-		calendar.add_child(card)
-		var column := VBoxContainer.new()
-		column.add_theme_constant_override("separation", 1)
-		card.add_child(column)
-		var day_label := Label.new()
-		day_label.text = "✓" if index < shown_count else str(index + 1)
-		day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		day_label.add_theme_font_size_override("font_size", 12)
-		column.add_child(day_label)
-		var kind: String = Daily.CALENDAR[index].keys()[0]
-		var icon := TextureRect.new()
-		icon.texture = KEY_ICON if kind == "cache_keys" else home.Art.item(kind)
-		icon.name = "RewardIcon"
-		icon.custom_minimum_size = Vector2(22, 22)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		column.add_child(icon)
-		var amount := Label.new()
-		amount.text = str(Daily.CALENDAR[index][kind])
-		amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		amount.add_theme_font_size_override("font_size", 12)
-		column.add_child(amount)
-		card.tooltip_text = "Claim %d: %s" % [index + 1, Daily.reward_text(Daily.CALENDAR[index])]
+	var calendar := GridContainer.new()
+	calendar.columns = 3
+	calendar.add_theme_constant_override("h_separation", 7)
+	calendar.add_theme_constant_override("v_separation", 7)
+	home.body.add_child(calendar)
+	for index in 6:
+		calendar_card(home, calendar, index, index < shown_count, index == next_claim and not claimed_today)
+	var finale := UI.card(home, home.body, Color("ce9f4b") if next_claim == 6 and not claimed_today else Color("7260ad"), 8)
+	var final_row := HBoxContainer.new()
+	finale.add_child(final_row)
+	UI.art(home, final_row, home.Art.icon("quartermaster"), Vector2(46, 46))
+	var final_words := VBoxContainer.new()
+	final_words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	final_row.add_child(final_words)
+	UI.label_in(home, final_words, "Claim 7 · Supply Cache", 18, Color("ffdb99"))
+	UI.label_in(home, final_words, "Collected" if shown_count == 7 else ("Ready today" if next_claim == 6 and not claimed_today else "Finish this supply cycle"), 12, Color("c7b7eb"))
+	reward_icons(home, final_row, Daily.CALENDAR[6], true)
 	var calendar_label := "Supplies claimed today" if claimed_today else "Claim " + Daily.reward_text(Daily.CALENDAR[next_claim])
 	var claim: Button = home.button(calendar_label, func():
 		home.message = "Supplies saved." if home.profile.claim_calendar() else "Supplies could not be claimed."
 		home.rebuild())
 	claim.name = "CalendarClaim"
 	claim.disabled = claimed_today or home.profile.blocked
-	home.text_line("The calendar repeats after seven claims. Claim once per UTC day; no streak is lost when you take a break.", 14)
-	home.button("Back to Expedition", func(): home.navigate("mission"))
+	home.MenuSkin.action(claim, "gold")
+	home.text_line("Missing a day keeps your place. One claim per UTC day.\nRefresh: 00:00 UTC · repeats after seven claims.", 12)
+	home.button("Back to Expedition", func(): home.navigate("mission"), null, 38)
 	watch_day(home, state.day)
+
+static func calendar_card(home: Control, parent: Node, index: int, collected: bool, selected: bool) -> void:
+	var card := UI.card(home, parent, Color("d1a358") if selected else Color("4e5f9b"), 4)
+	card.get_parent().custom_minimum_size.y = 76
+	card.add_theme_constant_override("separation", 2)
+	card.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var heading_label := UI.label_in(home, card, "✓ CLAIMED" if collected else "CLAIM %d" % (index + 1), 11, Color("ffdb9a") if selected else Color("c6d5f6"))
+	heading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var kind: String = Daily.CALENDAR[index].keys()[0]
+	var picture := UI.art(home, card, KEY_ICON if kind == "cache_keys" else home.Art.item(kind), Vector2(0, 28))
+	picture.name = "RewardIcon"
+	picture.modulate = Color("98a3c0") if collected else Color.WHITE
+	UI.label_in(home, card, str(Daily.CALENDAR[index][kind]), 19, Color("fff0ca")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card.get_parent().tooltip_text = "Claim %d: %s" % [index + 1, Daily.reward_text(Daily.CALENDAR[index])]
 
 static func show_page(home: Control) -> void:
 	var state: Dictionary = home.profile.daily_state()
 	heading(home, false)
-	home.text_line("Complete any 3 · %d/3" % mini(3, Daily.completed(state)), 17, Color("ffd27c"))
-	home.text_line("Campaign or contracts. Clear or survive 60s; progress saves when the expedition ends.", 12)
-	for objective in Daily.OBJECTIVES:
-		var row := VBoxContainer.new()
-		row.add_theme_constant_override("separation", 1)
-		home.body.add_child(row)
-		var label := Label.new()
-		label.text = "%s  %d/%d" % [objective.label, state.progress[objective.id], objective.target]
-		label.add_theme_font_size_override("font_size", 14)
-		row.add_child(label)
-		var bar := ProgressBar.new()
-		bar.max_value = objective.target
-		bar.value = state.progress[objective.id]
-		bar.show_percentage = false
-		bar.custom_minimum_size.y = 5
-		var background: StyleBoxFlat = home.style(Color("0a1c3d"), Color("0a1c3d"))
-		background.set_content_margin_all(0)
-		bar.add_theme_stylebox_override("background", background)
-		var fill: StyleBoxFlat = home.style(Color("bc8cf5"), Color("bc8cf5"))
-		fill.set_content_margin_all(0)
-		bar.add_theme_stylebox_override("fill", fill)
-		row.add_child(bar)
+	var progress := HBoxContainer.new()
+	home.body.add_child(progress)
+	UI.label_in(home, progress, "Complete any 3", 18, Color("ffdf9e")).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UI.label_in(home, progress, "%d / 3" % mini(3, Daily.completed(state)), 18, Color("f2e9ff"))
+	var objectives := UI.card(home, home.body, Color("3a629c"), 12)
+	objectives.add_theme_constant_override("separation", 9)
+	for index in Daily.OBJECTIVES.size():
+		var objective: Dictionary = Daily.OBJECTIVES[index]
+		var completed: bool = state.progress[objective.id] >= objective.target
+		var entry := VBoxContainer.new()
+		objectives.add_child(entry)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		entry.add_child(row)
+		UI.art(home, row, home.Art.icon(["training", "quartermaster", "mission", "class"][index]), Vector2(37, 37))
+		var words := VBoxContainer.new()
+		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		words.add_theme_constant_override("separation", 2)
+		row.add_child(words)
+		var top := HBoxContainer.new()
+		words.add_child(top)
+		UI.label_in(home, top, objective.label, 14).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UI.label_in(home, top, "✓" if completed else "%d/%d" % [state.progress[objective.id], objective.target], 14, Color("ffdb99") if completed else Color("cbb8f4"))
+		UI.rail(home, words, state.progress[objective.id], objective.target, 6)
+	var reward_card := UI.card(home, home.body, Color("9871c2"), 7)
+	var bundle := HBoxContainer.new()
+	reward_card.add_child(bundle)
+	UI.label_in(home, bundle, "DAILY BONUS", 12, Color("c9b0f2")).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	reward_icons(home, bundle, Daily.BONUS)
 	var ready := Daily.available_bonuses(state)
-	home.text_line(Daily.reward_text(Daily.BONUS) + " per daily bonus", 12)
 	var reward: Button = home.button("Claim bonus" + (" ×%d" % ready if ready > 1 else "") if ready > 0 else ("Daily bonus claimed" if state.claimed else "Complete 3 objectives"), func():
 		home.message = "Daily rewards saved." if home.profile.claim_daily_bonus() else "Daily reward could not be claimed."
 		home.rebuild())
 	reward.name = "DailyBonusClaim"
 	reward.disabled = ready <= 0 or home.profile.blocked
-	home.text_line("Completed, unclaimed bonuses carry into the next day.", 12)
-	home.button("Back to Expedition", func(): home.navigate("mission"))
+	home.MenuSkin.action(reward, "gold")
+	home.text_line("Campaign or contracts: clear or survive 60s. Progress saves at run end. Unclaimed bonuses carry forward.", 12)
+	home.button("Back to Expedition", func(): home.navigate("mission"), null, 36)
 	watch_day(home, state.day)

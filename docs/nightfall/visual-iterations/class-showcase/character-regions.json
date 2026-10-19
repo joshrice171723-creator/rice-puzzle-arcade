@@ -1,0 +1,80 @@
+{
+  "arcanist.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "alpha_gt16_bounds_xyxy": [
+      56,
+      18,
+      1018,
+      1483
+    ],
+    "alpha0_corners": true
+  },
+  "roster.png": {
+    "size": [
+      1536,
+      1024
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "alpha_gt16_bounds_xyxy": [
+      36,
+      91,
+      1498,
+      957
+    ],
+    "alpha0_corners": true
+  },
+  "roster_regions": {
+    "scavenger": {
+      "rect_xywh": [
+        20,
+        90,
+        490,
+        870
+      ],
+      "local_alpha_gt16_bounds_xyxy": [
+        16,
+        12,
+        475,
+        855
+      ]
+    },
+    "engineer": {
+      "rect_xywh": [
+        550,
+        110,
+        400,
+        850
+      ],
+      "local_alpha_gt16_bounds_xyxy": [
+        18,
+        16,
+        380,
+        836
+      ]
+    },
+    "warden": {
+      "rect_xywh": [
+        1000,
+        75,
+        520,
+        900
+      ],
+      "local_alpha_gt16_bounds_xyxy": [
+        17,
+        16,
+        498,
+        882
+      ]
+    }
+  }
+}

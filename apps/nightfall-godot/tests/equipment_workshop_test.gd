@@ -138,8 +138,7 @@ func verify() -> void:
 	for seed_value in 600:
 		var roll: Dictionary = p.Loot.roll("armor", seed_value, 0, 0, seed_value)
 		set_drops[Content.set_id(roll.item)] += 1
-	for count in set_drops.values():
-		check(count > 150 and count < 250, "Armor chest sample supplies all three sets without a dominant set")
+	check(set_drops.outrider == 600 and set_drops.ironwatch == 0 and set_drops.riftweaver == 0, "New Outskirts armor drops stay local while legacy sets retain their effects")
 	p.data.active_attempt = {"id": 100}
 	before = p.data.duplicate(true)
 	check(not p.reroll_substat(target.id, target.affixes[0]) and not p.upgrade_substat(target.id, untouched) and not p.merge_items(extra.id, []) and p.data == before, "Saved expeditions prevent workshop changes")

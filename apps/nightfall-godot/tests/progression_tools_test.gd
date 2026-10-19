@@ -192,7 +192,7 @@ func verify() -> void:
 	check(extra.id in p.data.locked_items, "Detail screen locks actual inventory item")
 	home.navigate("class")
 	await settle()
-	button_in(home, "Skill tree").pressed.emit()
+	home.find_child("OpenClassSkills", true, false).pressed.emit()
 	await settle()
 	check(home.page == "skills" and home.active_tab() == "class", "Class opens its permanent tree")
 	p.data.mastery.engineer = 300

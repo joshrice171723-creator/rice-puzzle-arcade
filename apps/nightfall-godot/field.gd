@@ -14,6 +14,7 @@ const RELICS := {
 	"cinder": {"name": "Cinder Lens", "description": "+8% spell damage. Your pickup reach is 10% smaller."}}
 const TRAIT_COSTS := [30, 45, 65]
 const RADIUS := 60.0
+const Content = preload("res://haven_content.gd")
 var rng := RandomNumberGenerator.new()
 var sites: Array[Dictionary] = []
 var scrap := 0
@@ -117,7 +118,8 @@ func open_cache(index: int) -> void:
 	if index == 5:
 		add_loot("gear", "Outrider Boots", 1, "uncommon", "boots")
 	elif rng.randf() < 0.25:
-		add_loot("gear", "Service Pistol", 1, "uncommon" if rng.randf() < 0.3 else "common", "weapon")
+		var slot_index := rng.randi_range(0, Content.SLOTS.size() - 1)
+		add_loot("gear", Content.STARTER_NAMES[slot_index], 1, "uncommon" if rng.randf() < 0.3 else "common", Content.SLOTS[slot_index])
 	else:
 		add_loot("parts", "Workshop Parts", rng.randi_range(2, 4))
 	scrap += rng.randi_range(15, 24)

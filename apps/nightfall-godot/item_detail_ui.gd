@@ -1,39 +1,40 @@
 extends RefCounted
 const Art = preload("res://haven_art.gd")
 const Content = preload("res://haven_content.gd")
-const PANEL = preload("res://assets/gear/detail-panel.svg")
-const ACTION_FACES = [preload("res://assets/gear/action-blue.svg"), preload("res://assets/gear/action-violet.svg"), preload("res://assets/gear/action-gold.svg")]
-const ACTION_DISABLED = preload("res://assets/gear/action-disabled.svg")
-const RIBBONS = [preload("res://assets/gear/ribbon-0.svg"), preload("res://assets/gear/ribbon-1.svg"), preload("res://assets/gear/ribbon-2.svg"), preload("res://assets/gear/ribbon-3.svg"), preload("res://assets/gear/ribbon-4.svg"), preload("res://assets/gear/ribbon-5.svg")]
-
+const MenuSkin = preload("res://menu_skin.gd")
 static func label(parent: Node, text: String, font_size: int = 15, color: Color = Color("f2f2ff")) -> Label:
-	var node := Label.new()
-	node.text = text
-	if font_size >= 15:
-		var bold := FontVariation.new()
-		bold.base_font = Art.BODY_FONT
-		bold.variation_embolden = 0.8
-		node.add_theme_font_override("font", bold)
-	node.add_theme_font_size_override("font_size", font_size)
-	node.add_theme_color_override("font_color", color)
-	node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(node)
+	var node := MenuSkin.label(parent, text, font_size, color)
+	if font_size < 20:
+		var body := MenuSkin.body_font()
+		body.variation_embolden = 1.1
+		node.add_theme_font_override("font", body)
 	return node
 
 static func section(home: Control, parent: Node, heading: String, lines: Array) -> void:
+	var shell := PanelContainer.new()
+	var material := MenuSkin.surface("inset")
+	material.set_content_margin_all(3)
+	shell.add_theme_stylebox_override("panel", material)
+	parent.add_child(shell)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 0)
-	parent.add_child(column)
+	shell.add_child(column)
 	var header := PanelContainer.new()
-	header.add_theme_stylebox_override("panel", home.style(Color("30395d"), Color("646a91")))
+	var header_face: StyleBoxFlat = home.style(Color("17396d"), Color("17396d"))
+	header_face.set_corner_radius_all(4)
+	header_face.set_content_margin_all(6)
+	header.add_theme_stylebox_override("panel", header_face)
 	column.add_child(header)
-	label(header, heading, 15)
+	label(header, heading, 15).add_theme_font_override("font", MenuSkin.DISPLAY)
 	for index in lines.size():
 		var row := PanelContainer.new()
-		row.add_theme_stylebox_override("panel", home.style(Color("d2d7ee") if index % 2 == 0 else Color("bac5e4"), Color("a4b5da")))
+		var row_face: StyleBoxFlat = home.style(Color("d1d3ef") if index % 2 == 0 else Color("bec3e2"), Color("b6bfdc"))
+		row_face.set_border_width_all(0)
+		row_face.set_corner_radius_all(0)
+		row_face.set_content_margin_all(6)
+		row.add_theme_stylebox_override("panel", row_face)
 		column.add_child(row)
-		label(row, lines[index], 14, Color("263456"))
+		label(row, lines[index], 14, Color("273453"))
 
 static func close(home: Control) -> void:
 	home.selected_item = -1
@@ -74,21 +75,24 @@ static func show_item(home: Control) -> void:
 	panel.position = Vector2(14, 148)
 	panel.size = Vector2(402, 552)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	var surface := StyleBoxTexture.new()
-	surface.texture = PANEL
-	surface.set_texture_margin_all(18)
+	var surface := MenuSkin.surface("panel")
 	panel.add_theme_stylebox_override("panel", surface)
 	overlay.add_child(panel)
 	var rank: int = Content.RARITIES.find(item.rarity)
-	Art.picture(overlay, RIBBONS[rank], Rect2(26, 126, 378, 55))
-	var name_label := label(overlay, item.name, 25)
-	name_label.position = Vector2(49, 134)
+	var ribbon := Panel.new()
+	ribbon.position = Vector2(26, 126)
+	ribbon.size = Vector2(378, 62)
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ribbon.add_theme_stylebox_override("panel", MenuSkin.surface("ribbon"))
+	overlay.add_child(ribbon)
+	var name_label := label(overlay, item.name, 26)
+	name_label.position = Vector2(49, 139)
 	name_label.size = Vector2(332, 35)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_color_override("font_outline_color", Color("142145"))
 	name_label.add_theme_constant_override("outline_size", 4)
 	var rarity := PanelContainer.new()
-	rarity.position = Vector2(160, 174)
+	rarity.position = Vector2(160, 179)
 	rarity.size = Vector2(110, 26)
 	var rarity_style: StyleBoxFlat = home.style(Color(Content.RARITY_COLORS[rank]).darkened(0.5), Color("70b8f1"))
 	rarity_style.set_content_margin_all(2)
@@ -99,23 +103,11 @@ static func show_item(home: Control) -> void:
 	var close_button: Button = home.button("×", func(): close(home), overlay, 44)
 	close_button.name = "CloseItemDetail"
 	close_button.tooltip_text = "Close item details"
-	close_button.position = Vector2(359, 150)
-	close_button.custom_minimum_size = Vector2(54, 54)
-	close_button.size = Vector2(54, 54)
-	close_button.add_theme_font_size_override("font_size", 30)
-	var close_face: StyleBoxFlat = home.style(Color("198ed1"), Color("91dbff"))
-	close_face.set_corner_radius_all(27)
-	close_face.set_border_width_all(2)
-	close_face.set_content_margin_all(0)
-	close_button.add_theme_stylebox_override("normal", close_face)
-	var close_pressed := close_face.duplicate()
-	close_pressed.bg_color = Color("155eaa")
-	close_button.add_theme_stylebox_override("hover", close_face)
-	close_button.add_theme_stylebox_override("pressed", close_pressed)
-	var close_focus := close_face.duplicate()
-	close_focus.draw_center = false
-	close_focus.border_color = Color("ffd27c")
-	close_button.add_theme_stylebox_override("focus", close_focus)
+	close_button.position = Vector2(366, 151)
+	close_button.custom_minimum_size = Vector2(44, 44)
+	close_button.size = Vector2(44, 44)
+	MenuSkin.action(close_button)
+	close_button.add_theme_font_size_override("font_size", 28)
 	close_button.grab_focus()
 	var scroll := ScrollContainer.new()
 	scroll.name = "ItemDetailScroll"
@@ -131,7 +123,7 @@ static func show_item(home: Control) -> void:
 	summary.add_theme_constant_override("separation", 10)
 	content.add_child(summary)
 	var art_panel := PanelContainer.new()
-	art_panel.custom_minimum_size = Vector2(123, 124)
+	art_panel.custom_minimum_size = Vector2(132, 136)
 	var art_frame := StyleBoxTexture.new()
 	art_frame.texture = Art.GEAR_FRAMES[rank]
 	art_frame.set_texture_margin_all(12)
@@ -156,11 +148,12 @@ static func show_item(home: Control) -> void:
 		stat_lines.append("Field Medkit")
 	for text: String in stat_lines:
 		var stat_row := PanelContainer.new()
-		var stat_face: StyleBoxFlat = home.style(Color("d2d7ee"), Color("9db5df"))
-		stat_face.set_content_margin_all(6)
+		var stat_face: StyleBoxFlat = home.style(Color("c9c8eb"), Color("aebbe0"))
+		stat_face.set_corner_radius_all(6)
+		stat_face.set_content_margin_all(7)
 		stat_row.add_theme_stylebox_override("panel", stat_face)
 		stats_column.add_child(stat_row)
-		label(stat_row, text, 17, Color("273450"))
+		label(stat_row, text, 18, Color("30334d")).add_theme_font_override("font", MenuSkin.DISPLAY)
 	var equipped: bool = home.profile.data.equipment[item.slot] == item.id
 	var set_id := Content.set_id(item)
 	if not set_id.is_empty():
@@ -168,8 +161,8 @@ static func show_item(home: Control) -> void:
 		var count: int = home.profile.set_counts()[set_id]
 		var set_lines: Array = []
 		for threshold in [2, 3]:
-			set_lines.append("%d pieces (%d/%d): %s%s" % [threshold, mini(count, threshold), threshold, definition.two if threshold == 2 else definition.three, " · Active" if count >= threshold else " · Requires Rare+"])
-		section(home, content, "%s set · %d qualifying pieces" % [definition.name, count], set_lines)
+			set_lines.append("%d pieces (%d/%d) · %s%s" % [threshold, mini(count, threshold), threshold, definition.two if threshold == 2 else definition.three, " · Active" if count >= threshold else ""])
+		section(home, content, "%s set · %d Rare+ pieces" % [definition.name, count], set_lines)
 	else:
 		section(home, content, "Equipment effect", ["Once per expedition: restore %d%% maximum HP when a nonlethal hit leaves you at 25%% HP or below." % (25 if home.profile.data.facilities.infirmary == 2 else 20)] if item.slot == "gadget" else [Content.SLOT_LABELS[item.slot] + " · " + ("Currently equipped" if equipped else "Ready to equip")])
 	var substats: Array = []
@@ -210,23 +203,27 @@ static func show_item(home: Control) -> void:
 	var cost_strip := PanelContainer.new()
 	cost_strip.position = Vector2(36, 568)
 	cost_strip.size = Vector2(358, 35)
-	var cost_face: StyleBoxFlat = home.style(Color("08357c"), Color("1f62a8"))
+	var cost_face: StyleBoxFlat = home.style(Color("0a2864"), Color("1a4d95"))
 	cost_face.set_content_margin_all(3)
 	cost_strip.add_theme_stylebox_override("panel", cost_face)
 	overlay.add_child(cost_strip)
-	var costs := HBoxContainer.new()
-	costs.add_theme_constant_override("separation", 12)
-	cost_strip.add_child(costs)
 	if cost.is_empty():
-		label(costs, "Level cap reached · Level 5 / 5", 16)
+		label(cost_strip, "Level cap reached · Level 5 / 5", 15)
 	else:
+		var costs := MenuSkin.cost_row(cost_strip, home.profile, cost)
+		costs.add_theme_constant_override("separation", 12)
+		var index := 0
 		for currency in ["credits", "parts"]:
-			var cost_row := HBoxContainer.new()
-			cost_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			costs.add_child(cost_row)
-			var currency_icon := Art.picture(cost_row, Art.item(currency), Rect2(0, 0, 25, 30))
-			currency_icon.custom_minimum_size = Vector2(25, 30)
-			label(cost_row, "%s / %d" % [home.compact_amount(home.profile.data[currency]), cost[currency]], 17, Color("f2f2ff") if home.profile.data[currency] >= cost[currency] else Color("ffafbd")).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var group: HBoxContainer = costs.get_child(index)
+			group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var amount: Label = group.get_child(1)
+			amount.text = "%s / %d" % [home.compact_amount(home.profile.data[currency]), cost[currency]]
+			amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var amount_font := MenuSkin.body_font()
+			amount_font.variation_embolden = 1.1
+			amount.add_theme_font_override("font", amount_font)
+			amount.add_theme_font_size_override("font_size", 17)
+			index += 1
 	var actions := HBoxContainer.new()
 	actions.position = Vector2(30, 625)
 	actions.size = Vector2(370, 60)
@@ -251,24 +248,7 @@ static func show_item(home: Control) -> void:
 	for index in 3:
 		var action: Button = actions.get_child(index)
 		action.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		action.add_theme_font_size_override("font_size", 17)
-		action.add_theme_color_override("font_outline_color", Color("213055"))
-		action.add_theme_constant_override("outline_size", 3)
-		var action_style := StyleBoxTexture.new()
-		action_style.texture = ACTION_FACES[index]
-		action_style.set_texture_margin_all(13)
-		action_style.set_content_margin_all(6)
-		action.add_theme_stylebox_override("normal", action_style)
-		var hover_face := action_style.duplicate()
-		hover_face.modulate_color = Color(1.1, 1.1, 1.1)
-		action.add_theme_stylebox_override("hover", hover_face)
-		var pressed_face := action_style.duplicate()
-		pressed_face.modulate_color = Color("c2cde1")
-		action.add_theme_stylebox_override("pressed", pressed_face)
-		var disabled_face := action_style.duplicate()
-		disabled_face.texture = ACTION_DISABLED
-		action.add_theme_stylebox_override("disabled", disabled_face)
-		action.add_theme_color_override("font_disabled_color", Color("a8b6d0"))
+		MenuSkin.action(action, ["blue", "gold", "gold" if home.confirmation == "quick_upgrade" else "blue"][index])
 	var notice := label(overlay, home.profile.error if not home.profile.error.is_empty() else ("Finish your saved expedition to change equipment." if not home.profile.can_change_loadout() else home.message), 12, Color("ffd27c"))
 	notice.position = Vector2(36, 605)
 	notice.size = Vector2(358, 20)

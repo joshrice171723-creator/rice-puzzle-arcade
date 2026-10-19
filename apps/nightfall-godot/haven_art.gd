@@ -23,8 +23,8 @@ const CHROME = {
 	"selected": preload("res://assets/gear/nav-tab-active.svg"),
 	"pressed": preload("res://assets/gear/nav-tab-pressed.svg"),
 	"settings": preload("res://assets/gear/nav-settings.svg")}
-const DISPLAY_FONT = preload("res://assets/fonts/Cinzel.ttf")
-const BODY_FONT = preload("res://assets/fonts/BarlowSemiCondensed-SemiBold.ttf")
+const DISPLAY_FONT = preload("res://assets/fonts/LilitaOne-Regular.ttf")
+const BODY_FONT = preload("res://assets/fonts/Nunito.ttf")
 const ITEM_NAMES := ["weapon", "helmet", "body", "boots", "charm", "gadget", "ring", "pants", "credits", "parts", "gems", "hp"]
 const NAMES := ["shop", "gear", "mission", "haven", "class", "ring", "pants", "workshop", "infirmary", "quartermaster", "training", "arcanum"]
 
@@ -39,16 +39,14 @@ static func icon(id: String) -> AtlasTexture:
 		texture.region.size.x -= 46
 	return texture
 
-static func hero(id: String) -> AtlasTexture:
+static func hero(id: String) -> Texture2D:
+	if id == "arcanist":
+		return preload("res://assets/class-showcase/arcanist.png")
+	var regions := {"scavenger":Rect2(20,90,490,870), "engineer":Rect2(550,110,400,850), "warden":Rect2(1000,75,520,900)}
 	var texture := AtlasTexture.new()
-	if id in ["warden", "arcanist"]:
-		texture.atlas = CLASSES
-		var cell := CLASSES.get_width() / 2.0
-		texture.region = Rect2((cell if id == "arcanist" else 0.0) + 8, 0, cell - 16, CLASSES.get_height())
-		return texture
-	texture.atlas = HEROES
-	var cell := HEROES.get_width() / 2.0
-	texture.region = Rect2(cell if id == "engineer" else 0.0, 0, cell, HEROES.get_height())
+	texture.atlas = preload("res://assets/class-showcase/roster.png")
+	texture.region = regions.get(id, regions.scavenger)
+	texture.filter_clip = true
 	return texture
 
 static func item(id: String) -> AtlasTexture:
@@ -100,5 +98,5 @@ static func chrome_style(id: String) -> StyleBoxTexture:
 static func strong_font() -> FontVariation:
 	var font := FontVariation.new()
 	font.base_font = BODY_FONT
-	font.variation_embolden = 0.65
+	font.variation_opentype = {"wght": 800}
 	return font
