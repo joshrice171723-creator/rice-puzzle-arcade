@@ -79,7 +79,35 @@ The latest visual set covers proximity charging for the fast shop and slow Relic
 
 ![Mission preview and rescue](art-concepts/nightfall-b-mission-rescue.png)
 
-## Generation provenance
+## Current target: simpler Haven and equipment layout
+
+Joshua supplied simpler home/equipment references after the detailed courtyard concepts below. This steering supersedes the elaborate scenic presentation: use a clean cobalt background, a compact central base model or character, large readable icons, short labels, and four bottom tabs. Keep Nightfall's original characters and magical scavenger identity. Do not reproduce the reference game's shop clutter or green interface.
+
+![Simplified Haven and equipment concept](art-concepts/nightfall-b-simple-haven-gear.png)
+
+Haven: one compact diorama containing Workshop, Infirmary, Storehouse, beacon and selected character; four shortcuts; a mission selector and Venture out action. Gear: large selected-character preview with six equipped slots, Power/HP summary, and eight visible inventory tiles per page. The two-by-four grid is a presentation target; page count must come from actual inventory. Costs, rarities, wallet values and sample inventory in the image are illustrative, not new economy rules.
+
+Build this simpler composition first. Layered 2D scenery, selectable buildings and character idle animation still apply; no sprawling scenic castle or free-roaming home map is required. Upgrades can change a building's visible roof/equipment while retaining the compact layout. Keep details behind taps and inventory paginated. The detailed earlier Workshop panel is a functional reference only and should be restyled to this simpler interface. Only the Base tab rename is implemented so far; the visual overhaul remains a concept awaiting implementation.
+
+## Haven as a physical base — October 18 revision
+
+Joshua requested that Haven look like an inhabited base with buildings and the selected character, rather than a page of buttons. The navigation tab is now **Base**; **Haven** remains the settlement name. The following new images are implementation targets for review, not functional game screenshots. Only the tab label has been implemented in this pass.
+
+![Haven courtyard home concept](art-concepts/nightfall-b-haven-base.png)
+
+Build toward one fixed portrait courtyard scene: the selected character beside the fire, Workshop, Infirmary, Storehouse, Arcanum, Training Yard and the expedition gate. Buildings act as entrances to existing features. Storehouse is the visual name for the existing Quartermaster facility, not a new currency or progression system. Arcanum opens the existing ability guide; Training opens boss practice. The expedition gate opens mission selection. Gear and Class remain available from bottom navigation.
+
+Use layered 2D scenery, separate building sprites and broad invisible touch areas. Keep the character, fire, lights, smoke and repair drone on separate animation layers. Fit the complete home view within the phone; do not require dragging or scrolling to reach a building. Choose legibility over copying every decorative detail in the concept. Small labels and tap targets need phone-size validation.
+
+![Workshop selection and upgrade concept](art-concepts/nightfall-b-workshop-upgrade.png)
+
+Tapping a building highlights it and opens one concise action panel while retaining the character and environment. Show current rank, exact benefit, costs and the resulting appearance. Workshop I to II uses the existing 400 Credits + 12 Parts cost and 10% reduction to equipment-upgrade Credit costs; Parts costs do not decrease. Upgrades should visibly restore or reinforce the relevant building. No construction timer is introduced. Other wallet numbers are illustrative.
+
+Implementation order: (1) layered courtyard and selected-character idle pose; (2) building entry points connected to existing screens; (3) compact facility panels using the existing transactional purchases; (4) rank-specific building art and subtle ambient animation; (5) phone fit, touch targets, reduced effects, save/resume and performance checks. These images require isolated production assets before implementation; they are not a ready-made playable scene.
+
+Both concepts were generated with built-in image_gen. Exact prompts are in [BEACONBOUND_PROMPTS.md](art-concepts/BEACONBOUND_PROMPTS.md); originals remain preserved in the Codex generated-images directory.
+
+## Earlier generation provenance
 
 Both boards were generated with the built-in image_gen tool. Exact generation prompts are preserved in [PROMPTS.md](art-concepts/PROMPTS.md). Originals remain in the Codex generated-images directory; workspace copies are versioned with this plan.
 

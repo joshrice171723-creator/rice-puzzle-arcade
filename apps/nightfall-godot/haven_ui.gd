@@ -78,7 +78,7 @@ func _ready() -> void:
 	navigation.size = Vector2(394, 52)
 	navigation.add_theme_constant_override("separation", 5)
 	add_child(navigation)
-	for entry in [["mission", "Venture"], ["gear", "Gear"], ["haven", "Haven"], ["class", "Class"]]:
+	for entry in [["mission", "Venture"], ["gear", "Gear"], ["haven", "Base"], ["class", "Class"]]:
 		var tab := button(entry[1], func(): page = entry[0]; selected_item = -1; confirmation = ""; message = ""; rebuild(), navigation)
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rebuild()
