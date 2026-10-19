@@ -1,6 +1,6 @@
 # Nightfall Shrines and Run Interface Concepts
 
-October 18, 2026. Visual exploration and working design notes following the main plan. Style B is selected; the new screens and numerical tuning remain proposals for review. No gameplay, ads, currencies, or UI functionality was implemented. The campaign still requires surviving timed waves and then killing the boss, without a second timer.
+October 18, 2026. Historical visual exploration and design notes following the main plan. Style B is selected. These images were created before implementation was authorized; the images themselves did not implement gameplay. Joshua subsequently approved starting the build. See [feature-session evidence](FEATURE_BUILD_SESSION.md) for the current Godot implementation and acceptance gaps. The campaign still requires surviving timed waves and then killing the boss, without a second timer.
 
 ## User direction and proposed tuning
 

@@ -95,3 +95,28 @@ Google's [rewarded-ad documentation](https://developers.google.com/admob/android
 - Static graphical fixture: 120 enemies plus 40 pickups used 24 draw calls against the 60-call limit. `final-render-budget.log` records the result. This is rendering evidence, not a physical-phone FPS claim.
 - Eleven static product captures generated without advancing combat or loading/writing the player's save. Final combat preview: `artifacts/nightfall-godot/compact-hud-final.png`. Engineer left/right, pause, progress, abilities, mastery, contracts and boss captures are alongside it.
 - Deferred ObjectDB teardown warnings remain in the bug log. No manual emulator gameplay or actual rewarded video playback was performed during this feature-only session.
+
+## Packaged build receipt
+
+Runtime source: `27c1133` (`feat(nightfall): add mission progress and engineer presentation`). Later changes to this record and the static viewport-capture script do not change exported runtime resources; `tests/*` and source documentation are excluded by both export presets.
+
+| Artifact | Size | SHA256 |
+|---|---:|---|
+| `artifacts/nightfall-godot/nightfall-proof.apk` | 178,688,713 bytes | `066FE27401156165B3626010AAE49A3DAE1A9ED6B65433F0BCB82805FD9593EE` |
+| `artifacts/nightfall-godot/NightfallProof.exe` | 114,242,280 bytes | `D2C2E4907C64708B0719C3AF7834DEE1540ADE4ACE45D5C0BBD1EDC85FBC6827` |
+
+Android export completed October 19 at 02:15:40 UTC; Windows completed at 02:16:18 UTC. Android signature verification passed with APK Signature Scheme v2. Package `com.joshuarice.nightfallproof`, minimum Android API 24, target API 36, arm64-v8a and x86_64. Exported assets include the Engineer and five-boss atlases, compact HUD controller, class talents and Salvage Contracts. This is a debug/internal build, not a signed store release.
+
+Logs: `android-final-features.log`, `windows-final-features.log`, `final-feature-tests.log`, `final-feature-render.log`, `final-render-budget.log`. Machine-readable hashes/evidence: `artifacts/nightfall-godot/feature-build-receipt.json`.
+
+Static fixture windows were also rendered at 320×568 and 390×844. Their captures live in `phone-320/` and `phone-390/`; the canvas preserves its aspect ratio and taller windows letterbox. Render texture captures contain the game canvas, not the operating system's outer window or letterbox bars. No scrolling was required in combat, pause or mission progress. This does not replace a physical-device safe-area/touch-target check.
+
+At the final device-discovery check, `emulator-5554` was offline. No APK installation, manual emulator play, native video delivery or physical-device acceptance was performed in this feature-only session. Existing rendering defects remain in KNOWN_ISSUES.md.
+
+## Next delivery gates
+
+1. Human review of the compact combat layout and branching ability choices, using this exact build.
+2. Resume the deferred bug-cleanup pass when requested; reproduce the missing Android button labels and ordinary-actor mirror issue before changing them.
+3. Validate native rewarded rescue on a reachable emulator/device: no fill, early close, earned completion, repeated callbacks and background/resume. Production publisher IDs, mediation and purchases are separate work.
+4. Play the five campaign missions with starter and upgraded gear to tune human difficulty and boss readability. Automated assertions do not establish fun, player failure rates or long-term progression balance.
+5. Complete the next content milestone: a second zone using the same rules/content structure, then broaden classes and animation. Do not label twenty zones complete based on this one-zone prototype.

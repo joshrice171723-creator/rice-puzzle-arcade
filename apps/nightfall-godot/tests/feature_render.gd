@@ -1,11 +1,16 @@
 extends SceneTree
 ## Static product captures. Never advances combat or reads the player's save.
 var destination := ""
+var phone_size := Vector2i(430, 760)
 
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture-dir="):
 			destination = arg.trim_prefix("--capture-dir=")
+		elif arg.begins_with("--phone-size="):
+			var dimensions := arg.trim_prefix("--phone-size=").split("x")
+			if dimensions.size() == 2:
+				phone_size = Vector2i(maxi(240, dimensions[0].to_int()), maxi(400, dimensions[1].to_int()))
 	call_deferred("capture")
 
 func save_frame(name: String) -> void:
@@ -26,7 +31,7 @@ func capture() -> void:
 	arena.testing = true
 	root.add_child(arena)
 	arena.set_physics_process(false)
-	root.size = Vector2i(430, 760)
+	root.size = phone_size
 	arena.home.show()
 	arena.profile.data.seen_bosses = [1, 2, 3, 4, 5]
 	arena.profile.data.missions = {"1": ["clear"], "2": ["clear"], "3": ["clear"], "4": ["clear"]}
