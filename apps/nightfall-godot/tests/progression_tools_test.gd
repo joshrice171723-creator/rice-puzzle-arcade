@@ -193,6 +193,7 @@ func verify() -> void:
 	home.navigate("class")
 	await settle()
 	home.find_child("OpenClassSkills", true, false).pressed.emit()
+	home.find_child("TalentPreviewOpenTree", true, false).pressed.emit()
 	await settle()
 	check(home.page == "skills" and home.active_tab() == "class", "Class opens its permanent tree")
 	p.data.mastery.engineer = 300

@@ -10,6 +10,7 @@ signal contract_requested(slot: String)
 const Art = preload("res://haven_art.gd")
 const MenuSkin = preload("res://menu_skin.gd")
 const MenuMotion = preload("res://menu_motion.gd")
+const TalentPreview = preload("res://talent_preview.gd")
 const ClassShowcase = preload("res://class_showcase.gd")
 const Services = preload("res://haven_services_ui.gd")
 const ShopReward = preload("res://shop_reward.gd")
@@ -152,7 +153,7 @@ func active_tab() -> String:
 		return "shop"
 	if page in ["mission", "rewards", "contracts", "zones", "daily", "calendar"]:
 		return "mission"
-	if page in ["class", "mastery", "skills"]:
+	if page in ["class", "mastery", "skills", "talents"]:
 		return "class"
 	return "gear" if page in ["gear", "builds", "filters", "merge", "substats", "sets"] else "haven"
 
@@ -296,7 +297,7 @@ func rebuild() -> void:
 	for child in body.get_children():
 		body.remove_child(child)
 		child.queue_free()
-	frame_panel.position.y = 48 if page == "class" else 64
+	frame_panel.position.y = 48 if page in ["class", "talents"] else 64
 	body.add_theme_constant_override("separation", 5 if page == "arcanum" else 7)
 	frame_panel.size = Vector2(402, 594)
 	var surface := StyleBoxEmpty.new()
@@ -342,6 +343,7 @@ func rebuild() -> void:
 		"sets": EquipmentWorkshop.sets(self)
 		"haven": haven_page()
 		"class": class_page()
+		"talents": TalentPreview.show_page(self)
 		"skills": SkillTreeUI.show_tree(self)
 		"settings": settings_page()
 		"cache": LootUI.show(self)

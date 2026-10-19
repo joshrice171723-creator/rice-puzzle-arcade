@@ -40,7 +40,16 @@ func run() -> void:
 		check(home.body.get_global_rect().end.y <= home.navigation.position.y,"Showcase fits above navigation for "+id)
 		check(arena.profile.data == before,"Previewing "+id+" does not change the player's profile")
 	home.find_child("OpenClassSkills",true,false).pressed.emit()
-	check(home.page == "skills","Skill Tree opens the real class tree")
+	check(home.page == "talents","Class opens the dedicated talent preview")
+	for id in ["scavenger","warden","arcanist","engineer"]:
+		home.find_child("TalentClass_"+id,true,false).pressed.emit()
+		await process_frame
+		check(home.inspected_class == id and home.active_tab() == "class","Talent preview follows inspected class")
+		check(home.find_child("TalentConstellation",true,false).get_child_count() > 8,"Talent preview contains ability nodes and prerequisite connections")
+		check(arena.profile.data == before,"Talent preview does not change equipment, XP or unlocks")
+	home.find_child("TalentNode_gravity",true,false).pressed.emit()
+	home.find_child("TalentPreviewOpenTree",true,false).pressed.emit()
+	check(home.page == "skills" and home.tree_ability == "gravity","Preview opens the selected ability in the real skill tree")
 	home.navigate("class")
 	home.find_child("OpenClassMastery",true,false).pressed.emit()
 	check(home.page == "mastery","Mastery opens the real permanent talents")

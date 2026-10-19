@@ -32,7 +32,7 @@ func verify() -> void:
 	arena.home.show()
 	for viewport in [Vector2i(320, 568), Vector2i(390, 844), Vector2i(430, 760)]:
 		root.size = viewport
-		for page in ["mission", "gear", "haven", "class", "settings", "cache", "rare_choice", "rewards", "contracts", "training", "arcanum", "mastery"]:
+		for page in ["mission", "gear", "haven", "class", "talents", "settings", "cache", "rare_choice", "rewards", "contracts", "training", "arcanum", "mastery"]:
 			arena.home.page = page
 			arena.home.rebuild()
 			await settle()

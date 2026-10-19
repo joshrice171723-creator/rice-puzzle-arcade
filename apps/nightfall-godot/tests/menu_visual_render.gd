@@ -31,7 +31,7 @@ func capture() -> void:
 		root.size = dimensions
 		var suffix := "-%dx%d" % [dimensions.x, dimensions.y]
 		arena.profile.data = starter.duplicate(true)
-		for page in ["shop","gear","mission","haven","class","settings","zones","contracts","training","arcanum","mastery","skills","daily","calendar","builds","filters","sets","cache","rare_choice","rewards","craft"]:
+		for page in ["shop","gear","mission","haven","class","talents","settings","zones","contracts","training","arcanum","mastery","skills","daily","calendar","builds","filters","sets","cache","rare_choice","rewards","craft"]:
 			home.navigate(page)
 			await frame(arena, page + "-starter" + suffix)
 		for id in ["workshop","infirmary","quartermaster"]:
