@@ -1,10 +1,12 @@
 extends RefCounted
-## Authored world-space spell sprites. Positions, radii and lifetime come from Run.
+## Continuous world-space spell geometry. Positions, radii and lifetime come from Run.
+const Shapes = preload("res://draw_shapes.gd")
 const Magic = preload("res://magic.gd")
+const HeroMotion = preload("res://hero_cast.gd")
 const Ember = preload("res://ember_vfx.gd")
 const ATLAS = preload("res://assets/combat-vfx/arcane-effects-atlas.png")
 const SPELL_EFFECTS := ["chain", "frost", "ember", "lance", "gravity"]
-const LIFT := Vector2(0,-18)
+const LIFT := Vector2(0,-28)
 const MAX_PROJECTILES := 64
 const MAX_EFFECTS := 64
 # Explicit occupied regions exclude neighboring glow and keep the two poses aligned.
@@ -27,12 +29,12 @@ static func draw_ground(canvas: Node2D, run: RefCounted, offset: Vector2, time: 
 		if radius <= 0.0 or life <= 0.0:
 			continue
 		var at: Vector2 = zone.pos + offset
-		if zone.get("kind", "ground") == "collapse":
+		if zone.get("kind", "ground") in ["collapse", "gravity_pull"]:
 			gravity(canvas, at, radius, 1.0 - clampf(life / 0.6, 0.0, 1.0), time, reduced, 0.55)
 		else:
 			var fade := minf(1.0, life * 2.5)
 			Ember.body(canvas,at,Vector2.ONE*radius,0,time*0.2,0,fade*(0.45 if reduced else 0.8),9)
-			canvas.draw_arc(at, radius, 0, TAU, 40, Color(0.57, 0.80, 1.0, fade * 0.35), 1.3, true)
+			Shapes.ring(canvas,at,radius,1.3,Color(0.57,0.80,1.0,fade*0.35))
 			canvas.draw_arc(at, radius * 0.80, 0.0 if reduced else time * 0.25, (0.0 if reduced else time * 0.25) + PI * 1.55, 32, Color(1.0, 0.82, 0.45, fade * 0.38), 1.3, true)
 			var marks := PackedVector2Array()
 			for rune in (6 if reduced else 10):
@@ -59,6 +61,35 @@ static func draw_shot(canvas: Node2D, shot: Dictionary, offset: Vector2, time: f
 	match shot.get("kind","pistol"):
 		"ember":
 			Ember.draw_projectile(canvas,shot,offset,time,reduced)
+		"wand":
+			Ember.ribbon(canvas,at,direction,24,5,time,0,0.65,6)
+			Ember.body(canvas,at,Vector2(9,7),direction.angle(),time,0,1,5)
+			var rays := PackedVector2Array()
+			for n in 3:
+				var ray := Vector2.from_angle(time*4+n*PI/3)*8
+				rays.append(at-ray)
+				rays.append(at+ray)
+			canvas.draw_multiline(rays,Color(0.90,0.93,1,0.75),1.1,true)
+		"crossbow":
+			var side := direction.orthogonal()
+			canvas.draw_line(at-direction*15,at+direction*9,Color("b27a48"),3,true)
+			canvas.draw_line(at-direction*14-side,at+direction*8-side,Color("f5d095"),1,true)
+			canvas.draw_colored_polygon(PackedVector2Array([at+direction*16,at+direction*6+side*4,at+direction*8,at+direction*6-side*4]),Color("e3e7ed"))
+			for sign_value in [-1,1]:
+				canvas.draw_colored_polygon(PackedVector2Array([at-direction*7,at-direction*14+side*5*sign_value,at-direction*18+side*5*sign_value,at-direction*14]),Color("6086ba"))
+		"sabre":
+			var age := 1.0-clampf(float(shot.life)/0.24,0,1)
+			var sweep := smoothstep(0.05,0.65,age)
+			var aim: Vector2 = shot.get("direction",Vector2.RIGHT)
+			var angle := aim.angle()-1.1+sweep*2.2
+			var radius: float = shot.get("radius",80.0)
+			var fade := 1.0-smoothstep(0.55,1,age)
+			var points := PackedVector2Array()
+			for n in 16:
+				points.append(shot.pos+offset+Vector2(0,-10)+Vector2.from_angle(angle-n*0.065)*radius)
+			canvas.draw_polyline(points,Color(0.66,0.78,1,fade*0.25),9,true)
+			canvas.draw_polyline(points,Color(0.89,0.95,1,fade*0.85),2.5,true)
+			blade(canvas,at+Vector2.from_angle(angle)*radius*0.42,angle,time,true)
 		"blade":
 			var spin: float = direction.angle()+time*13.0
 			blade(canvas,at,spin,time,reduced)
@@ -91,6 +122,7 @@ static func draw_wisps(canvas: Node2D, run: RefCounted, offset: Vector2, time: f
 
 static func draw_effects(canvas: Node2D, run: RefCounted, offset: Vector2, time: float, reduced: bool) -> void:
 	Ember.draw_cast(canvas,run,offset,reduced)
+	draw_spell_gesture(canvas,run,offset,time,reduced)
 	for event: Dictionary in run.vfx_events:
 		if event.kind == "ember_hit":
 			Ember.draw_impact(canvas,event,offset,reduced)
@@ -129,6 +161,46 @@ static func draw_effects(canvas: Node2D, run: RefCounted, offset: Vector2, time:
 				stone_line(canvas, from + LIFT, to + LIFT, clampf(float(run.spell_mod("lance", "width", 20)), 12.0, 40.0), age, fade, reduced)
 			"gravity":
 				gravity(canvas, from, maxf(1.0, effect.from.distance_to(effect.to)), age, time, reduced, fade * strength)
+
+
+static func draw_spell_gesture(canvas: Node2D, run: RefCounted, offset: Vector2, time: float, reduced: bool) -> void:
+	var pose := HeroMotion.pose(run)
+	if pose.is_empty() or pose.get("spell", "") in ["", "ember", "wisp"]:
+		return
+	var age: float = pose.age
+	var fade := (1.0-clampf(age/0.30,0,1)) if age >= 0 else smoothstep(-0.18,0,age)
+	if fade <= 0:
+		return
+	var direction: Vector2 = pose.direction
+	var at: Vector2 = run.player+offset+LIFT+direction*24
+	var radius := 9.0+fade*5.0
+	match pose.spell:
+		"frost", "lance":
+			var vertices := PackedVector2Array()
+			var colors := PackedColorArray()
+			for n in (2 if reduced else 3):
+				var ray := Vector2.from_angle(time*3+n*TAU/3)
+				crystal_faces(vertices,colors,at+ray*radius,ray,8*fade+4,3,fade,pose.spell=="frost")
+			draw_triangles(canvas,vertices,colors,10 if pose.spell=="frost" else 11)
+		"chain":
+			for n in (1 if reduced else 2):
+				var tip := at+Vector2.from_angle(time*5+n*PI)*(radius+5)
+				lightning(canvas,at,tip,clampf(age+0.18,0,1),fade*0.7,true)
+		"ground":
+			canvas.draw_arc(at,radius,0,TAU,20,Color(0.76,0.84,1,fade*0.8),1.3,true)
+			canvas.draw_arc(at,radius*0.65,time*2,time*2+PI*1.5,16,Color(1,0.82,0.48,fade*0.8),1.2,true)
+		"gravity":
+			Ember.body(canvas,at,Vector2.ONE*radius,0,time,0,fade*0.75,8)
+			for n in (2 if reduced else 4):
+				var angle := time*5+n*TAU/4
+				Ember.ribbon(canvas,at+Vector2.from_angle(angle)*radius,Vector2.from_angle(angle+PI/2),10,2,time,n,fade*0.6,6)
+		"blades":
+			for n in 2:
+				var side := direction.orthogonal()*(9+n*5)*(1 if n==0 else -1)
+				var vertices := PackedVector2Array()
+				var colors := PackedColorArray()
+				crystal_faces(vertices,colors,at+side-direction*6,direction,20*fade,3,fade,true)
+				draw_triangles(canvas,vertices,colors,10)
 
 
 static func lightning(canvas: Node2D, from: Vector2, to: Vector2, age: float, alpha: float, reduced: bool) -> void:
@@ -205,7 +277,7 @@ static func stone_line(canvas: Node2D, from: Vector2, to: Vector2, width: float,
 
 static func gravity(canvas: Node2D, at: Vector2, radius: float, age: float, time: float, reduced: bool, alpha: float) -> void:
 	Ember.body(canvas,at,Vector2.ONE*radius,0,time,0,alpha*(0.6 if reduced else 0.9),8)
-	canvas.draw_arc(at, radius, 0, TAU, 36, Color(0.62, 0.56, 1.0, alpha * 0.30), 1.2, true)
+	Shapes.ring(canvas,at,radius,1.2,Color(0.62,0.56,1.0,alpha*0.30))
 	if reduced:
 		return
 	for index in 8:

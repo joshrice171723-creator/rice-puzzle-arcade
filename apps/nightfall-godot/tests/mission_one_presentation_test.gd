@@ -50,9 +50,11 @@ func _initialize() -> void:
 	run.separate_enemies(1)
 	check(run.enemies[0].pos == held, "Spacing leaves a telegraphing enemy fixed")
 	run.mission = 2
-	held = run.enemies[1].pos
+	run.enemies[0].tell = 0
+	run.enemies[0].pos = Vector2(500,500)
+	run.enemies[1].pos = Vector2(500,500)
 	run.separate_enemies(1)
-	check(run.enemies[1].pos == held, "Mission One spacing does not alter other missions")
+	check(run.enemies[0].pos.distance_to(run.enemies[1].pos) > 15, "Readable crowd spacing also applies in later missions")
 	run.mission = 1
 	run.enemies.clear()
 	run.spawn_enemy()

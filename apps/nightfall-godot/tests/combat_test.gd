@@ -71,6 +71,7 @@ func _initialize() -> void:
 	r = Run.new()
 	boss = target_at(r, r.player + Vector2(200, 0), "breaker")
 	for attack in ["rush", "slam", "toss"]:
+		boss.pos = r.player + Vector2(60,0)
 		boss.attack_wait = 0
 		boss.tell = 0
 		boss.rush_left = 0

@@ -64,5 +64,21 @@ func _initialize() -> void:
 		maximum_step = maxf(maximum_step,geometry[n].distance_to(next_geometry[n]))
 	check(maximum_step < 1.0,"Adjacent core frames deform smoothly without shape replacement")
 	check(geometry == Ember.body_points(Vector2.ZERO,Vector2(20,17),0,0.2,0),"Identical simulation time freezes geometry")
+	var hand := Vector2(0.83,0.48)
+	check(Hero.deform_point(hand,Vector2(58,80),1,0,0,0.05,0,"scattergun") != Hero.deform_point(hand,Vector2(58,80),1,0,0,0.05,0,"pistol"),"Scattergun recoil differs from the pistol's lighter kick")
+	check(Hero.deform_point(hand,Vector2(58,80),1,0,0,0.05,0,"sabre") != Hero.deform_point(hand,Vector2(58,80),1,0,0,0.15,0,"sabre"),"Sabre motion follows through its strike instead of switching poses")
+	var motion = preload("res://enemy_motion.gd")
+	var actor := {"id":0,"motion":1.0,"moving":true,"face":1.0,"attack":"swipe"}
+	var first: PackedVector2Array = motion.geometry(actor,Vector2(55,52),Vector2.ZERO,1,0,0,0)
+	actor.motion += 0.08
+	var second: PackedVector2Array = motion.geometry(actor,Vector2(55,52),Vector2.ZERO,1.016,0,0,0)
+	var step_distance := 0.0
+	for n in first.size():
+		step_distance = maxf(step_distance,first[n].distance_to(second[n]))
+	check(first != second and step_distance < 1.0,"Enemy walk mesh moves smoothly between frames")
+	check(second == motion.geometry(actor,Vector2(55,52),Vector2.ZERO,1.016,0,0,0),"Frozen enemy animation is deterministic")
+	for action in ["swipe","pounce","slam","toss","summon"]:
+		actor.attack = action
+		check(motion.geometry(actor,Vector2(55,52),Vector2.ZERO,1,1,0,0) != motion.geometry(actor,Vector2(55,52),Vector2.ZERO,1,0,0.5,0),action+" has a distinct anticipation and strike shape")
 	print("Nightfall animated VFX: %d checks, %d failures" % [checks,failures])
 	quit(1 if failures else 0)

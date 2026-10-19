@@ -551,6 +551,9 @@ func stats() -> Dictionary:
 		"speed": 1.05 if data["class"] == "scavenger" else 1.0, "pickup": 1.15 if data["class"] == "scavenger" else 1.0,
 		"capacity": 8 + int(data.facilities.quartermaster) - 1, "secure": 2,
 		"medkit": 0.25 if data.facilities.infirmary >= 2 else 0.20, "class": data["class"], "cooldown": 0.0}
+	result.weapon = preload("res://weapons.gd").family(item_by_id(data.equipment.weapon))
+	if data["class"] == "warden":
+		result.armor += 18
 	result.blueprints = ["barricade", "trap"]
 	if "clear" in data.missions.get("1", []):
 		result.blueprints.append("turret")
@@ -579,8 +582,11 @@ func stats() -> Dictionary:
 	if sets.ironwatch >= 3:
 		result.hp *= 1.06
 	result.spell_bonus = 0.03 if sets.riftweaver >= 2 else 0.0
+	result.class_spell_bonus = 0.08 if data["class"] == "arcanist" else 0.0
 	if sets.riftweaver >= 3:
 		result.cooldown += 0.04
+	if data["class"] == "warden":
+		result.hp *= 1.10
 	result.hp *= 1.0 + result.training_bonuses.hp
 	result.speed = minf(result.speed, 1.15)
 	result.cooldown = minf(result.cooldown, 0.15)

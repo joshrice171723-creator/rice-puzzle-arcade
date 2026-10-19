@@ -1,5 +1,7 @@
 extends RefCounted
 ## Presentation only. The caller draws grounds first and sorts bodies with actor feet.
+const Shapes = preload("res://draw_shapes.gd")
+const SHADOW = preload("res://assets/shadow.svg")
 const Field = preload("res://field.gd")
 const FLOOR = preload("res://assets/world/flagstones.png")
 const ALTARS = preload("res://assets/world/altars.png")
@@ -34,17 +36,16 @@ static func draw_site_ground(canvas: Node2D, site: Dictionary, offset: Vector2, 
 		color = DORMANT
 	var cache: bool = site.get("kind", "") == "cache"
 	# Soft grounding is independent of the y-sorted structure.
-	canvas.draw_set_transform(at + Vector2(0, 8), 0, Vector2(1, 0.45))
-	canvas.draw_circle(Vector2.ZERO, 21.0 if cache else 66.0, Color(0.015, 0.025, 0.065, 0.24))
-	canvas.draw_set_transform(Vector2.ZERO)
+	var shadow_size := Vector2(42,19) if cache else Vector2(132,59.4)
+	canvas.draw_texture_rect(SHADOW,Rect2(at+Vector2(0,8)-shadow_size*0.5,shadow_size),false)
 	if opened:
 		return
 	# Chests show a ring only while opening; the permanent landmarks are altars.
 	if cache and float(site.get("progress",0.0)) <= 0:
 		return
 	# Preserve the exact gameplay proximity radius; visual size never changes it.
-	canvas.draw_circle(at, Field.RADIUS, Color(color, 0.035))
-	canvas.draw_arc(at, Field.RADIUS, 0, TAU, 64, Color(color, 0.28 if dormant else 0.48), 1.4, true)
+	Shapes.circle(canvas,at,Field.RADIUS,Color(color,0.035))
+	Shapes.ring(canvas,at,Field.RADIUS,1.4,Color(color,0.28 if dormant else 0.48))
 	var duration := maxf(0.01, float(site.get("duration", 1.0)))
 	var charge := clampf(float(site.get("progress", 0.0)) / duration, 0.0, 1.0)
 	if charge > 0:

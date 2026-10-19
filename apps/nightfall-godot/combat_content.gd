@@ -19,14 +19,14 @@ const SPELLS := {
 	"gravity": {"name": "Gravity Knot", "cooldown": 12.0, "description": "40% Power in an area. Pull ordinary enemies together; bosses resist."},
 }
 const PASSIVES := {
-	"rounds": {"name": "Heavy Rounds", "description": "+4 pistol damage per rank, maximum 48.", "max_rank": 3},
+	"rounds": {"name": "Heavy Strikes", "description": "+4 base weapon damage per rank, maximum 48. Your weapon pattern still applies.", "max_rank": 3},
 	"quick": {"name": "Quick Hands", "description": "Fire 0.025s faster per rank, minimum 0.18s.", "max_rank": 3},
 	"focus": {"name": "Arcane Focus", "description": "+6% spell damage per rank. Pairs with Ember Bolt.", "max_rank": 3},
 	"vital": {"name": "Vital Reserve", "description": "+8% base maximum health per rank. Pairs with Frost Ring.", "max_rank": 3},
 	"fleet": {"name": "Fleet Foot", "description": "+5% movement speed per rank. Total movement bonus capped at 30%.", "max_rank": 3},
 	"mechanic": {"name": "Field Mechanic", "description": "+6% structure damage and +10% repair strength per rank. Pairs with Chain Spark.", "max_rank": 3},
 	"magnet": {"name": "Magnetic Harness", "description": "+20% XP pickup radius per rank. Pairs with Orbiting Wisp.", "max_rank": 3},
-	"pierce": {"name": "Piercing Shot", "description": "Pistol rounds can hit one extra enemy. Pairs with Stone Lance.", "max_rank": 1},
+	"pierce": {"name": "Piercing Shot", "description": "Weapon projectiles pierce one extra foe; sabres sweep one extra target. Pairs with Stone Lance.", "max_rank": 1},
 	"channel": {"name": "Efficient Channel", "description": "Spell cooldowns are 6% shorter per rank, capped at 30% total reduction.", "max_rank": 3}}
 const EVOLUTIONS := {
 	"ember": {"name": "Wildfire Bolt", "pair": "focus", "description": "Rank 3 Ember Bolt also splashes 20% Power around its impact."},

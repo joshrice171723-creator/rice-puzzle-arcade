@@ -131,7 +131,7 @@ static func show_item(home: Control) -> void:
 	art_panel.add_theme_stylebox_override("panel", art_frame)
 	summary.add_child(art_panel)
 	var portrait := TextureRect.new()
-	portrait.texture = home.item_texture(item.slot)
+	portrait.texture = home.item_texture(item.slot, item)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	art_panel.add_child(portrait)
@@ -165,6 +165,10 @@ static func show_item(home: Control) -> void:
 		section(home, content, "%s set · %d Rare+ pieces" % [definition.name, count], set_lines)
 	else:
 		section(home, content, "Equipment effect", ["Once per expedition: restore %d%% maximum HP when a nonlethal hit leaves you at 25%% HP or below." % (25 if home.profile.data.facilities.infirmary == 2 else 20)] if item.slot == "gadget" else [Content.SLOT_LABELS[item.slot] + " · " + ("Currently equipped" if equipped else "Ready to equip")])
+	if item.slot == "weapon":
+		var weapons = preload("res://weapons.gd")
+		var attack: Dictionary = weapons.TYPES[weapons.family(item)]
+		section(home, content, "Automatic attack", [attack.description, "%.0f damage × %d · %.2fs · %s" % [stats.power * 0.6 * attack.scale, attack.count, attack.interval, "Elemental" if attack.elemental else "Physical"]])
 	var substats: Array = []
 	for affix: String in item.get("affixes", []):
 		substats.append(Content.affix_text(item, affix))

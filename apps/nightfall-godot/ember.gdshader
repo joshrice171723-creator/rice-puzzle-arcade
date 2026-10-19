@@ -82,7 +82,7 @@ void fragment() {
 			float marks=step(0.74,r)*step(r,0.89)*pow(max(0.0,cos(theta*12.0+age*0.4)),28.0);
 			float rays=pow(max(0.0,cos(theta*6.0+age*0.25)),60.0)*step(r,0.67)*smoothstep(0.2,0.5,r);
 			COLOR=vec4(mix(vec3(0.27,0.40,0.94),vec3(0.88,0.78,0.50),marks),(band*0.48+marks*0.8+rays*0.3)*opacity);
-		} else {
+		} else if(effect_kind<11.5) {
 			// Facet colors are vertex-lit; procedural striations give the solid meshes
 			// material detail without an atlas or changing the object between frames.
 			float grain=flow(effect_uv*vec2(18.0,6.0));
@@ -96,6 +96,20 @@ void fragment() {
 				base+=vec3(0.13,0.10,0.20)*streak;
 			}
 			COLOR=vec4(base,effect_params.a);
+		} else if(effect_kind<12.5) {
+			float r=length(p), z=sqrt(max(0.0,1.0-dot(p,p)));
+			float n=flow(p*3.0+vec2(age*3.0,seed));
+			float veins=pow(max(0.0,sin(p.x*10.0+p.y*7.0+n*5.0-age*4.0)),6.0);
+			vec3 c=mix(vec3(0.20,0.025,0.12),vec3(1.0,0.23,0.08),veins);
+			c=mix(c,vec3(1.0,0.83,0.49),pow(z,9.0)*0.75);
+			COLOR=vec4(c,(1.0-smoothstep(0.82,1.0,r))*opacity);
+		} else {
+			float r=length(p);
+			float edge=exp(-pow((r-0.91)*25.0,2.0));
+			vec2 grid=p*7.0;
+			float lines=min(abs(sin(grid.x*1.7+age*0.3)),min(abs(sin(grid.y*1.5+grid.x*0.85)),abs(sin(grid.y*1.5-grid.x*0.85))));
+			float pattern=(1.0-smoothstep(0.02,0.09,lines))*0.23;
+			COLOR=vec4(vec3(0.47,0.77,1.0),(edge*0.7+pattern+0.05)*(1.0-smoothstep(0.95,1.0,r))*opacity);
 		}
 	}
 }

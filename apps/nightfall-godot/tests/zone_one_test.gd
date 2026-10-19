@@ -32,11 +32,11 @@ func verify() -> void:
 	cleanup()
 	var catalog := ZoneOne.catalog()
 	var families: Array = []
-	check(catalog.size() == 8, "Zone 1 authors one family for every equipped slot")
+	check(catalog.size() == 12, "Zone 1 authors eight starter families and four alternate weapons")
 	for record in catalog:
-		check(record.family not in families and record.family == ZoneOne.family_for_slot(record.slot), "Every local family has a unique stable content ID")
+		check(record.family not in families and (record.family == ZoneOne.family_for_slot(record.slot) or record.has("weapon")), "Every local family has a unique stable content ID")
 		families.append(record.family)
-		var item := Loot.equipment(record.slot, "common", 100)
+		var item := Loot.equipment(record.slot, "common", 100, "outrider", record.get("weapon", "pistol"))
 		check(item.name == record.name and Content.item_stats(item) == record.base_stats and item.level == record.drop_level, "Catalog budgets agree with generated equipment")
 		check(record.level_cap == 5 and record.first_zone == 1, "Local equipment has explicit early-game boundaries")
 	check(ZoneOne.family_for_slot("invalid").is_empty(), "Unknown slots have no authored family")
@@ -44,7 +44,7 @@ func verify() -> void:
 		var valid_pool := true
 		for seed_value in 256:
 			var roll := Loot.roll(category, seed_value * 317, 0, 0, seed_value)
-			valid_pool = valid_pool and roll.item.name in Content.STARTER_NAMES and roll.item.level == 1 and roll.item.rarity in ["common", "uncommon", "rare", "epic"] and roll.item.slot in Loot.CATEGORIES[category].slots
+			valid_pool = valid_pool and roll.item.name in catalog.map(func(record): return record.name) and roll.item.level == 1 and roll.item.rarity in ["common", "uncommon", "rare", "epic"] and roll.item.slot in Loot.CATEGORIES[category].slots
 		check(valid_pool, "New " + category + " chest items stay within the playable zone's source pool")
 	var field_slots: Dictionary = {}
 	for seed_value in 512:

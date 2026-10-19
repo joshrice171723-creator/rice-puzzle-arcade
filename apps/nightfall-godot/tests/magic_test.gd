@@ -100,7 +100,11 @@ func _initialize() -> void:
 	enemy = target(run, Vector2(150, 0), true)
 	run.spells.gravity = {"rank": 1, "wait": 0.0}
 	run.cast_spell("gravity")
-	check(near.hp == 984 and enemy.hp == 984 and enemy.pos == run.player + Vector2(142, 0), "Gravity affects multiple foes but boss displacement is limited to eight")
+	check(near.hp == 984 and enemy.hp == 984 and enemy.pos == run.player + Vector2(150,0), "Gravity damage does not teleport enemies")
+	run.Magic.tick(run,0.3)
+	check(enemy.pos.is_equal_approx(run.player+Vector2(146,0)), "Gravity delivers half its displacement halfway through the pull")
+	run.Magic.tick(run,0.3)
+	check(enemy.pos.is_equal_approx(run.player+Vector2(142,0)), "Gravity boss displacement stays capped at eight over its full duration")
 	run = quiet_run()
 	check(run.apply_passive("focus") and run.apply_passive("vital") and run.apply_passive("channel"), "Three distinct passives fit a build")
 	check(not run.apply_passive("fleet"), "A fourth passive cannot overflow build slots")

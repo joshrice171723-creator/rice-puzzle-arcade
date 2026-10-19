@@ -3,12 +3,12 @@ extends RefCounted
 
 const TRAITS := {
 	"vitality": {"name": "Vitality", "description": "+10% maximum health per rank. Heal the added health."},
-	"aim": {"name": "Steady Aim", "description": "+6% pistol damage per rank."},
+	"aim": {"name": "Steady Aim", "description": "+6% weapon damage per rank."},
 	"reach": {"name": "Long Reach", "description": "+25% XP pickup reach per rank."}}
 const RELICS := {
 	"emberleaf": {"name": "Emberleaf", "description": "After 4 seconds without damage, recover 0.15% maximum HP per second."},
 	"obsidian": {"name": "Obsidian Heart", "description": "Take 10% less damage. Move 5% slower."},
-	"feather": {"name": "Storm Feather", "description": "Dodge recharges 15% faster. Pistol damage is 5% lower."},
+	"feather": {"name": "Storm Feather", "description": "Dodge recharges 15% faster. Weapon damage is 5% lower."},
 	"lantern": {"name": "Wisp Lantern", "description": "A wisp strikes one nearby enemy for 12 damage every 3 seconds."},
 	"moonstone": {"name": "Moonstone", "description": "+12% maximum health. Recover that added health immediately."},
 	"cinder": {"name": "Cinder Lens", "description": "+8% spell damage. Your pickup reach is 10% smaller."}}
@@ -95,6 +95,14 @@ func add_drop(position: Vector2, credit_value: int, scrap_value: int) -> void:
 			return
 	if drops.size() < 48:
 		drops.append({"pos": position, "credits": credit_value, "scrap": scrap_value})
+	else:
+		# Preserve earned loot when the rendering budget is full.
+		var nearest: Dictionary = drops[0]
+		for drop in drops:
+			if drop.pos.distance_squared_to(position) < nearest.pos.distance_squared_to(position):
+				nearest = drop
+		nearest.credits += credit_value
+		nearest.scrap += scrap_value
 
 func add_loot(kind: String, name_value: String, amount: int = 1, rarity: String = "common", slot: String = "") -> bool:
 	if bag.size() >= capacity:

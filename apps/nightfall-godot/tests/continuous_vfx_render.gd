@@ -7,6 +7,7 @@ class Probe extends Node2D:
 	var age := 0.20
 	var effects := false
 	var material_only := false
+	var material_kind := 5
 	func _draw() -> void:
 		draw_texture_rect(FLOOR,Rect2(0,0,300,200),false,Color(0.8,0.9,1,1))
 		draw_rect(Rect2(4,4,20,20),Color(0.3,0.6,0.9,0.5))
@@ -14,7 +15,7 @@ class Probe extends Node2D:
 			if material_only:
 				var uvs := PackedVector2Array()
 				for n in Ember.SEGMENTS:
-					uvs.append(Vector2.from_angle(float(n)*TAU/Ember.SEGMENTS)*0.5+Vector2(320.5,0.5))
+					uvs.append(Vector2.from_angle(float(n)*TAU/Ember.SEGMENTS)*0.5+Vector2(material_kind*64+0.5,0.5))
 				draw_polygon(Ember.body_points(Vector2(150,100),Vector2(40,40),0,0,0),PackedColorArray([Color(age,0,1,1)]),uvs)
 			else:
 				Ember.draw_projectile(self,{"pos":Vector2(150,125),"velocity":Vector2.RIGHT*450,"life":0.85-age,"kind":"ember"},Vector2.ZERO,age,false)
@@ -58,6 +59,15 @@ func verify() -> void:
 	probe.age += 1.0/60
 	var flowing_next: Image = await capture(probe)
 	check(flowing.get_data() != flowing_next.get_data(),"Material flow continues beyond one second on fixed geometry")
+	for kind in [1,2,3,5,6,7,8,9,12,13]:
+		probe.material_kind = kind
+		probe.age = 0.2
+		var start: Image = await capture(probe)
+		probe.age = 0.23
+		var moved: Image = await capture(probe)
+		check(start.get_data() != moved.get_data(),"Effect material %d changes continuously on actual rendered geometry" % kind)
+		var held: Image = await capture(probe)
+		check(moved.get_data() == held.get_data(),"Effect material %d freezes when simulation time is held" % kind)
 	probe.effects = false
 	var cleaned: Image = await capture(probe)
 	check(cleaned.get_data() == passthrough.get_data(),"Removing transient effects leaves no shader residue")

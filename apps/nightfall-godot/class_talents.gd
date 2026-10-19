@@ -30,7 +30,7 @@ func phase_step(run: RefCounted) -> void:
 		opening_shot = true
 
 func basic_damage(run: RefCounted, shot: Dictionary, amount: float) -> float:
-	if run.class_id == "scavenger" and run.mastery_level >= 15 and opening_shot and shot.get("kind", "pistol") == "pistol":
+	if run.class_id == "scavenger" and run.mastery_level >= 15 and opening_shot and shot.get("basic", shot.get("kind", "pistol") == "pistol"):
 		opening_shot = false
 		return amount * 1.25
 	return amount

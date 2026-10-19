@@ -120,7 +120,7 @@ static func merge(home: Control) -> void:
 				home.merge_donors.append(candidate.id)
 			home.rebuild(), list, 64)
 		node.name = "Donor%d" % candidate.id
-		home.decorate_item_button(node, candidate.slot)
+		home.decorate_item_button(node, candidate.slot, candidate)
 		node.add_theme_font_size_override("font_size", 13)
 		if selected:
 			home.MenuSkin.action(node, "gold")

@@ -1,5 +1,6 @@
 extends RefCounted
 ## Equipment rewards use a separate deterministic stream from combat and offers.
+const Weapons = preload("res://weapons.gd")
 const Content = preload("res://haven_content.gd")
 const CATEGORIES := {
 	"supply": {"name": "Supply Crate", "slots": Content.SLOTS},
@@ -22,10 +23,12 @@ static func affixes(slot: String, rarity: String, identity: int) -> Array:
 		pool.remove_at(choice)
 	return result
 
-static func equipment(slot: String, rarity: String, identity: int, armor_set: String = "outrider") -> Dictionary:
+static func equipment(slot: String, rarity: String, identity: int, armor_set: String = "outrider", weapon_family: String = "pistol") -> Dictionary:
 	var name: String = Content.STARTER_NAMES[Content.SLOTS.find(slot)]
 	if slot in Content.ARMOR_SLOTS and armor_set in Content.SETS:
 		name = Content.SETS[armor_set].pieces[Content.ARMOR_SLOTS.find(slot)]
+	if slot == "weapon" and weapon_family in Weapons.TYPES:
+		name = Weapons.TYPES[weapon_family].name
 	return {"id": identity, "slot": slot, "name": name,
 		"rarity": rarity, "level": 1, "affixes": affixes(slot, rarity, identity)}
 
@@ -43,7 +46,8 @@ static func roll(category: String, seed_value: int, rare_misses: int, epic_misse
 	var slots: Array = CATEGORIES[category].slots
 	var slot: String = slots[rng.randi_range(0, slots.size() - 1)]
 	# Future-zone sets remain valid in owned saves, but are not new Outskirts drops.
-	var item := equipment(slot, rarity, identity)
+	var family: String = Weapons.TYPES.keys()[rng.randi_range(0, Weapons.TYPES.size() - 1)] if slot == "weapon" else "pistol"
+	var item := equipment(slot, rarity, identity, "outrider", family)
 	return {"item": item, "rare_misses": 0 if Content.RARITIES.find(rarity) >= 2 else rare_misses + 1,
 		"epic_misses": 0 if Content.RARITIES.find(rarity) >= 3 else epic_misses + 1}
 

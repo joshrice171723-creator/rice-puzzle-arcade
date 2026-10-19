@@ -1,5 +1,6 @@
 extends RefCounted
 ## Bounded, presentation-only world accents. Feedback is owned and aged by Run.
+const Shapes = preload("res://draw_shapes.gd")
 const MenuSkin = preload("res://menu_skin.gd")
 const MAX_FEEDBACK := 48
 const EMBER_COUNT := 12
@@ -32,10 +33,10 @@ static func draw_ambience(canvas: Node2D, run: RefCounted, offset: Vector2, time
 static func draw_player_ground(canvas: Node2D, run: RefCounted, offset: Vector2, time: float, reduced: bool) -> void:
 	var at: Vector2 = run.player + offset + Vector2(0,2)
 	canvas.draw_set_transform(at, 0.0, Vector2(1.0,0.34))
-	canvas.draw_circle(Vector2.ZERO, 16.0, Color(0.02,0.04,0.10,0.20))
+	Shapes.circle(canvas,Vector2.ZERO,16.0,Color(0.02,0.04,0.10,0.20))
 	if not reduced:
 		var breath := 0.13 + sin(time * 1.35) * 0.015
-		canvas.draw_arc(Vector2.ZERO, 18.0, 0.0, TAU, 24, Color(0.49,0.82,1.0,breath), 1.0, true)
+		Shapes.ring(canvas,Vector2.ZERO,18.0,1.0,Color(0.49,0.82,1.0,breath))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_feedback(canvas: Node2D, run: RefCounted, offset: Vector2, reduced: bool) -> void:

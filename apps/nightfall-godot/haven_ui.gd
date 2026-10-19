@@ -246,7 +246,11 @@ func page_heading(parent: Node, text: String) -> void:
 	parent.add_child(ribbon)
 	MenuSkin.label(ribbon, text, 25, Color.WHITE, true)
 
-func item_texture(slot: String) -> AtlasTexture:
+func item_texture(slot: String, equipment: Dictionary = {}) -> Texture2D:
+	if slot == "weapon" and not equipment.is_empty():
+		var family: String = preload("res://weapons.gd").family(equipment)
+		if Art.WEAPON_ICONS.has(family):
+			return Art.WEAPON_ICONS[family]
 	if slot in Art.ITEM_NAMES:
 		return Art.item(slot)
 	var index: int = ["weapon", "helmet", "body", "boots", "charm", "gadget", "chest", "key"].find(slot)
@@ -256,8 +260,8 @@ func item_texture(slot: String) -> AtlasTexture:
 	texture.region = Rect2(Vector2(index % 4, index / 4) * cell, cell)
 	return texture
 
-func decorate_item_button(node: Button, slot: String) -> void:
-	node.icon = item_texture(slot)
+func decorate_item_button(node: Button, slot: String, equipment: Dictionary = {}) -> void:
+	node.icon = item_texture(slot, equipment)
 	node.expand_icon = true
 	node.add_theme_constant_override("icon_max_width", 44)
 	node.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -574,7 +578,7 @@ func equipment_tile(item: Dictionary, parent: Node, dimensions: Vector2) -> Butt
 	var pressed := face.duplicate()
 	pressed.modulate_color = face.modulate_color.darkened(0.18)
 	tile.add_theme_stylebox_override("pressed", pressed)
-	tile.icon = item_texture(item.slot)
+	tile.icon = item_texture(item.slot, item)
 	tile.expand_icon = true
 	tile.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tile.add_theme_constant_override("icon_max_width", int(dimensions.y - 8))

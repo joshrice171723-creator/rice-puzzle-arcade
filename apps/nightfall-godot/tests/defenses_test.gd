@@ -73,7 +73,12 @@ func _initialize() -> void:
 	r.defenses.place("barricade", Vector2(600, 600), 40, false)
 	r.defenses.tick(0.1, r)
 	check(r.enemies[0].pos.distance_to(Vector2(600, 600)) >= 42, "Barricade pushes enemies outside its blocking radius")
-	check(r.defenses.structures[0].hp == 170, "Enemy contact damages barricades")
+	check(r.defenses.structures[0].hp == 180, "Enemy contact alone cannot silently damage barricades")
+	r.enemies[0].attack_wait = 0.0
+	r.tick_enemy(r.enemies[0],0.01)
+	check(r.enemies[0].tell > 0,"Enemy telegraphs its attack against a barricade")
+	r.tick_enemy(r.enemies[0],0.42)
+	check(r.defenses.structures[0].hp == 170, "Enemy strike damages barricades after the windup")
 	var p = Profile.new()
 	r = Run.new()
 	r.configure(4, p.stats())
@@ -89,6 +94,7 @@ func _initialize() -> void:
 	check(boss.hp == 750, "Elemental builds offer another answer to Scrapback armor")
 	r.configure(3, p.stats())
 	boss.attack = "summon"
+	boss.recover = 0.0
 	boss.tell = 0.01
 	r.tick_enemy(boss, 0.02)
 	check(r.enemies.size() == 5, "Porchcaller summons four bounded ordinary enemies")
@@ -96,6 +102,7 @@ func _initialize() -> void:
 		check(enemy.pos.distance_to(r.player) >= 80, "Summoned enemies cannot appear on top of the player")
 	for cast in 12:
 		boss.attack = "summon"
+		boss.recover = 0.0
 		boss.tell = 0.01
 		r.tick_enemy(boss, 0.02)
 	check(r.enemies.size() == 7 and r.reinforcements_spawned == 6, "Caller has at most six living reinforcements")
@@ -103,6 +110,7 @@ func _initialize() -> void:
 		for enemy in r.enemies:
 			if not enemy.boss:
 				enemy.hp = 0
+		boss.recover = 0.0
 		boss.tell = 0.01
 		r.tick_enemy(boss, 0.02)
 	check(r.reinforcements_spawned == 24, "Total summoned rewards are bounded even in a prolonged boss fight")

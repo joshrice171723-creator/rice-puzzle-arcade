@@ -2,11 +2,10 @@ extends Node2D
 
 const CombatEffects = preload("res://combat_effects.gd")
 const WorldArt = preload("res://world_art.gd")
+const EnemyMotion = preload("res://enemy_motion.gd")
+const CombatVFX = preload("res://combat_vfx.gd")
 const HeroCast = preload("res://hero_cast.gd")
 const Presentation = preload("res://mission_presentation.gd")
-const GARAGE_FLOOR = preload("res://assets/mission-one/garage-yard.png")
-const GARAGE_ENEMIES = preload("res://assets/mission-one/enemies.png")
-const GARAGE_REGIONS = {"drifter": Rect2(15,223,617,566), "runner": Rect2(674,245,563,517), "spitter": Rect2(1245,246,519,516)}
 const Run = preload("res://run.gd")
 const Cards = preload("res://reward_cards.gd")
 const FieldUI = preload("res://field_ui.gd")
@@ -15,12 +14,9 @@ const HavenUI = preload("res://haven_ui.gd")
 const RewardFlow = preload("res://reward_flow.gd")
 const Soundscape = preload("res://soundscape.gd")
 const PowerHUD = preload("res://power_hud.gd")
-const BossArt = preload("res://boss_art.gd")
 const MenuSkin = preload("res://menu_skin.gd")
 const MenuArt = preload("res://haven_art.gd")
 const MENU_KEY = preload("res://assets/menu-key.svg")
-const ACTORS = preload("res://assets/actors.png")
-const ENGINEER = preload("res://assets/engineer.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const SHADOW = preload("res://assets/shadow.svg")
 const EXPERIENCE = preload("res://assets/experience.svg")
@@ -94,13 +90,17 @@ var help_view := false
 var progress_view := false
 var last_field_notice := ""
 var notice_left := 0.0
+var credit_drop: Texture2D = MenuArt.item("credits")
+var draw_cpu_ms := 0.0
+var draw_profile: Dictionary = {}
 var vfx_preview: Node
 
 func _ready() -> void:
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	var combat_requested := OS.is_debug_build() and ("--combat-preview" in OS.get_cmdline_user_args() or "--combat-campaign" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://combat-preview.flag"))
 	var preview_requested := OS.is_debug_build() and ("--vfx-preview" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://vfx-preview.flag"))
-	if preview_requested:
+	if preview_requested or combat_requested:
 		testing = true
 		profile = Profile.new("user://vfx-preview-profile.json")
 	if not testing:
@@ -132,8 +132,8 @@ func _ready() -> void:
 	else:
 		home.hide()
 	update_modal()
-	if preview_requested:
-		vfx_preview = load("res://vfx_preview.gd").new()
+	if preview_requested or combat_requested:
+		vfx_preview = load("res://combat_preview.gd" if combat_requested else "res://vfx_preview.gd").new()
 		vfx_preview.arena = self
 		add_child(vfx_preview)
 
@@ -918,36 +918,26 @@ func finish_report() -> void:
 			file.store_string(JSON.stringify(report, "\t"))
 	get_tree().quit()
 
-func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: float = 1.0, tint: Color = Color.WHITE) -> void:
-	if not enemy and run.class_id == "engineer":
-		var engineer_size := Vector2(72, 80) * scale_value
-		draw_set_transform(pos + world_offset, 0, Vector2(face, 1))
-		draw_texture_rect_region(ENGINEER, Rect2(Vector2(-engineer_size.x / 2, -engineer_size.y * 0.93), engineer_size), Rect2(frame * 543, 70, 543, 580), tint)
-		draw_set_transform(Vector2.ZERO)
-		return
-	# Generated atlas rows have different occupied bounds; exclude neighboring feet.
-	var width := ACTORS.get_width() / 4.0
-	var source := Rect2(frame * width, 535 if enemy else 20, width, 315 if enemy else 480)
-	var size := Vector2(72, 52 if enemy else 80) * scale_value
-	var at := pos + world_offset
-	var rect := Rect2(at - Vector2(size.x / 2.0, size.y * 0.93), size)
-	if face < 0:
-		rect.size.x = -rect.size.x
-	draw_texture_rect_region(ACTORS, rect, source, tint)
-
 func visible_world(position_value: Vector2) -> bool:
 	# Includes tall altar tops, shadows, and hit labels beyond the viewport edge.
 	return Rect2(-150,-100,730,1040).has_point(position_value+world_offset)
 
 func _draw() -> void:
+	var draw_started := Time.get_ticks_usec()
+	var enemy_usec := 0
+	var hero_usec := 0
 	var reduced: bool = profile.data.settings.reduced_effects
+	set_meta("actor_meshes", [])
+	var cleared_at := Time.get_ticks_usec()
 	if run.mission == 1 and run.mode == "campaign" and run.benchmark_count == 0:
 		WorldArt.draw_floor(self,world_offset)
 	else:
 		draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
 	Presentation.draw_ambience(self, run, world_offset, anim_time, reduced)
+	var terrain_at := Time.get_ticks_usec()
 	CombatEffects.draw_ground(self,run,world_offset,anim_time,reduced)
 	CombatEffects.Ember.draw_ground(self,run,world_offset,reduced)
+	var ground_fx_at := Time.get_ticks_usec()
 	if not run.practice and run.benchmark_count == 0:
 		draw_field_sites()
 		draw_defenses()
@@ -958,28 +948,16 @@ func _draw() -> void:
 		draw_arc(at, Run.Salvage.RADIUS, 0, TAU, 48, GOLD if ready else Color("65718f"), 2)
 		draw_arc(at, Run.Salvage.RADIUS + 4, -PI / 2, -PI / 2 + TAU * run.extract_progress / Run.Salvage.CHARGE, 48, GOLD, 4)
 		draw_prop(7, at, Vector2(45, 65), Color.WHITE if ready else Color("858095"))
-	for pickup in run.pickups:
-		var at: Vector2 = pickup + world_offset
-		draw_texture_rect(EXPERIENCE, Rect2(at - Vector2(6, 6), Vector2(12, 12)), false)
-	for enemy in run.enemies:
-		if enemy.tell > 0:
-			var at: Vector2 = enemy.target + world_offset
-			var from: Vector2 = enemy.pos + world_offset
-			if enemy.attack == "summon":
-				draw_circle(from, 110, Color(0.6, 0.35, 1, 0.10))
-				draw_arc(from, 110, 0, TAU * (1.0 - enemy.tell / enemy.windup), 48, VIOLET, 3)
-			elif enemy.attack == "slam":
-				draw_circle(at, 80, Color(1, 0.25, 0.35, 0.15))
-				draw_arc(at, 80, 0, TAU, 48, Color("ff7181"), 1.5)
-				draw_arc(at, 75, -PI / 2, -PI / 2 + TAU * (1.0 - enemy.tell / enemy.windup), 48, Color("ffdfb6"), 3)
-			else:
-				var direction := from.direction_to(at)
-				if enemy.attack == "rush":
-					draw_line(from, from + direction * 234, Color(1, 0.3, 0.35, 0.22), 60)
-					draw_line(from, from + direction * 234, Color("ff7181"), 2)
-				else:
-					for angle in ([-0.22, 0.0, 0.22] if enemy.attack == "toss" else [0.0]):
-						draw_line(from, from + direction.rotated(angle) * 210, Color("ffad7c"), 2)
+	var landmarks_at := Time.get_ticks_usec()
+	for index in run.pickups.size():
+		var at: Vector2 = run.pickups[index] + world_offset
+		var value: int = run.pickup_xp[index] if index < run.pickup_xp.size() else 1
+		var size := Vector2.ONE*(12+minf(8,sqrt(value-1)*2))
+		draw_texture_rect(EXPERIENCE, Rect2(at-size*0.5,size), false)
+	var pickups_at := Time.get_ticks_usec()
+	CombatVFX.draw_telegraphs(self, run, world_offset, reduced)
+
+	var world_done := Time.get_ticks_usec()
 	var actors: Array[Dictionary] = []
 	for enemy in run.enemies:
 		if visible_world(enemy.pos):
@@ -1006,38 +984,30 @@ func _draw() -> void:
 	Presentation.draw_player_ground(self, run, world_offset, anim_time, reduced)
 	CombatEffects.draw_wisps(self,run,world_offset,anim_time,reduced,false)
 	for item in actors:
+		if item.has("shot") or item.has("site") or item.has("player"):
+			EnemyMotion.flush(self)
 		if item.has("shot"):
 			CombatEffects.draw_shot(self,item.shot,world_offset,anim_time,reduced)
 		elif item.has("site"):
 			WorldArt.draw_site_body(self,item.site,world_offset,anim_time,reduced)
 		elif item.has("player"):
-			var pose := CombatEffects.Ember.cast_pose(run)
+			var hero_started := Time.get_ticks_usec()
+			var pose := HeroCast.pose(run)
 			var face := -1.0 if (run.facing.x if pose.is_empty() else pose.direction.x) < 0 else 1.0
-			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced)
-		elif item.boss and run.mission > 0:
-			BossArt.draw_boss(self, item, run.mission, world_offset)
+			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")))
+			hero_usec += Time.get_ticks_usec()-hero_started
 		else:
-			var scale_value := 1.7 if item.boss else (0.65 if item.kind == "runner" else 0.8)
-			var tint := Color("ffac87") if item.kind == "runner" else (Color("b6c8ff") if item.kind == "spitter" else Color.WHITE)
-			var flash: float = item.get("hit_flash", 0.0) / 0.12
-			if not reduced:
-				tint = tint.lerp(Color(1.6,1.6,1.7), flash)
-			var recoil: Vector2 = item.get("hit_push", Vector2.ZERO) * flash if not reduced else Vector2.ZERO
-			if run.mission == 1 and run.mode == "campaign" and run.benchmark_count == 0:
-				var source: Rect2 = GARAGE_REGIONS.get(item.kind, GARAGE_REGIONS.drifter)
-				var height := 43.0 if item.kind == "runner" else 48.0
-				var stride := 0.0 if reduced else sin(anim_time * (12.0 if item.kind == "runner" else 7.0) + item.id * 1.7)
-				var size := Vector2(height * source.size.x / source.size.y, height)
-				var at: Vector2 = item.pos + recoil + world_offset - Vector2(0, absf(stride) * 1.8)
-				var rect := Rect2(at - Vector2(size.x / 2 - stride * 0.6, size.y), size)
-				if item.face < 0:
-					rect.size.x = -rect.size.x
-				draw_texture_rect_region(GARAGE_ENEMIES, rect, source, Color.WHITE.lerp(Color(1.6,1.6,1.7), flash) if not reduced else Color.WHITE)
-			else:
-				actor(item.pos + recoil, true, (int(anim_time * 7) + item.id) % 4, scale_value, item.face, tint)
+			var enemy_started := Time.get_ticks_usec()
+			EnemyMotion.draw(self, item, run.mission, world_offset, anim_time, reduced,0.0,true)
+			enemy_usec += Time.get_ticks_usec()-enemy_started
+	EnemyMotion.flush(self)
+	var actors_done := Time.get_ticks_usec()
+
 	CombatEffects.draw_effects(self,run,world_offset,anim_time,reduced)
+	CombatVFX.draw_effects(self,run,world_offset,anim_time,reduced)
+	CombatVFX.draw_telegraphs(self,run,world_offset,reduced,true)
 	for item in run.enemies:
-		var mark: Vector2 = item.pos + world_offset - Vector2(0, 56 if run.mission == 1 else 42)
+		var mark: Vector2 = item.pos + world_offset - Vector2(0, EnemyMotion.body_height(item,run.mission)+12)
 		if item.boss and run.mission == 4:
 			var angle: float = item.forward.angle()
 			draw_arc(item.pos + world_offset, 42, angle - 1.2, angle + 1.2, 24, Color("92c2ff"), 5)
@@ -1045,41 +1015,30 @@ func _draw() -> void:
 			draw_polyline(PackedVector2Array([mark + Vector2(-5, 0), mark + Vector2(0, -5), mark + Vector2(5, 0)]), GOLD, 2)
 		elif item.kind == "spitter" and run.mission != 1:
 			draw_arc(mark, 5, 0, TAU, 12, Color("adceff"), 2)
-		if item.hp < item.max_hp or item.boss:
-			var at: Vector2 = item.pos + world_offset - Vector2(20, 85 if item.boss else (52 if run.mission == 1 else 38))
+		if visible_world(item.pos) and (item.hp < item.max_hp or item.boss):
+			var at: Vector2 = item.pos + world_offset - Vector2(20, EnemyMotion.body_height(item,run.mission)+5)
 			draw_rect(Rect2(at, Vector2(40, 4)), INK)
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
 	CombatEffects.draw_wisps(self,run,world_offset,anim_time,reduced,true)
-	if run.shield > 0:
-		draw_arc(run.player + world_offset - Vector2(0, 18), 30, 0, TAU, 32, Color("b5dfff"), 2)
+
 	if run.talents.slow_left > 0:
 		var at: Vector2 = run.player + world_offset
 		draw_arc(at, 22, 0, TAU, 24, Color("b2a2ef"), 3)
 		draw_string(ThemeDB.fallback_font, at + Vector2(-20, 24), "SLOWED", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("ddd3ff"))
-	for shot in run.hostile_shots:
-		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
-		draw_circle(at, 6, Color("ff7181"))
-		draw_arc(at, 8, 0, TAU, 12, Color("ffe1b0"), 1)
-	for effect in run.effects:
-		if CombatEffects.handles_effect(effect.kind):
-			continue
-		var from: Vector2 = effect.from + world_offset
-		var to: Vector2 = effect.to + world_offset
-		var fade: float = effect.life / effect.duration * (0.35 if reduced else 1.0)
-		match effect.kind:
-			"slam": draw_arc(from, 80, 0, TAU, 48, Color(1, 0.35, 0.4, fade), 5)
-			"turret": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(1, 0.82, 0.5, fade), 2)
-			"trap": draw_arc(from, 80 * (1.0 - fade), 0, TAU, 32, Color(1, 0.48, 0.25, fade), 5)
-			"summon": draw_arc(from, 110, 0, TAU, 32, Color(0.7, 0.5, 1, fade), 4)
+
+	var spells_done := Time.get_ticks_usec()
 	Presentation.draw_feedback(self, run, world_offset, reduced)
-	if run.pulse_flash > 0:
-		draw_arc(run.player + world_offset, 145 * (1.0 - run.pulse_flash / 0.35), 0, TAU, 64, VIOLET, 4, true)
+
 	if run.hurt_wait > 0.55 and not profile.data.settings.reduced_effects:
 		draw_rect(Rect2(0, 0, 430, 760), Color(0.7, 0.05, 0.15, 0.08))
 	var origin := stick_origin if touch_id >= 0 or mouse_stick else Vector2(88, 650)
 	draw_circle(origin, 48, Color(0.04, 0.05, 0.1, 0.6))
 	draw_arc(origin, 48, 0, TAU, 48, Color(0.8, 0.8, 0.95, 0.25), 2, true)
 	draw_circle(origin + stick * 32, 22, Color(0.55, 0.58, 0.72, 0.55))
+
+	var finished_draw := Time.get_ticks_usec()
+	draw_cpu_ms = (finished_draw-draw_started)/1000.0
+	draw_profile = {"retire_meshes":(cleared_at-draw_started)/1000.0,"terrain":(terrain_at-cleared_at)/1000.0,"ground_fx":(ground_fx_at-terrain_at)/1000.0,"landmarks":(landmarks_at-ground_fx_at)/1000.0,"pickups":(pickups_at-landmarks_at)/1000.0,"telegraphs":(world_done-pickups_at)/1000.0,"world":(world_done-draw_started)/1000.0,"actors":(actors_done-world_done)/1000.0,"spells":(spells_done-actors_done)/1000.0,"feedback":(finished_draw-spells_done)/1000.0,"enemy_mesh":enemy_usec/1000.0,"hero_mesh":hero_usec/1000.0}
 
 func draw_field_sites() -> void:
 	for site in run.field.sites:
@@ -1089,9 +1048,10 @@ func draw_field_sites() -> void:
 		visual.exhausted = site.kind == "relic" and run.field.relics.size() >= 3
 		WorldArt.draw_site_ground(self,visual,world_offset,anim_time,profile.data.settings.reduced_effects)
 	for drop in run.field.drops:
+		if not visible_world(drop.pos):
+			continue
 		var at: Vector2 = drop.pos + world_offset
-		draw_circle(at, 5, GOLD)
-		draw_arc(at, 6, 0, TAU, 12, Color("fff2bf"), 1)
+		draw_texture_rect(credit_drop,Rect2(at-Vector2(7,9),Vector2(14,18)),false)
 	for position in run.talents.cache_positions(run):
 		var at: Vector2 = (position + world_offset - Vector2(0, 48)).clamp(Vector2(18, 188), Vector2(412, 610))
 		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -7), at + Vector2(6, 0), at + Vector2(0, 7), at + Vector2(-6, 0)]), GOLD)

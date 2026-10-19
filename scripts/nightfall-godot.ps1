@@ -14,7 +14,7 @@ function Invoke-Godot([string[]]$Arguments) {
     $passedSummary = $false
     & $Godot @Arguments 2>&1 | ForEach-Object {
         $line = "$_"
-        if ($line -match 'SCRIPT ERROR:|Parse Error:|Failed to load script') { $scriptFailure = $true }
+        if ($line -match '^ERROR:|SCRIPT ERROR:|Parse Error:|Failed to load script') { $scriptFailure = $true }
         if ($line -match 'checks, 0 failures') { $passedSummary = $true }
         Write-Output $line
     }
@@ -25,6 +25,7 @@ function Invoke-Godot([string[]]$Arguments) {
 if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/run_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_mechanics_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_progression_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/mission_one_presentation_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_training_ui_test.gd')
@@ -32,6 +33,7 @@ if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_effects_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/animated_vfx_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/preview_isolation_test.gd','--','--vfx-preview')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/preview_isolation_test.gd','--','--combat-preview')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/specialization_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/field_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/reward_cards_test.gd')
@@ -87,8 +89,13 @@ if ($Action -eq 'Android') {
     New-Item -ItemType Directory -Force $source | Out-Null
     Copy-Item "$project/native/NightfallAds.kt" $source
     Set-Content (Join-Path $project 'android/.build_version') '4.7.2.stable' -NoNewline
-    Invoke-Godot @('--headless','--path',$project,'--export-debug','Android proof','--quit')
-    & "$build/gradlew.bat" --stop
+    $nightfallPreviousGradleOptions = $env:GRADLE_OPTS
+    try {
+        $env:GRADLE_OPTS = (($nightfallPreviousGradleOptions + ' -Dorg.gradle.daemon=false').Trim())
+        Invoke-Godot @('--headless','--path',$project,'--export-debug','Android proof','--quit')
+    } finally {
+        $env:GRADLE_OPTS = $nightfallPreviousGradleOptions
+    }
 } else {
     Invoke-Godot @('--headless','--path',$project,'--export-debug','Windows proof','--quit')
 }

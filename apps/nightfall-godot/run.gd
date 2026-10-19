@@ -1,6 +1,9 @@
 extends RefCounted
 ## Fixed-step combat and attempt-local exploration rules.
 
+const Weapons = preload("res://weapons.gd")
+const Projectiles = preload("res://combat_projectiles.gd")
+const EnemyCombat = preload("res://enemy_combat.gd")
 const Training = preload("res://combat_progression.gd")
 const DURATION := 240.0
 const Content = preload("res://combat_content.gd")
@@ -26,12 +29,15 @@ var hostile_shots: Array[Dictionary] = []
 var effects: Array[Dictionary] = []
 var feedback: Array[Dictionary] = []
 var vfx_events: Array[Dictionary] = []
+var vfx_serial := 0
 var spells: Dictionary = {}
 var offers: Array[Dictionary] = []
 var enemies: Array[Dictionary] = []
 var pickups: Array[Vector2] = []
+var pickup_xp: Array[int] = []
 var xp := 0
 var level := 1
+var weapon_id := "pistol"
 var damage := 24.0
 var fire_interval := 0.35
 var fire_wait := 0.0
@@ -106,11 +112,14 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	base_health = stats.hp
 	health = max_health()
 	damage = stats.power * 0.6
-	fire_interval = 0.6
+	weapon_id = stats.get("weapon", "pistol")
+	if weapon_id not in Weapons.TYPES:
+		weapon_id = "pistol"
+	fire_interval = Weapons.TYPES[weapon_id].interval
 	armor = stats.armor
 	speed_multiplier = stats.speed
 	pickup_multiplier = stats.pickup
-	spell_multiplier = stats.power / 40.0
+	spell_multiplier = stats.power / 40.0 * (1.0 + clampf(stats.get("class_spell_bonus", 0.0), 0.0, 0.08))
 	equipment_spell_bonus = clampf(stats.get("spell_bonus", 0.0), 0, 0.03)
 	field.capacity = stats.capacity
 	field.secure_capacity = stats.secure
@@ -129,6 +138,9 @@ func configure_contract(stats: Dictionary, slot: String) -> void:
 	boss_name = "Salvage Contract"
 
 func snapshot() -> Dictionary:
+	var experience_values: Array[int] = []
+	for index in pickups.size():
+		experience_values.append(pickup_xp[index] if index < pickup_xp.size() else 1)
 	var values := {}
 	for key in SNAPSHOT_KEYS:
 		values[key] = get(key)
@@ -140,7 +152,7 @@ func snapshot() -> Dictionary:
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
 		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
 		"combat_xp": combat_xp.duplicate(), "training_style": training_style, "training_bonuses": training_bonuses.duplicate(),
-		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus}
+		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus, "weapon": weapon_id, "pickup_xp": experience_values}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -161,11 +173,19 @@ func restore(saved: Dictionary) -> bool:
 		return false
 	if saved.get("mode", "campaign") not in ["campaign", "salvage"] or saved.get("target_slot", "weapon") not in Haven.SLOTS:
 		return false
+	if saved.get("weapon", "pistol") not in Weapons.TYPES:
+		return false
 	var saved_pool: Variant = saved.get("available_spells", Content.SPELLS.keys())
 	if not saved_pool is Array or saved_pool.size() < 3 or saved_pool.size() > Content.SPELLS.size():
 		return false
 	for id in saved_pool:
 		if id not in Content.SPELLS or saved_pool.count(id) != 1:
+			return false
+	var pickup_values: Variant = saved.get("pickup_xp", [])
+	if not pickup_values is Array or pickup_values.size() > 40 or (not pickup_values.is_empty() and pickup_values.size() != saved.combat.pickups.size()):
+		return false
+	for value in pickup_values:
+		if not (value is int or value is float) or value < 1 or value > 100000 or value != floor(value):
 			return false
 	for key in SNAPSHOT_KEYS:
 		set(key, saved.combat[key])
@@ -195,6 +215,9 @@ func restore(saved: Dictionary) -> bool:
 	combat_xp = saved.get("combat_xp", Training.fresh()).duplicate()
 	training_style = saved.get("training_style", "accurate")
 	training_bonuses = saved.get("training_bonuses", Training.bonuses(Training.fresh())).duplicate()
+	weapon_id = saved.get("weapon", "pistol")
+	pickup_xp.assign(saved.get("pickup_xp", []))
+	sync_pickup_values()
 	paused = true
 	vfx_events.clear()
 	return true
@@ -239,18 +262,21 @@ func class_ability() -> bool:
 				return false
 			shield = max_health() * 0.2
 			shield_left = 4.0
+			add_vfx("aegis", player, facing, 0.6)
 		"arcanist":
 			if nearest_enemy(player, 145).is_empty():
 				return false
 			for enemy in enemies:
 				if player.distance_to(enemy.pos) <= 145:
 					damage_enemy(enemy, 48 * spell_scale(), player, true)
-			pulse_flash = 0.35
+			pulse_flash = 0.65
+			add_vfx("rift_pulse", player, facing, 0.65)
 		"engineer":
 			if not defenses.repair_nearest(player, 1.0 + 0.1 * passive_rank("mechanic"), mastery_level):
 				return false
 		_:
 			return false
+	add_vfx("class_cast", player, facing, 0.30)
 	ability_notice = Haven.CLASSES[class_id].ability
 	class_wait = Haven.CLASSES[class_id].cooldown
 	return true
@@ -311,8 +337,10 @@ func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: 
 	enemy.reward_hp = maxf(0, remaining - eligible)
 	enemy.hp -= dealt
 	if benchmark_count == 0:
-		enemy.hit_flash = 0.12
-		enemy.hit_push = (enemy.pos - source).normalized() * (2.0 if enemy.boss else 4.0)
+		if enemy.get("hit_visual_wait",0.0) <= 0:
+			enemy.hit_flash = 0.12
+			enemy.hit_visual_wait = 0.20
+			enemy.hit_push = (enemy.pos - source).normalized() * (2.0 if enemy.boss else 4.0)
 		var combined := false
 		for event in feedback:
 			if event.kind == "hit" and event.get("enemy_id", -1) == enemy.id and event.life > 0.42:
@@ -335,7 +363,7 @@ func add_feedback(kind: String, pos: Vector2, direction: Vector2 = Vector2.ZERO,
 	feedback.append({"kind": kind, "pos": pos, "direction": direction, "amount": amount, "elemental": elemental, "critical": critical, "life": lifetime, "duration": lifetime})
 
 func separate_enemies(delta: float) -> void:
-	if mission != 1 or mode != "campaign" or benchmark_count > 0:
+	if benchmark_count > 0:
 		return
 	var cells := {}
 	for enemy in enemies:
@@ -363,7 +391,7 @@ func separate_enemies(delta: float) -> void:
 					if distance < spacing:
 						var away := offset / distance if distance > 0.01 else Vector2.RIGHT.rotated(enemy.id * 2.39996)
 						push += away * (spacing - distance)
-		enemy.pos = clamp_position(enemy.pos + push.limit_length(35.0) * delta * 2.0)
+		enemy.pos = move_body(enemy.pos, enemy.pos + push.limit_length(35.0) * delta * 2.0, 13)
 
 func max_health() -> float:
 	return base_health * (field.health_multiplier() + 0.08 * passive_rank("vital"))
@@ -455,6 +483,12 @@ func spawn_enemy(boss: bool = false, kind: String = "drifter") -> void:
 		boss_id = next_id
 	next_id += 1
 
+func move_body(start: Vector2, finish: Vector2, radius: float, steer: float = 0.0) -> Vector2:
+	var destination := clamp_position(finish)
+	if not practice and benchmark_count == 0:
+		destination = preload("res://field_motion.gd").move_body(field.sites,start,destination,radius,steer)
+	return clamp_position(destination)
+
 func clamp_position(pos: Vector2) -> Vector2:
 	return pos.clamp(BOUNDS.position, BOUNDS.end)
 
@@ -467,6 +501,7 @@ func set_benchmark(count: int) -> void:
 	spells.clear()
 	offers.clear()
 	pickups.clear()
+	pickup_xp.clear()
 	phase = "waves"
 	elapsed = 0.0
 	health = 120.0
@@ -479,6 +514,7 @@ func dodge() -> bool:
 	dodge_wait = 3.0 * (0.85 if "feather" in field.relics else 1.0)
 	dodge_left = 0.18
 	add_feedback("dodge", player, facing)
+	add_vfx("dodge", player, facing, 0.32)
 	if class_id == "scavenger" and class_wait <= 0:
 		dodge_left = 0.30
 		class_wait = Haven.CLASSES.scavenger.cooldown
@@ -516,7 +552,7 @@ func refresh_evolutions() -> void:
 
 func make_offers() -> void:
 	offers.clear()
-	if level == 2:
+	if level == 2 and spells.is_empty():
 		var first_choices: Array = available_spells.duplicate()
 		while first_choices.size() > 3:
 			first_choices.remove_at(offer_rng.randi_range(0, first_choices.size() - 1))
@@ -548,6 +584,9 @@ func make_offers() -> void:
 		var index := offer_rng.randi_range(0, pool.size() - 1)
 		offers.append(pool[index])
 		pool.remove_at(index)
+
+	if offers.is_empty():
+		offers.append({"id":"heal", "name":"Field Dressing", "description":"Recover up to 35 HP. Your current powers are fully upgraded."})
 
 func spell_offer(id: String, current_rank: int = 0) -> Dictionary:
 	var rank := current_rank if current_rank > 0 else (int(spells[id].rank) + 1 if spells.has(id) else 1)
@@ -624,7 +663,8 @@ func add_vfx(kind: String, position: Vector2, direction: Vector2, duration: floa
 	# Transient presentation events are deliberately excluded from saves and RNG.
 	if vfx_events.size() >= 48:
 		vfx_events.pop_front()
-	vfx_events.append({"kind":kind,"pos":position,"direction":direction,"life":duration,"duration":duration})
+	vfx_serial += 1
+	vfx_events.append({"serial":vfx_serial,"kind":kind,"pos":position,"direction":direction,"life":duration,"duration":duration})
 
 func cast_spell(id: String) -> bool:
 	if paused or phase not in ["waves", "boss"] or not spells.has(id):
@@ -632,16 +672,19 @@ func cast_spell(id: String) -> bool:
 	var target := nearest_enemy(player, 425.0 if id != "frost" else spell_mod(id, "radius", 150.0))
 	if target.is_empty():
 		return false
+	var cast_direction := player.direction_to(target.pos)
 	var multiplier := (1.0 + 0.25 * (int(spells[id].rank) - 1)) * spell_scale() * spell_mod(id, "damage")
 	match id:
 		"ember":
 			var count := int(spell_mod(id, "count"))
 			if shots.size() > MAX_SHOTS - count:
 				return false
-			add_vfx("ember_cast", player, player.direction_to(target.pos), 0.30)
+			var aim := Weapons.aim_direction(player,target,500.0,0.85)
+			cast_direction = aim
+			add_vfx("ember_cast", player, aim, 0.30)
 			for index in count:
 				var angle := (index - (count - 1) / 2.0) * 0.14
-				shots.append({"pos": player, "velocity": player.direction_to(target.pos).rotated(angle) * 500.0,
+				shots.append({"pos": player, "velocity": aim.rotated(angle) * 500.0,
 					"life": 0.85, "kind": "ember", "damage": 36.0 * multiplier,
 					"burn_dps": 6.0 * multiplier * spell_mod(id, "burn") / spell_mod(id, "damage"),
 					"pierce": int(spell_mod(id, "pierce", 0)), "hits": [],
@@ -672,88 +715,23 @@ func cast_spell(id: String) -> bool:
 				from = target.pos
 				target = nearest_enemy(from, spell_mod(id, "range", 180.0), hit)
 		_:
-			return Magic.cast(self, id, multiplier, target)
+			if not Magic.cast(self, id, multiplier, target):
+				return false
+	add_vfx("spell_cast", player, cast_direction, 0.30)
+	vfx_events.back().spell = id
 	return true
 
-func hostile_projectile(from: Vector2, direction: Vector2, amount: float, speed: float = 170.0, slow: float = 0.0) -> void:
+func hostile_projectile(from: Vector2, direction: Vector2, amount: float, speed: float = 170.0, slow: float = 0.0, kind: String = "spit") -> void:
 	if hostile_shots.size() < 32:
-		hostile_shots.append({"pos": from, "velocity": direction * speed, "damage": amount, "life": 3.0, "slow": slow})
+		hostile_shots.append({"pos": from, "velocity": direction * speed, "damage": amount, "life": 3.0, "slow": slow, "kind": kind, "age": 0.0})
 
 func tick_enemy(enemy: Dictionary, delta: float) -> void:
-	if enemy.hp <= 0:
-		return
-	if enemy.burn > 0:
-		damage_enemy(enemy, enemy.burn_dps * minf(delta, enemy.burn), enemy.pos, true)
-		enemy.burn = maxf(0, enemy.burn - delta)
-	if enemy.hp <= 0:
-		return
-	enemy.hit_flash = maxf(0.0, enemy.get("hit_flash", 0.0) - delta)
-	var pos: Vector2 = enemy.pos
-	enemy.face = -1.0 if player.x < pos.x else 1.0
-	if enemy.tell <= 0 and enemy.rush_left <= 0 and enemy.recover <= 0:
-		enemy.forward = pos.direction_to(player)
-	enemy.chill = maxf(0, enemy.chill - delta)
-	enemy.attack_wait -= delta
-	if enemy.rush_left > 0:
-		enemy.rush_left = maxf(0, enemy.rush_left - delta)
-		var rush_speed := 410.0 if mission == 2 else (280.0 if mission == 1 else 360.0)
-		enemy.pos = clamp_position(pos + enemy.rush_direction * rush_speed * delta)
-		if enemy.rush_left == 0:
-			enemy.recover = 1.35 if mission == 2 else 1.1
-	elif enemy.recover > 0:
-		enemy.recover = maxf(0, enemy.recover - delta)
-	elif enemy.tell > 0:
-		enemy.tell = maxf(0, enemy.tell - delta)
-		if enemy.tell == 0:
-			match enemy.attack:
-				"rush":
-					enemy.rush_direction = pos.direction_to(enemy.target)
-					enemy.forward = enemy.rush_direction
-					enemy.rush_left = 0.65
-				"slam":
-					add_effect("slam", enemy.target, enemy.target)
-					if player.distance_to(enemy.target) < 80.0:
-						hurt(30.0)
-				"toss":
-					for angle in [-0.22, 0.0, 0.22]:
-						hostile_projectile(pos, pos.direction_to(enemy.target).rotated(angle), 16.0, 190.0)
-				"spit": hostile_projectile(pos, pos.direction_to(enemy.target), 12.0, 170.0, 2.0)
-				"summon":
-					for count in 4:
-						if reinforcements_spawned >= 24 or enemies.filter(func(e: Dictionary): return e.hp > 0 and e.get("reinforcement", false)).size() >= 6:
-							break
-						var previous_count := enemies.size()
-						spawn_enemy(false, "drifter")
-						if enemies.size() > previous_count:
-							reinforcements_spawned += 1
-							enemies.back().reinforcement = true
-							var summon_pos := clamp_position(pos + Vector2.from_angle(count * PI / 2) * 110)
-							if summon_pos.distance_to(player) >= 80:
-								enemies.back().pos = summon_pos
-					add_effect("summon", pos, pos, 0.6)
-			enemy.attack_wait = (1.6 if enemy.hp < enemy.max_hp * 0.5 else 2.4) if enemy.boss else 4.0
-			if mission == 5 and enemy.attack == "rush" and enemy.hp < enemy.max_hp * 0.5:
-				enemy.attack_wait = 1.8
-	else:
-		if enemy.attack_wait <= 0 and (enemy.boss or (enemy.kind == "spitter" and pos.distance_to(player) < 360.0)):
-			enemy.target = player
-			var attacks: Array = Haven.MISSIONS[mission - 1].attacks if mission > 0 else ["rush", "slam", "toss"]
-			enemy.attack = attacks[enemy.cycle % attacks.size()] if enemy.boss else "spit"
-			if enemy.attack == "slam":
-				enemy.target = pos
-			enemy.cycle += 1
-			enemy.windup = (1.15 if mission == 1 else (0.8 if mission == 2 else 0.95)) if enemy.boss else 0.65
-			enemy.tell = enemy.windup
-		else:
-			var slow := (0.9 if enemy.boss else 0.6) if enemy.chill > 0 else 1.0
-			if enemy.kind != "spitter" or pos.distance_to(player) > 210.0:
-				enemy.pos = clamp_position(pos.move_toward(player, enemy.speed * slow * delta))
-	if player.distance_squared_to(enemy.pos) < pow(30.0 if enemy.boss else 17.0, 2):
-		hurt(enemy.contact)
+	EnemyCombat.tick(self, enemy, delta)
 
 func tick(delta: float, direction: Vector2) -> void:
 	if paused or phase not in ["waves", "boss"]:
 		return
+	sync_pickup_values()
 	elapsed += delta
 	for event in vfx_events:
 		event.life -= delta
@@ -781,7 +759,7 @@ func tick(delta: float, direction: Vector2) -> void:
 	var speed := 125.0 * minf(1.3, speed_multiplier * (1.0 + 0.05 * passive_rank("fleet"))) * (0.95 if "obsidian" in field.relics else 1.0)
 	if talents.slow_left > 0:
 		speed *= 0.8
-	player = clamp_position(player + move * (520.0 if dodge_left > 0.0 else speed) * delta)
+	player = move_body(player,player + move * (520.0 if dodge_left > 0.0 else speed) * delta,10)
 	if benchmark_count == 0 and phase == "waves" and elapsed >= duration:
 		if mode == "salvage":
 			phase = "defeat"
@@ -810,66 +788,31 @@ func tick(delta: float, direction: Vector2) -> void:
 		if spells[id].wait == 0 and cast_spell(id):
 			spells[id].wait = spell_cooldown(id)
 	Magic.tick(self, delta)
-	if fire_wait <= 0.0 and shots.size() < MAX_SHOTS:
-		var nearest := nearest_enemy(player, 425.0)
-		if not nearest.is_empty():
-			var aim := player.direction_to(nearest.pos)
-			shots.append({"pos": player, "velocity": aim * 500.0, "life": 0.85, "pierce": passive_rank("pierce"), "hits": []})
-			add_feedback("muzzle", player + aim * 24 - Vector2(0, 18), aim)
+	if fire_wait <= 0.0:
+		var nearest := nearest_enemy(player, Weapons.TYPES[weapon_id].range)
+		if not nearest.is_empty() and Weapons.fire(self, nearest):
 			fire_wait = fire_interval
+
 	for enemy in enemies:
 		tick_enemy(enemy, delta)
 	separate_enemies(delta)
 	defenses.tick(delta, self)
-	for shot in hostile_shots:
-		shot.life -= delta
-		shot.pos += shot.velocity * delta
-		if shot.pos.distance_to(player) < 15.0:
-			var hits_before := damage_taken
-			hurt(shot.damage)
-			if damage_taken > hits_before:
-				talents.slow_left = maxf(talents.slow_left, shot.get("slow", 0.0))
-			shot.life = 0.0
-	hostile_shots = hostile_shots.filter(func(shot: Dictionary) -> bool: return shot.life > 0)
-	for shot in shots:
-		shot.life -= delta
-		shot.pos += shot.velocity * delta
-		for enemy in enemies:
-			if enemy.hp > 0.0 and enemy.id not in shot.get("hits", []) and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
-				var amount: float = talents.basic_damage(self, shot, shot.get("damage", damage * field.damage_multiplier()))
-				var critical: bool = shot.get("kind", "pistol") == "pistol" and training_bonuses.crit > 0 and rng.randf() < training_bonuses.crit
-				if critical:
-					amount *= 1.5
-				damage_enemy(enemy, amount, shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol", critical)
-				if shot.get("kind", "pistol") == "pistol":
-					add_vfx("bullet_hit",enemy.pos,shot.velocity.normalized(),0.20)
-				if shot.get("kind", "pistol") == "ember":
-					enemy.burn = maxf(enemy.burn, 2.0)
-					enemy.burn_dps = maxf(enemy.burn_dps, shot.burn_dps)
-					add_effect("ember", enemy.pos, enemy.pos)
-					if shot.get("splash", 0.0) > 0:
-						for nearby in enemies:
-							if nearby.id != enemy.id and nearby.pos.distance_to(enemy.pos) <= 65:
-								damage_enemy(nearby, shot.splash, enemy.pos, true)
-				if shot.get("pierce", 0) > 0:
-					shot.pierce -= 1
-					shot.hits.append(enemy.id)
-				else:
-					shot.life = 0.0
-				break
-	shots = shots.filter(func(s: Dictionary) -> bool: return s.life > 0.0)
+	Projectiles.hostile(self, delta)
+	Projectiles.friendly(self, delta)
+
 	for i in range(enemies.size() - 1, -1, -1):
 		var enemy := enemies[i]
 		if enemy.hp > 0.0:
 			continue
 		add_feedback("death", enemy.pos - Vector2(0, 12))
+		add_vfx("enemy_death", enemy.pos, enemy.get("hit_push", Vector2.RIGHT), 0.48)
+		vfx_events.back().enemy = {"kind":enemy.kind,"boss":enemy.boss,"face":enemy.face,"id":enemy.id,"motion":enemy.get("motion",0.0),"moving":enemy.get("moving",false),"attack":enemy.attack,"attack_anim":enemy.get("attack_anim",0.0),"tell":enemy.tell,"windup":enemy.windup,"rush_left":enemy.rush_left}
 		kills += 1
 		if not practice and benchmark_count == 0:
 			survivor_xp += 1
 			mastery_xp += 1 if kills % 3 == 0 else 0
 			field.add_drop(enemy.pos, 3 if enemy.boss else 1, 12 if enemy.boss else (2 if kills % 3 == 0 else 0))
-		if pickups.size() < 40:
-			pickups.append(enemy.pos)
+		add_experience(enemy.pos)
 		if enemy.boss and health > 0.0:
 			phase = "victory"
 		enemies.remove_at(i)
@@ -884,8 +827,9 @@ func tick(delta: float, direction: Vector2) -> void:
 			pickups[i] = pickups[i].move_toward(player, 220.0 * delta)
 		if pickups[i].distance_to(player) < 14.0:
 			add_feedback("pickup", player - Vector2(0, 15))
-			xp += 1
+			xp += pickup_xp[i]
 			pickups.remove_at(i)
+			pickup_xp.remove_at(i)
 	if benchmark_count == 0 and xp >= level * 5 and level < 12:
 		xp -= level * 5
 		level += 1
@@ -904,6 +848,7 @@ func hurt(amount: float) -> void:
 		return
 	var reduced := amount * maxf(0.35, (1.0 - minf(0.5, armor / (armor + 150.0))) * (0.9 if "obsidian" in field.relics else 1.0) * (1.0 - defenses.mitigation(player)) * (1.0 - training_bonuses.reduction))
 	var absorbed := minf(shield, reduced)
+	add_vfx("shield_hit" if absorbed >= reduced else "hero_hit",player,Vector2.UP,0.28)
 	shield -= absorbed
 	health = maxf(0.0, health - (reduced - absorbed))
 	if reduced > absorbed:
@@ -915,3 +860,20 @@ func hurt(amount: float) -> void:
 		medkit_used = true
 		health = minf(max_health(), health + max_health() * medkit_fraction)
 		ability_notice = "Field Medkit restored health."
+
+func sync_pickup_values() -> void:
+	while pickup_xp.size() < pickups.size():
+		pickup_xp.append(1)
+	if pickup_xp.size() > pickups.size():
+		pickup_xp.resize(pickups.size())
+
+func add_experience(position: Vector2) -> void:
+	if pickups.size() < 40:
+		pickups.append(position)
+		pickup_xp.append(1)
+		return
+	var nearest := 0
+	for index in pickups.size():
+		if pickups[index].distance_squared_to(position) < pickups[nearest].distance_squared_to(position):
+			nearest = index
+	pickup_xp[nearest] += 1

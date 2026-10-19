@@ -122,8 +122,5 @@ func tick(delta: float, run: RefCounted) -> void:
 			var radius: float = TYPES[structure.kind].radius + (30 if enemy.boss else 17)
 			var offset: Vector2 = enemy.pos - structure.pos
 			if offset.length() < radius:
-				if structure.hurt_wait == 0:
-					structure.hp -= 36 if enemy.boss else enemy.contact
-					structure.hurt_wait = 0.6
 				enemy.pos = run.clamp_position(structure.pos + (offset.normalized() if offset.length() > 0.01 else Vector2.RIGHT) * radius)
 	structures = structures.filter(func(s: Dictionary): return s.hp > 0)

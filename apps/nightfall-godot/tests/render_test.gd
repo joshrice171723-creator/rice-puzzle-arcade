@@ -29,10 +29,12 @@ func verify_batches() -> void:
 	for frame in 10:
 		await RenderingServer.frame_post_draw
 	print("Mission One without hits: ", int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+	for n in 48:
+		arena.run.field.drops.append({"pos":Vector2(420+(n%8)*30,450+(n/8)*30),"credits":1,"scrap":1})
 	for n in 12:
 		arena.run.add_feedback("hit",Vector2(450 + n * 20,500),Vector2.RIGHT,12)
 	for frame in 10:
 		await RenderingServer.frame_post_draw
 	calls = int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
-	print("Mission One render: 120 authored enemies + 40 pickups + 12 hits, %d draw calls (budget 100)" % calls)
+	print("Mission One render: 120 authored enemies + 40 XP + 48 currency drops + 12 hits, %d draw calls (budget 100)" % calls)
 	quit(0 if baseline_ok and calls > 0 and calls <= 100 else 1)

@@ -33,7 +33,7 @@ static func cost(home: Control, parent: Node, values: Dictionary) -> void:
 static func item_tile(home: Control, parent: Node, item: Dictionary, height: int = 72) -> Button:
 	var node: Button = home.button("Lv.%d" % item.level, func(): pass, parent, height)
 	node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	node.icon = home.item_texture(item.slot)
+	node.icon = home.item_texture(item.slot, item)
 	node.expand_icon = true
 	node.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	node.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP

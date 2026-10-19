@@ -1,5 +1,7 @@
 # Continuous combat VFX — October 19, 2026
 
+Historical record of the earlier effects-only pass. The subsequent live-combat changes, four-class coverage and current acceptance evidence are recorded in [Combat mechanics and presentation](COMBAT_MECHANICS_AND_PRESENTATION.md). The APK and performance values below identify that earlier build.
+
 The generated Ember animation sheets were rejected because switching between inconsistent pictures read as a slideshow. The runtime now uses continuously deformed geometry and a procedural shader. No generated animation frames drive Ember Bolt, Frost Nova, spectral blades, wisps, stone lances, gravity, or ground magic.
 
 ## Rendering

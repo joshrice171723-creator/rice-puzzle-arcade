@@ -25,6 +25,11 @@ const CHROME = {
 	"settings": preload("res://assets/gear/nav-settings.svg")}
 const DISPLAY_FONT = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 const BODY_FONT = preload("res://assets/fonts/Nunito.ttf")
+const WEAPON_ICONS = {
+	"scattergun": preload("res://assets/weapons/scattergun.png"),
+	"crossbow": preload("res://assets/weapons/crossbow.png"),
+	"wand": preload("res://assets/weapons/wand.png"),
+	"sabre": preload("res://assets/weapons/sabre.png")}
 const ITEM_NAMES := ["weapon", "helmet", "body", "boots", "charm", "gadget", "ring", "pants", "credits", "parts", "gems", "hp"]
 const NAMES := ["shop", "gear", "mission", "haven", "class", "ring", "pants", "workshop", "infirmary", "quartermaster", "training", "arcanum"]
 
