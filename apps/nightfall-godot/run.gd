@@ -5,6 +5,7 @@ const DURATION := 240.0
 const Content = preload("res://combat_content.gd")
 const Field = preload("res://field.gd")
 const Haven = preload("res://haven_content.gd")
+const Defenses = preload("res://defenses.gd")
 const MAX_ENEMIES := 120
 const MAX_SHOTS := 64
 const BOUNDS := Rect2(135, 135, 930, 930)
@@ -59,6 +60,11 @@ var class_wait := 0.0
 var shield := 0.0
 var shield_left := 0.0
 var ability_notice := ""
+var defenses = Defenses.new()
+var build_revision := 0
+var blueprints: Array[String] = ["barricade", "trap"]
+var mastery_level := 0
+var rescued := false
 
 const SNAPSHOT_KEYS := ["player", "facing", "health", "elapsed", "phase", "kills", "shots", "hostile_shots", "effects", "spells", "offers", "enemies", "pickups", "xp", "level", "damage", "fire_interval", "fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "boss_id", "next_id", "base_health", "damage_taken", "last_damage_at", "wisp_wait", "survivor_xp", "mastery_xp", "mission", "duration", "boss_name", "armor", "speed_multiplier", "pickup_multiplier", "spell_multiplier", "medkit_fraction", "medkit_used", "class_id", "class_wait", "shield", "shield_left"]
 const FIELD_KEYS := ["sites", "scrap", "credits", "bag", "capacity", "secure_capacity", "traits", "relics", "active_site", "caches_opened", "notice", "revision", "drops", "next_loot_id"]
@@ -84,6 +90,8 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	field.secure_capacity = stats.secure
 	medkit_fraction = stats.medkit
 	class_id = stats["class"]
+	blueprints.assign(stats.get("blueprints", ["barricade", "trap"]))
+	mastery_level = stats.get("mastery", 0)
 
 func snapshot() -> Dictionary:
 	var values := {}
@@ -92,7 +100,8 @@ func snapshot() -> Dictionary:
 	var exploration := {}
 	for key in FIELD_KEYS:
 		exploration[key] = field.get(key)
-	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state}
+	return {"version": 1, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
+		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
@@ -103,7 +112,7 @@ func restore(saved: Dictionary) -> bool:
 	for key in FIELD_KEYS:
 		if not saved.field.has(key) or typeof(saved.field[key]) != typeof(field.get(key)):
 			return false
-	if saved.combat.phase not in ["waves", "boss", "upgrade", "shrine", "pack", "victory", "defeat"] or saved.combat.mission not in range(1, 6):
+	if saved.combat.phase not in ["waves", "boss", "upgrade", "shrine", "pack", "build", "victory", "defeat"] or saved.combat.mission not in range(1, 6):
 		return false
 	if saved.combat.enemies.size() > MAX_ENEMIES or saved.combat.shots.size() > MAX_SHOTS or saved.field.sites.size() != 7 or saved.field.bag.size() > 12:
 		return false
@@ -113,6 +122,11 @@ func restore(saved: Dictionary) -> bool:
 		field.set(key, saved.field[key])
 	rng.state = saved.rng
 	field.rng.state = saved.field_rng
+	defenses.structures.assign(saved.get("defenses", []))
+	defenses.next_id = saved.get("next_structure", 0)
+	blueprints.assign(saved.get("blueprints", ["barricade", "trap"]))
+	mastery_level = saved.get("mastery", 0)
+	rescued = saved.get("rescued", false)
 	paused = true
 	return true
 
@@ -121,7 +135,27 @@ func result() -> Dictionary:
 	var loot: Array = field.banked_loot(won)
 	return {"victory": won, "credits": field.credits, "survivor_xp": survivor_xp,
 		"mastery_xp": mastery_xp, "loot": loot, "damage_taken": damage_taken,
-		"caches": field.caches_opened, "lost": field.bag.size() - loot.size(), "rescued": false}
+		"caches": field.caches_opened, "lost": field.bag.size() - loot.size(), "rescued": rescued}
+
+func rescue() -> bool:
+	if phase != "defeat" or rescued or practice or benchmark_count > 0:
+		return false
+	rescued = true
+	health = max_health() * 0.5
+	hurt_wait = 2.5
+	hostile_shots.clear()
+	for enemy in enemies:
+		if player.distance_to(enemy.pos) < 100:
+			var direction := player.direction_to(enemy.pos)
+			if direction == Vector2.ZERO:
+				direction = Vector2.RIGHT
+			enemy.pos = clamp_position(player + direction * 145)
+		enemy.tell = 0.0
+		enemy.rush_left = 0.0
+		enemy.attack_wait = maxf(enemy.attack_wait, 2.5)
+	phase = "boss" if boss_id >= 0 else "waves"
+	paused = true
+	return true
 
 func class_ability() -> bool:
 	if paused or phase not in ["waves", "boss"] or class_wait > 0:
@@ -139,10 +173,48 @@ func class_ability() -> bool:
 					enemy.hp -= 48 * spell_multiplier
 			pulse_flash = 0.35
 		"engineer":
-			ability_notice = "Place a structure before using Repair Swarm."
-			return false
+			if not defenses.repair_nearest(player):
+				ability_notice = defenses.notice
+				return false
 	class_wait = Haven.CLASSES[class_id].cooldown
 	return true
+
+func open_build() -> void:
+	if not paused and phase in ["waves", "boss"]:
+		phase = "build"
+		defenses.notice = "Structures are placed ahead of your facing direction."
+		build_revision += 1
+
+func close_build() -> void:
+	if phase == "build":
+		phase = "boss" if boss_id >= 0 else "waves"
+
+func build_cost(kind: String) -> int:
+	if kind not in Defenses.TYPES:
+		return -1
+	return ceili(Defenses.TYPES[kind].cost * (0.9 if class_id == "engineer" and mastery_level >= 5 else 1.0))
+
+func place_structure(kind: String) -> bool:
+	if paused or phase != "build" or kind not in blueprints or field.scrap < build_cost(kind):
+		return false
+	var position := player + facing * 90.0
+	build_revision += 1
+	if not defenses.can_place(kind, position, field.sites, player):
+		return false
+	defenses.place(kind, position, spell_multiplier * 40.0, class_id == "engineer")
+	field.scrap -= build_cost(kind)
+	field.revision += 1
+	return true
+
+func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: bool = false) -> void:
+	if enemy.hp <= 0:
+		return
+	var mitigation := 1.0
+	if mission == 4 and enemy.boss and not elemental:
+		var forward: Vector2 = enemy.get("forward", Vector2.RIGHT)
+		if (source - enemy.pos).normalized().dot(forward) > 0.3:
+			mitigation = 0.5
+	enemy.hp -= amount * mitigation
 
 func max_health() -> float:
 	return base_health * field.health_multiplier()
@@ -202,6 +274,7 @@ func spawn_enemy(boss: bool = false, kind: String = "drifter") -> void:
 	enemies.append({"id": next_id, "pos": pos, "hp": hp, "max_hp": hp,
 		"speed": stats.speed, "boss": boss, "kind": kind, "contact": stats.contact,
 		"tell": 0.0, "attack_wait": 2.0, "target": pos, "face": 1.0,
+		"forward": Vector2.LEFT, "windup": 0.95,
 		"attack": "", "cycle": 0, "rush_left": 0.0, "rush_direction": Vector2.ZERO,
 		"recover": 0.0, "chill": 0.0, "burn": 0.0, "burn_dps": 0.0})
 	if boss:
@@ -240,7 +313,7 @@ func pulse() -> bool:
 	pulse_flash = 0.35
 	for enemy in enemies:
 		if player.distance_to(enemy.pos) <= 145.0:
-			enemy.hp -= 55.0
+			damage_enemy(enemy, 55.0, player, true)
 			if not enemy.boss:
 				enemy.pos = clamp_position(enemy.pos + player.direction_to(enemy.pos) * 45.0)
 	return true
@@ -340,7 +413,7 @@ func cast_spell(id: String) -> bool:
 		"frost":
 			for enemy in enemies:
 				if enemy.hp > 0 and player.distance_to(enemy.pos) <= 150.0:
-					enemy.hp -= 26.0 * multiplier
+					damage_enemy(enemy, 26.0 * multiplier, player, true)
 					enemy.chill = maxf(enemy.chill, 1.5 if enemy.boss else 3.0)
 			add_effect("frost", player, player, 0.45)
 		"chain":
@@ -349,7 +422,7 @@ func cast_spell(id: String) -> bool:
 			for amount in [28.0, 18.0, 12.0]:
 				if target.is_empty():
 					break
-				target.hp -= amount * multiplier
+				damage_enemy(target, amount * multiplier, from, true)
 				hit.append(target.id)
 				add_effect("chain", from, target.pos)
 				from = target.pos
@@ -370,13 +443,16 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 		return
 	var pos: Vector2 = enemy.pos
 	enemy.face = -1.0 if player.x < pos.x else 1.0
+	if enemy.tell <= 0 and enemy.rush_left <= 0 and enemy.recover <= 0:
+		enemy.forward = pos.direction_to(player)
 	enemy.chill = maxf(0, enemy.chill - delta)
 	enemy.attack_wait -= delta
 	if enemy.rush_left > 0:
 		enemy.rush_left = maxf(0, enemy.rush_left - delta)
-		enemy.pos = clamp_position(pos + enemy.rush_direction * 360.0 * delta)
+		var rush_speed := 410.0 if mission == 2 else (280.0 if mission == 1 else 360.0)
+		enemy.pos = clamp_position(pos + enemy.rush_direction * rush_speed * delta)
 		if enemy.rush_left == 0:
-			enemy.recover = 1.1
+			enemy.recover = 1.35 if mission == 2 else 1.1
 	elif enemy.recover > 0:
 		enemy.recover = maxf(0, enemy.recover - delta)
 	elif enemy.tell > 0:
@@ -385,6 +461,7 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 			match enemy.attack:
 				"rush":
 					enemy.rush_direction = pos.direction_to(enemy.target)
+					enemy.forward = enemy.rush_direction
 					enemy.rush_left = 0.65
 				"slam":
 					add_effect("slam", enemy.target, enemy.target)
@@ -396,8 +473,16 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 				"spit": hostile_projectile(pos, pos.direction_to(enemy.target), 12.0)
 				"summon":
 					for count in 4:
+						var previous_count := enemies.size()
 						spawn_enemy(false, "drifter")
+						if enemies.size() > previous_count:
+							var summon_pos := clamp_position(pos + Vector2.from_angle(count * PI / 2) * 110)
+							if summon_pos.distance_to(player) >= 80:
+								enemies.back().pos = summon_pos
+					add_effect("summon", pos, pos, 0.6)
 			enemy.attack_wait = (1.6 if enemy.hp < enemy.max_hp * 0.5 else 2.4) if enemy.boss else 4.0
+			if mission == 5 and enemy.attack == "rush" and enemy.hp < enemy.max_hp * 0.5:
+				enemy.attack_wait = 1.8
 	else:
 		if enemy.attack_wait <= 0 and (enemy.boss or (enemy.kind == "spitter" and pos.distance_to(player) < 360.0)):
 			enemy.target = player
@@ -406,7 +491,8 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 			if enemy.attack == "slam":
 				enemy.target = pos
 			enemy.cycle += 1
-			enemy.tell = 0.95 if enemy.boss else 0.65
+			enemy.windup = (1.15 if mission == 1 else (0.8 if mission == 2 else 0.95)) if enemy.boss else 0.65
+			enemy.tell = enemy.windup
 		else:
 			var slow := (0.9 if enemy.boss else 0.6) if enemy.chill > 0 else 1.0
 			if enemy.kind != "spitter" or pos.distance_to(player) > 210.0:
@@ -424,7 +510,7 @@ func tick(delta: float, direction: Vector2) -> void:
 	if "lantern" in field.relics and wisp_wait == 0:
 		var target := nearest_enemy(player, 220.0)
 		if not target.is_empty():
-			target.hp -= 12.0
+			damage_enemy(target, 12.0, player, true)
 			add_effect("chain", player, target.pos)
 			wisp_wait = 3.0
 	for key in ["fire_wait", "spawn_wait", "hurt_wait", "dodge_wait", "dodge_left", "pulse_wait", "pulse_flash", "class_wait", "shield_left"]:
@@ -466,6 +552,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		fire_wait = fire_interval
 	for enemy in enemies:
 		tick_enemy(enemy, delta)
+	defenses.tick(delta, self)
 	for shot in hostile_shots:
 		shot.life -= delta
 		shot.pos += shot.velocity * delta
@@ -478,7 +565,7 @@ func tick(delta: float, direction: Vector2) -> void:
 		shot.pos += shot.velocity * delta
 		for enemy in enemies:
 			if enemy.hp > 0.0 and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
-				enemy.hp -= shot.get("damage", damage * field.damage_multiplier())
+				damage_enemy(enemy, shot.get("damage", damage * field.damage_multiplier()), shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") == "ember")
 				if shot.get("kind", "pistol") == "ember":
 					enemy.burn = maxf(enemy.burn, 2.0)
 					enemy.burn_dps = maxf(enemy.burn_dps, shot.burn_dps)
@@ -524,7 +611,7 @@ func hurt(amount: float) -> void:
 		return
 	if amount <= 0:
 		return
-	var reduced := amount * (1.0 - minf(0.5, armor / (armor + 150.0))) * (0.9 if "obsidian" in field.relics else 1.0)
+	var reduced := amount * maxf(0.35, (1.0 - minf(0.5, armor / (armor + 150.0))) * (0.9 if "obsidian" in field.relics else 1.0) * (1.0 - defenses.mitigation(player)))
 	var absorbed := minf(shield, reduced)
 	shield -= absorbed
 	health = maxf(0.0, health - (reduced - absorbed))

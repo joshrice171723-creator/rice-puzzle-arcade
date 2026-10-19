@@ -16,9 +16,14 @@ class NightfallAds(godot: Godot) : GodotPlugin(godot) {
     private var initialized = false
     private var busy = false
     private var earned = false
+    private var activeRequest: String? = null
+    private var showing = false
     override fun getPluginName() = "NightfallAds"
     override fun getPluginSignals() = setOf(
-        SignalInfo("ad_state", String::class.java), SignalInfo("reward_earned")
+        SignalInfo("ad_state", String::class.java), SignalInfo("reward_earned"),
+        SignalInfo("reward_granted", String::class.java),
+        SignalInfo("reward_finished", String::class.java, Boolean::class.javaObjectType),
+        SignalInfo("reward_error", String::class.java, String::class.java)
     )
 
     private fun state(message: String) {
@@ -28,65 +33,100 @@ class NightfallAds(godot: Godot) : GodotPlugin(godot) {
 
     @UsedByGodot
     fun testRewarded() {
-        val host = activity ?: return
+        showRewarded("diagnostic-${System.nanoTime()}")
+    }
+
+    @UsedByGodot
+    fun cancelRewarded(requestId: String) {
+        activity?.runOnUiThread {
+            if (activeRequest == requestId && !showing) fail(requestId, "Video request cancelled.")
+        }
+    }
+
+    private fun fail(requestId: String, message: String) {
+        if (activeRequest != requestId) return
+        busy = false
+        showing = false
+        activeRequest = null
+        state(message)
+        emitSignal("reward_error", requestId, message)
+    }
+
+    @UsedByGodot
+    fun showRewarded(requestId: String) {
+        val host = activity ?: run {
+            emitSignal("reward_error", requestId, "Android activity is unavailable.")
+            return
+        }
         host.runOnUiThread {
-            if (busy) return@runOnUiThread
+            if (busy) {
+                emitSignal("reward_error", requestId, "Another video request is already active.")
+                return@runOnUiThread
+            }
             busy = true
             earned = false
+            showing = false
+            activeRequest = requestId
             state("Checking consent…")
             val consent = UserMessagingPlatform.getConsentInformation(host)
             val params = ConsentRequestParameters.Builder().build()
             consent.requestConsentInfoUpdate(host, params, {
+                if (activeRequest != requestId) return@requestConsentInfoUpdate
                 UserMessagingPlatform.loadAndShowConsentFormIfRequired(host) { error ->
+                    if (activeRequest != requestId) return@loadAndShowConsentFormIfRequired
                     if (error != null) {
-                        busy = false
-                        state("Consent form: ${error.message}")
+                        fail(requestId, "Consent form: ${error.message}")
                     } else if (consent.canRequestAds()) {
-                        if (initialized) loadVideo() else {
+                        if (initialized) loadVideo(requestId) else {
                             MobileAds.setRequestConfiguration(RequestConfiguration.Builder()
                                 .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_T).build())
                             MobileAds.initialize(host) {
                                 initialized = true
-                                host.runOnUiThread { loadVideo() }
+                                host.runOnUiThread { if (activeRequest == requestId) loadVideo(requestId) }
                             }
                         }
                     } else {
-                        busy = false
-                        state("Ads unavailable for this consent state.")
+                        fail(requestId, "Ads unavailable for this consent state.")
                     }
                 }
             }, { error ->
-                busy = false
-                state("Consent request: ${error.message}")
+                fail(requestId, "Consent request: ${error.message}")
             })
         }
     }
 
-    private fun loadVideo() {
-        val host = activity ?: run { busy = false; return }
+    private fun loadVideo(requestId: String) {
+        val host = activity ?: run { fail(requestId, "Android activity is unavailable."); return }
         state("Loading Google sample rewarded video…")
         RewardedAd.load(host, "ca-app-pub-3940256099942544/5224354917",
             AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
                 override fun onAdFailedToLoad(error: LoadAdError) {
-                    busy = false
-                    state("Load failed ${error.code}: ${error.message}")
+                    fail(requestId, "Load failed ${error.code}: ${error.message}")
                 }
                 override fun onAdLoaded(ad: RewardedAd) {
+                    if (activeRequest != requestId) return
                     ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                        override fun onAdShowedFullScreenContent() { state("Sample video showing") }
+                        override fun onAdShowedFullScreenContent() {
+                            showing = true
+                            state("Sample video showing")
+                        }
                         override fun onAdDismissedFullScreenContent() {
+                            if (activeRequest != requestId) return
                             busy = false
+                            showing = false
+                            activeRequest = null
                             state(if (earned) "Closed • reward verified" else "Closed • no earned reward")
+                            emitSignal("reward_finished", requestId, earned)
                         }
                         override fun onAdFailedToShowFullScreenContent(error: AdError) {
-                            busy = false
-                            state("Show failed ${error.code}: ${error.message}")
+                            fail(requestId, "Show failed ${error.code}: ${error.message}")
                         }
                     }
                     ad.show(host) {
-                        if (!earned) {
+                        if (activeRequest == requestId && !earned) {
                             earned = true
                             emitSignal("reward_earned")
+                            emitSignal("reward_granted", requestId)
                             state("Earned callback received once")
                         }
                     }

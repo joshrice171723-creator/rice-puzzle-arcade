@@ -23,7 +23,8 @@ func fresh() -> Dictionary:
 		"inventory": items, "equipment": equipment, "next_item": 6, "missions": {}, "zone_claims": [],
 		"facilities": {"workshop": 1, "quartermaster": 1, "infirmary": 1},
 		"next_attempt": 1, "active_attempt": {}, "last_result": {}, "last_banked": 0,
-		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false}
+		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false,
+		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false}}
 
 func valid(candidate: Variant) -> bool:
 	if not candidate is Dictionary or candidate.get("version") != VERSION:
@@ -39,6 +40,15 @@ func valid(candidate: Variant) -> bool:
 		return false
 	if not candidate.active_attempt is Dictionary or not candidate.last_result is Dictionary or not candidate.zone_claims is Array or not candidate.cosmetics is Array or not candidate.tutorial_seen is bool:
 		return false
+	if not candidate.settings is Dictionary:
+		return false
+	for key in ["music", "sound"]:
+		var value: Variant = candidate.settings.get(key)
+		if not (value is int or value is float) or value < 0 or value > 1:
+			return false
+	for key in ["haptics", "reduced_effects"]:
+		if not candidate.settings.get(key) is bool:
+			return false
 	var ids: Array = []
 	for item in candidate.inventory:
 		if not item is Dictionary or not item.get("id") is float and not item.get("id") is int:
@@ -77,7 +87,10 @@ func read_candidate(file_path: String) -> Variant:
 	var parser := JSON.new()
 	if parser.parse(FileAccess.get_file_as_string(file_path)) != OK:
 		return null
-	return normalize_numbers(parser.data)
+	var parsed: Variant = normalize_numbers(parser.data)
+	if parsed is Dictionary and parsed.get("version") == 1 and not parsed.has("settings"):
+		parsed.settings = fresh().settings
+	return parsed
 
 func normalize_numbers(value: Variant) -> Variant:
 	# JSON numbers load as floats. Stable integer IDs are needed for Array.has
@@ -239,6 +252,12 @@ func stats() -> Dictionary:
 		"speed": 1.05 if data["class"] == "scavenger" else 1.0, "pickup": 1.15 if data["class"] == "scavenger" else 1.0,
 		"capacity": 8 + int(data.facilities.quartermaster) - 1, "secure": 2,
 		"medkit": 0.25 if data.facilities.infirmary >= 2 else 0.20, "class": data["class"]}
+	result.blueprints = ["barricade", "trap"]
+	if "clear" in data.missions.get("1", []):
+		result.blueprints.append("turret")
+	if "clear" in data.missions.get("3", []):
+		result.blueprints.append("ward")
+	result.mastery = Content.mastery_level(data.mastery[data["class"]])
 	var outrider := 0
 	for slot: String in Content.SLOTS:
 		var item := item_by_id(data.equipment[slot])
@@ -358,3 +377,15 @@ func saved_run() -> Dictionary:
 		return {}
 	var decoded: Variant = Marshalls.base64_to_variant(encoded, false)
 	return decoded if decoded is Dictionary else {}
+
+func set_setting(key: String, value: Variant) -> bool:
+	if blocked or key not in data.settings:
+		return false
+	if key in ["music", "sound"]:
+		if not (value is float or value is int) or value < 0 or value > 1:
+			return false
+	elif not value is bool:
+		return false
+	var previous := data.duplicate(true)
+	data.settings[key] = value
+	return commit(previous)

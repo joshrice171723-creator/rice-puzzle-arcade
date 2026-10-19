@@ -41,7 +41,7 @@ func _ready() -> void:
 	subtitle.add_theme_font_size_override("font_size", 12)
 	subtitle.add_theme_color_override("font_color", Color("b9a7de"))
 	add_child(subtitle)
-	var settings := button("Settings", func(): diagnostics_requested.emit(), self, 40)
+	var settings := button("Settings", func(): page = "settings"; message = ""; rebuild(), self, 40)
 	settings.position = Vector2(317, 22)
 	settings.size.x = 95
 	wallet = Label.new()
@@ -122,6 +122,7 @@ func rebuild() -> void:
 		"gear": gear_page()
 		"haven": haven_page()
 		"class": class_page()
+		"settings": settings_page()
 	status_label.text = profile.error if not profile.error.is_empty() else message
 	for index in navigation.get_child_count():
 		var tab: Button = navigation.get_child(index)
@@ -239,3 +240,20 @@ func class_page() -> void:
 		text_line(info.description if unlocked else info.unlock, 13)
 		var node := button("Selected" if selected else ("Select %s" % info.name if unlocked else "Locked"), func(): refresh(func(): return profile.select_class(id), "Class changed."), null, 40)
 		node.disabled = selected or not unlocked or not profile.can_change_loadout()
+
+func settings_page() -> void:
+	text_line("SETTINGS", 22, Color("ffd27c"))
+	text_line("Original instrumental music and sound effects. Your preferences are saved on this device.")
+	for key in ["music", "sound"]:
+		text_line("%s volume • %.0f%%" % [key.capitalize(), profile.data.settings[key] * 100], 17)
+		var row := HBoxContainer.new()
+		body.add_child(row)
+		for volume in [0.0, 0.25, 0.5, 1.0]:
+			var node := button("Off" if volume == 0 else "%.0f%%" % (volume * 100), func(): refresh(func(): return profile.set_setting(key, volume), "Audio preference saved."), row)
+			node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for entry in [["haptics", "Vibration"], ["reduced_effects", "Reduced effects"]]:
+		var enabled: bool = profile.data.settings[entry[0]]
+		button("%s: %s" % [entry[1], "On" if enabled else "Off"], func(): refresh(func(): return profile.set_setting(entry[0], not enabled), "Preference saved."))
+	text_line("Reduced effects hides screen flashes and softens spell effects. Attack warnings remain visible.", 13)
+	button("Internal test tools & ad privacy", func(): diagnostics_requested.emit())
+	button("Back to Haven", func(): page = "haven"; message = ""; rebuild())

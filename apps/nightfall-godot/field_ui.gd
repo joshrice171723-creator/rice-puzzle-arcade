@@ -61,3 +61,16 @@ static func pack(arena: Node) -> void:
 	if pages > 1:
 		arena.make_button("Next page • %d/%d" % [arena.pack_page + 1, pages], func(): arena.pack_page = (arena.pack_page + 1) % pages; arena.last_screen = "", arena.modal_body, 40)
 	arena.make_button("Back to the field", func(): arena.pending_discard = -1; arena.run.close_pack(), arena.modal_body)
+
+static func build(arena: Node) -> void:
+	var run = arena.run
+	arena.modal_title.text = "Field Defenses"
+	label(arena, "%d scrap • capacity %d/%d" % [run.field.scrap, run.defenses.used_capacity(), run.Defenses.CAPACITY], 16)
+	for id: String in run.blueprints:
+		var info: Dictionary = run.Defenses.TYPES[id]
+		var cost: int = run.build_cost(id)
+		var button: Button = arena.make_button("%s • %d scrap" % [info.name, cost], func(): run.place_structure(id), arena.modal_body)
+		button.disabled = run.field.scrap < cost or run.defenses.used_capacity() + info.capacity > run.Defenses.CAPACITY
+		label(arena, info.description, 13)
+	label(arena, run.defenses.notice, 13)
+	arena.make_button("Back to the field", func(): run.close_build(), arena.modal_body)

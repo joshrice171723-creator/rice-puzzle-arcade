@@ -4,10 +4,14 @@ const Run = preload("res://run.gd")
 const FieldUI = preload("res://field_ui.gd")
 const Profile = preload("res://profile.gd")
 const HavenUI = preload("res://haven_ui.gd")
+const RewardFlow = preload("res://reward_flow.gd")
+const Soundscape = preload("res://soundscape.gd")
 const ACTORS = preload("res://assets/actors.png")
 const FLOOR = preload("res://assets/courtyard.png")
 const SHADOW = preload("res://assets/shadow.svg")
 const EXPERIENCE = preload("res://assets/experience.svg")
+const PROPS = preload("res://assets/field-props.png")
+const PROP_RECTS := [Rect2(0, 0, 440, 455), Rect2(455, 0, 435, 455), Rect2(915, 45, 390, 400), Rect2(1350, 0, 420, 455), Rect2(0, 475, 500, 410), Rect2(500, 475, 430, 410), Rect2(940, 520, 430, 350), Rect2(1430, 450, 330, 435)]
 const INK := Color("101a32")
 const GOLD := Color("ffd27c")
 const VIOLET := Color("ba92ff")
@@ -57,6 +61,10 @@ var reward_receipt: Dictionary = {}
 var diagnostics := false
 var class_button: Button
 var last_checkpoint_key := ""
+var build_button: Button
+var reward_flow = RewardFlow.new()
+var soundscape: Node
+var previous_health := 0.0
 
 func _ready() -> void:
 	if not testing:
@@ -66,7 +74,12 @@ func _ready() -> void:
 		ad_status = "Google sample ads only • rewards: 0"
 		ad_bridge.connect("ad_state", func(value: String): ad_status = value; refresh_ad_label())
 		ad_bridge.connect("reward_earned", func(): ad_rewards += 1; refresh_ad_label())
+		ad_bridge.connect("reward_granted", earned_rescue)
+		ad_bridge.connect("reward_finished", finished_rescue)
+		ad_bridge.connect("reward_error", failed_rescue)
 	build_ui()
+	soundscape = Soundscape.new()
+	add_child(soundscape)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--crowd="):
 			run.set_benchmark(int(arg.get_slice("=", 1)))
@@ -86,10 +99,15 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
+		if is_instance_valid(soundscape):
+			soundscape.focused = false
 		if benchmark_seconds <= 0.0:
 			run.paused = true
 			clear_input()
 			save_checkpoint()
+	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
+		if is_instance_valid(soundscape):
+			soundscape.focused = true
 
 func panel_style(color: Color, border: Color = Color("34456d")) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -168,6 +186,9 @@ func build_ui() -> void:
 	pack_button = make_button("PACK", func(): run.open_pack(), layer, 44)
 	pack_button.position = Vector2(14, 552)
 	pack_button.size.x = 90
+	build_button = make_button("BUILD", func(): run.open_build(), layer, 44)
+	build_button.position = Vector2(14, 498)
+	build_button.size.x = 90
 	field_status = Label.new()
 	field_status.position = Vector2(16, 205)
 	field_status.size = Vector2(335, 65)
@@ -176,7 +197,7 @@ func build_ui() -> void:
 	field_status.add_theme_color_override("font_color", GOLD)
 	layer.add_child(field_status)
 	var footer := Label.new()
-	footer.text = "NIGHTFALL  /  ENGINE PROOF  •  WASD / touch"
+	footer.text = "NIGHTFALL  •  BLACKOUT OUTSKIRTS"
 	footer.position = Vector2(14, 738)
 	footer.add_theme_font_size_override("font_size", 11)
 	layer.add_child(footer)
@@ -225,6 +246,7 @@ func start_campaign(mission_number: int) -> void:
 	attempt_id = attempt.id
 	run = Run.new(attempt.seed)
 	run.configure(mission_number, profile.stats())
+	reward_flow = RewardFlow.new()
 	reward_receipt = {}
 	diagnostics = false
 	checkpoint_wait = 0.0
@@ -245,6 +267,7 @@ func resume_campaign() -> void:
 		home.rebuild()
 		return
 	run = resumed
+	reward_flow = RewardFlow.new()
 	run.paused = true
 	attempt_id = attempt.id
 	diagnostics = false
@@ -262,7 +285,8 @@ func abandon_campaign() -> void:
 	var snapshot: Dictionary = profile.saved_run()
 	if not snapshot.is_empty():
 		abandoned.restore(snapshot)
-	abandoned.phase = "defeat"
+	if abandoned.phase != "victory":
+		abandoned.phase = "defeat"
 	var result: Dictionary = profile.finish_attempt(attempt.id, abandoned.result())
 	if not result.is_empty():
 		attempt_id = 0
@@ -297,6 +321,38 @@ func bank_result() -> void:
 		if not reward_receipt.is_empty():
 			attempt_id = 0
 
+func request_rescue() -> void:
+	if ad_bridge == null:
+		return
+	var token: String = reward_flow.begin(attempt_id, run)
+	if token.is_empty():
+		return
+	run.paused = false
+	save_checkpoint()
+	ad_bridge.showRewarded(token)
+	last_screen = ""
+
+func earned_rescue(token: String) -> void:
+	if reward_flow.earned(token, attempt_id, run):
+		save_checkpoint()
+		last_screen = ""
+
+func finished_rescue(token: String, _earned: bool) -> void:
+	if reward_flow.finish(token):
+		last_screen = ""
+
+func failed_rescue(token: String, reason: String) -> void:
+	if reward_flow.fail(token, reason):
+		last_screen = ""
+
+func finish_to_haven() -> void:
+	if attempt_id > 0 and run.phase in ["defeat", "victory"]:
+		bank_result()
+		if attempt_id > 0:
+			last_screen = ""
+			return
+	show_haven()
+
 func fit_modal() -> void:
 	var minimum := modal.get_combined_minimum_size()
 	modal.size.y = minimum.y
@@ -315,12 +371,12 @@ func update_modal() -> void:
 	if is_instance_valid(home) and home.visible:
 		modal.hide()
 		return
-	var screen: String = "pause" if run.paused else run.phase
-	var screen_key := screen + (str(run.field.revision) if screen in ["shrine", "pack"] else "")
+	var screen: String = "ad" if not reward_flow.pending.is_empty() else ("pause" if run.paused and run.phase not in ["victory", "defeat"] else run.phase)
+	var screen_key := screen + (str(run.field.revision) if screen in ["shrine", "pack"] else (str(run.build_revision) if screen == "build" else ""))
 	if screen_key == last_screen:
 		return
 	last_screen = screen_key
-	modal.visible = screen in ["pause", "upgrade", "victory", "defeat", "shrine", "pack"]
+	modal.visible = screen in ["pause", "upgrade", "victory", "defeat", "shrine", "pack", "build", "ad"]
 	if not modal.visible:
 		return
 	clear_input()
@@ -330,8 +386,14 @@ func update_modal() -> void:
 			child.queue_free()
 	modal.size.y = 0
 	match screen:
+		"ad":
+			modal_title.text = "Rescue video"
+			FieldUI.label(self, reward_flow.message)
+			FieldUI.label(self, "Test ads only in this internal build. No payment is required.")
+			make_button("Cancel loading", func(): ad_bridge.cancelRewarded(reward_flow.pending), modal_body)
 		"shrine": FieldUI.shrine(self)
 		"pack": FieldUI.pack(self)
+		"build": FieldUI.build(self)
 		"pause":
 			modal_title.text = "Nightfall\nBlackout Outskirts"
 			var description := Label.new()
@@ -367,7 +429,8 @@ func update_modal() -> void:
 				description.add_theme_font_size_override("font_size", 13)
 				modal_body.add_child(description)
 		"victory", "defeat":
-			bank_result()
+			if screen == "victory":
+				bank_result()
 			modal_title.text = "Boss defeated" if screen == "victory" else "The night claimed you"
 			if run.practice:
 				modal_title.text = "Practice complete" if screen == "victory" else "Practice • try another approach"
@@ -383,14 +446,21 @@ func update_modal() -> void:
 				if reward_receipt.lost > 0:
 					FieldUI.label(self, "%d unprotected loot bundles lost." % reward_receipt.lost)
 			if attempt_id > 0:
-				FieldUI.label(self, profile.error)
-				make_button("Retry saving rewards", func(): last_screen = "", modal_body)
+				if screen == "defeat" and not run.rescued and ad_bridge:
+					make_button("Watch test video • rescue at 50% HP", request_rescue, modal_body)
+					FieldUI.label(self, "Once per expedition. Gear and run powers stay with you. A rescue does not earn the combat mastery medal.", 13)
+				if not reward_flow.message.is_empty():
+					FieldUI.label(self, reward_flow.message, 13)
+				if not profile.error.is_empty():
+					FieldUI.label(self, profile.error, 13)
+				make_button("Finish expedition & bank rewards", func(): bank_result(); last_screen = "", modal_body)
 			else:
 				make_button("Practice again" if run.practice else "Try again", replay, modal_body)
-			make_button("Return to Haven", show_haven, modal_body)
+			make_button("Return to Haven", finish_to_haven, modal_body)
 
 func restart() -> void:
 	run = Run.new()
+	reward_flow = RewardFlow.new()
 	frames.clear()
 	clear_input()
 
@@ -429,6 +499,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			run.class_ability()
 		elif event.keycode == KEY_TAB:
 			run.open_pack()
+		elif event.keycode == KEY_B:
+			run.open_build()
 	if run.paused or run.phase not in ["waves", "boss"]:
 		return
 	if event is InputEventScreenTouch:
@@ -449,7 +521,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		stick = ((event.position - stick_origin) / 50.0).limit_length()
 
 func _physics_process(delta: float) -> void:
-	if home.visible:
+	if home.visible or not reward_flow.pending.is_empty():
 		return
 	var direction := Vector2(
 		float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT)),
@@ -467,6 +539,11 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	var in_field: bool = not home.visible
+	soundscape.apply_settings(profile.data.settings)
+	soundscape.tick(delta, run, home.visible, not reward_flow.pending.is_empty())
+	if run.health < previous_health and in_field and profile.data.settings.haptics and OS.get_name() == "Android":
+		Input.vibrate_handheld(35)
+	previous_health = run.health
 	for control in [hud.get_parent().get_parent(), metrics, dodge_button, pause_button]:
 		control.visible = in_field
 	pulse_button.visible = in_field and run.mission == 0
@@ -474,7 +551,7 @@ func _process(delta: float) -> void:
 	class_button.text = "%.1fs" % run.class_wait if run.class_wait > 0 else ("PHASE" if run.class_id == "scavenger" else "REPAIR")
 	if in_field and attempt_id > 0:
 		checkpoint_wait += delta
-		if checkpoint_wait >= 10.0 or (run.phase in ["upgrade", "shrine", "pack"] and last_checkpoint_key != run.phase + str(run.field.revision)):
+		if checkpoint_wait >= 10.0 or (run.phase in ["upgrade", "shrine", "pack", "build"] and last_checkpoint_key != run.phase + str(run.field.revision)):
 			save_checkpoint()
 			checkpoint_wait = 0.0
 	if not run.paused and run.phase in ["waves", "boss"]:
@@ -483,6 +560,7 @@ func _process(delta: float) -> void:
 	health_bar.value = run.health
 	health_bar.max_value = run.max_health()
 	pack_button.visible = in_field and not run.practice and run.benchmark_count == 0
+	build_button.visible = pack_button.visible
 	pack_button.text = "PACK %d/%d" % [run.field.bag.size(), run.field.capacity]
 	field_status.visible = in_field and not run.practice and run.benchmark_count == 0 and not modal.visible
 	field_status.text = "%d scrap  •  %d credits  •  %d/3 relics\n%s" % [run.field.scrap, run.field.credits, run.field.relics.size(), run.field.notice]
@@ -563,6 +641,7 @@ func _draw() -> void:
 	draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
 	if not run.practice and run.benchmark_count == 0:
 		draw_field_sites()
+		draw_defenses()
 	for pickup in run.pickups:
 		var at: Vector2 = pickup + world_offset
 		draw_texture_rect(EXPERIENCE, Rect2(at - Vector2(6, 6), Vector2(12, 12)), false)
@@ -570,9 +649,12 @@ func _draw() -> void:
 		if enemy.tell > 0:
 			var at: Vector2 = enemy.target + world_offset
 			var from: Vector2 = enemy.pos + world_offset
-			if enemy.attack == "slam":
+			if enemy.attack == "summon":
+				draw_circle(from, 110, Color(0.6, 0.35, 1, 0.10))
+				draw_arc(from, 110, 0, TAU * (1.0 - enemy.tell / enemy.windup), 48, VIOLET, 3)
+			elif enemy.attack == "slam":
 				draw_circle(at, 80, Color(1, 0.25, 0.35, 0.15))
-				draw_arc(at, 80, 0, TAU * (1.0 - enemy.tell / 0.95), 48, Color("ff7181"), 3)
+				draw_arc(at, 80, 0, TAU * (1.0 - enemy.tell / enemy.windup), 48, Color("ff7181"), 3)
 			else:
 				var direction := from.direction_to(at)
 				if enemy.attack == "rush":
@@ -600,6 +682,9 @@ func _draw() -> void:
 			actor(item.pos, true, (int(anim_time * 7) + item.id) % 4, scale_value, item.face, tint)
 	for item in run.enemies:
 		var mark: Vector2 = item.pos + world_offset - Vector2(0, 42)
+		if item.boss and run.mission == 4:
+			var angle: float = item.forward.angle()
+			draw_arc(item.pos + world_offset, 42, angle - 1.2, angle + 1.2, 24, Color("92c2ff"), 5)
 		if item.kind == "runner":
 			draw_polyline(PackedVector2Array([mark + Vector2(-5, 0), mark + Vector2(0, -5), mark + Vector2(5, 0)]), GOLD, 2)
 		elif item.kind == "spitter":
@@ -618,15 +703,18 @@ func _draw() -> void:
 	for effect in run.effects:
 		var from: Vector2 = effect.from + world_offset
 		var to: Vector2 = effect.to + world_offset
-		var fade: float = effect.life / effect.duration
+		var fade: float = effect.life / effect.duration * (0.35 if profile.data.settings.reduced_effects else 1.0)
 		match effect.kind:
 			"chain": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(0.75, 0.6, 1, fade), 3)
 			"frost": draw_arc(from, 150 * (1.0 - fade), 0, TAU, 48, Color(0.6, 0.85, 1, fade), 4)
 			"ember": draw_circle(from - Vector2(0, 18), 12 * (1.0 - fade), Color(1, 0.4, 0.2, fade))
 			"slam": draw_arc(from, 80, 0, TAU, 48, Color(1, 0.35, 0.4, fade), 5)
+			"turret": draw_line(from - Vector2(0, 18), to - Vector2(0, 18), Color(1, 0.82, 0.5, fade), 2)
+			"trap": draw_arc(from, 80 * (1.0 - fade), 0, TAU, 32, Color(1, 0.48, 0.25, fade), 5)
+			"summon": draw_arc(from, 110, 0, TAU, 32, Color(0.7, 0.5, 1, fade), 4)
 	if run.pulse_flash > 0:
 		draw_arc(run.player + world_offset, 145 * (1.0 - run.pulse_flash / 0.35), 0, TAU, 64, VIOLET, 4, true)
-	if run.hurt_wait > 0.55:
+	if run.hurt_wait > 0.55 and not profile.data.settings.reduced_effects:
 		draw_rect(Rect2(0, 0, 430, 760), Color(0.7, 0.05, 0.15, 0.08))
 	var origin := stick_origin if touch_id >= 0 or mouse_stick else Vector2(88, 650)
 	draw_circle(origin, 48, Color(0.04, 0.05, 0.1, 0.6))
@@ -647,22 +735,42 @@ func draw_field_sites() -> void:
 		if site.progress > 0 and not site.opened:
 			draw_arc(at, Run.Field.RADIUS, -PI / 2, -PI / 2 + TAU * site.progress / site.duration, 48, color, 4)
 		if site.kind == "cache":
-			draw_style_box(panel_style(Color("503b38"), color), Rect2(at - Vector2(20, 26), Vector2(40, 27)))
-			draw_line(at - Vector2(20, 16), at + Vector2(20, -16), color, 2)
-			draw_rect(Rect2(at - Vector2(3, 19), Vector2(6, 10)), color)
+			draw_prop(3 if site.opened else 2, at, Vector2(65, 62))
 		elif site.kind == "shop":
-			draw_rect(Rect2(at - Vector2(21, 22), Vector2(42, 13)), color.darkened(0.25))
-			draw_rect(Rect2(at - Vector2(8, 9), Vector2(16, 13)), Color("8b87a3"))
-			draw_line(at + Vector2(-10, -27), at + Vector2(8, -44), GOLD, 5)
-			draw_line(at + Vector2(2, -47), at + Vector2(14, -35), GOLD, 9)
+			draw_prop(0, at, Vector2(86, 90))
 		else:
-			for offset in [-12.0, 12.0]:
-				var crystal := at + Vector2(offset, -25)
-				draw_colored_polygon(PackedVector2Array([crystal + Vector2(0, -19), crystal + Vector2(9, 0), crystal + Vector2(0, 10), crystal + Vector2(-9, 0)]), color)
-				draw_line(crystal + Vector2(0, -16), crystal + Vector2(0, 6), Color("f2dfff"), 2)
+			draw_prop(1, at, Vector2(86, 90), Color("858095") if run.field.relics.size() >= 3 else Color.WHITE)
 		if site.cooldown > 0:
 			draw_arc(at, 34, -PI / 2, -PI / 2 + TAU * (1.0 - site.cooldown / 45.0), 32, Color("929bb4"), 2)
 	for drop in run.field.drops:
 		var at: Vector2 = drop.pos + world_offset
 		draw_circle(at, 5, GOLD)
 		draw_arc(at, 6, 0, TAU, 12, Color("fff2bf"), 1)
+
+func draw_defenses() -> void:
+	for structure in run.defenses.structures:
+		var at: Vector2 = structure.pos + world_offset
+		match structure.kind:
+			"barricade":
+				draw_prop(4, at, Vector2(74, 61))
+			"turret":
+				draw_prop(5, at, Vector2(68, 65))
+			"trap":
+				draw_prop(6, at, Vector2(50, 40))
+			"ward":
+				draw_circle(at, 100, Color(0.45, 0.55, 1, 0.04))
+				draw_arc(at, 100, 0, TAU, 48, Color(0.6, 0.6, 1, 0.25), 1)
+				draw_prop(7, at, Vector2(52, 70))
+		if structure.repair_left > 0:
+			draw_arc(at, 28, anim_time, anim_time + PI * 1.5, 24, Color("acd6ff"), 2)
+		if structure.hp < structure.max_hp:
+			draw_rect(Rect2(at - Vector2(20, 50), Vector2(40, 4)), INK)
+			draw_rect(Rect2(at - Vector2(20, 50), Vector2(40 * structure.hp / structure.max_hp, 4)), GOLD)
+	if run.phase == "build":
+		var placement: Vector2 = run.player + run.facing * 90 + world_offset
+		draw_arc(placement, 25, 0, TAU, 32, GOLD, 2)
+		draw_line(placement - Vector2(8, 0), placement + Vector2(8, 0), GOLD, 2)
+		draw_line(placement - Vector2(0, 8), placement + Vector2(0, 8), GOLD, 2)
+
+func draw_prop(index: int, position_value: Vector2, size_value: Vector2, tint: Color = Color.WHITE) -> void:
+	draw_texture_rect_region(PROPS, Rect2(position_value - Vector2(size_value.x / 2, size_value.y * 0.86), size_value), PROP_RECTS[index], tint)

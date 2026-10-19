@@ -32,7 +32,7 @@ func verify() -> void:
 	arena.home.show()
 	for viewport in [Vector2i(320, 568), Vector2i(390, 844), Vector2i(430, 760)]:
 		root.size = viewport
-		for page in ["mission", "gear", "haven", "class"]:
+		for page in ["mission", "gear", "haven", "class", "settings"]:
 			arena.home.page = page
 			arena.home.rebuild()
 			await settle()
@@ -65,6 +65,12 @@ func verify() -> void:
 		arena.update_modal()
 		await settle()
 		check(root.get_visible_rect().encloses(arena.modal.get_global_rect()), "Full pack with discard confirmation fits phone")
+		arena.run.phase = "build"
+		arena.run.blueprints.assign(["barricade", "turret", "trap", "ward"])
+		arena.last_screen = ""
+		arena.update_modal()
+		await settle()
+		check(root.get_visible_rect().encloses(arena.modal.get_global_rect()), "All unlocked structures fit without scrolling")
 		arena.home.show()
 	# Read-only fixtures must never create a real campaign save or grant rewards.
 	check(arena.attempt_id == 0, "UI fixtures do not start a saved expedition")

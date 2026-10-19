@@ -21,3 +21,16 @@ Joshua requested two hours of feature development starting **2026-10-19 00:27:19
 ## Next
 
 Field defenses and Engineer ability; distinguish the five boss encounters; finish active-run and UI integration checks; package the resulting feature build. Production ad work remains separate from these gameplay features.
+
+## Second increment
+
+- Four destructible defenses: barricade, turret, trap, ward. Shared eight-point capacity, maximum two turrets, blocked shrine approaches, no charge for rejected placement.
+- Engineer Repair Swarm restores 20% structure health over four seconds. Blueprint unlocks after missions 1 and 3 give the first zone usable construction choices.
+- Outskirts boss variants now include a faster charging Fence Runner, Porchcaller summons, and Scrapback frontal armor with rear/elemental counterplay.
+- New original transparent prop atlas replaces primitive shrine/cache/defense drawings.
+- Native Google sample-video bridge now uses request IDs and structured earned/finished/error signals. Attempt-local rescue restores 50% HP once, preserves the run, and prevents duplicate or unrelated callbacks from granting rewards. Defeat rewards wait until the player finishes or declines rescue. No production IDs were added.
+- Automatic controller journey verifies saved shrine state, no-fill retry, simulated earned rescue, boss clear, correct mastery eligibility, persistent upgrade purchase, next mission stats, and protected loot on abandonment.
+- Two original instrumental loops, nine effect cues, persistent volume/vibration/reduced-effects settings, and audio suspension during ads/background.
+- Android exports succeeded before and after the request-ID native bridge change. These exports are intermediate builds; no manual native play or actual video playback was performed in this feature session.
+
+Google's [rewarded-ad documentation](https://developers.google.com/admob/android/rewarded) states that Google-served ads deliver the earned callback before dismissal. This bridge uses Google's sample ad unit only. Mediation adapter ordering and production server verification remain separate acceptance work.
