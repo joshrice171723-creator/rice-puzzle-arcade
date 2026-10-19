@@ -1,6 +1,8 @@
 extends Node2D
 
 const CombatEffects = preload("res://combat_effects.gd")
+const WorldArt = preload("res://world_art.gd")
+const HeroCast = preload("res://hero_cast.gd")
 const Presentation = preload("res://mission_presentation.gd")
 const GARAGE_FLOOR = preload("res://assets/mission-one/garage-yard.png")
 const GARAGE_ENEMIES = preload("res://assets/mission-one/enemies.png")
@@ -35,6 +37,9 @@ var touch_id := -1
 var mouse_stick := false
 var moving := false
 var anim_time := 0.0
+var hero_stride := 0.0
+var hero_move_blend := 0.0
+var hero_last_position := Vector2(600,600)
 var hud: Label
 var hud_root: Control
 var level_label: Label
@@ -89,8 +94,15 @@ var help_view := false
 var progress_view := false
 var last_field_notice := ""
 var notice_left := 0.0
+var vfx_preview: Node
 
 func _ready() -> void:
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	var preview_requested := OS.is_debug_build() and ("--vfx-preview" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://vfx-preview.flag"))
+	if preview_requested:
+		testing = true
+		profile = Profile.new("user://vfx-preview-profile.json")
 	if not testing:
 		profile.load_save()
 	if Engine.has_singleton("NightfallAds"):
@@ -120,8 +132,14 @@ func _ready() -> void:
 	else:
 		home.hide()
 	update_modal()
+	if preview_requested:
+		vfx_preview = load("res://vfx_preview.gd").new()
+		vfx_preview.arena = self
+		add_child(vfx_preview)
 
 func _notification(what: int) -> void:
+	if vfx_preview != null:
+		return # Automated debug recording owns its explicit pause/resume stage.
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
 		if is_instance_valid(soundscape):
 			soundscape.focused = false
@@ -791,6 +809,11 @@ func _process(delta: float) -> void:
 			checkpoint_wait = 0.0
 	if not run.paused and run.phase in ["waves", "boss"]:
 		anim_time += delta
+		var travel: float = run.player.distance_to(hero_last_position)
+		hero_move_blend = move_toward(hero_move_blend,1.0 if travel > 0.05 else 0.0,delta*9)
+		if travel < 30:
+			hero_stride += travel*TAU/36.0
+	hero_last_position = run.player
 	world_offset = Vector2(215, 400) - run.player.clamp(Vector2(215, 240), Vector2(985, 920))
 	health_bar.value = run.health
 	health_bar.max_value = run.max_health()
@@ -909,18 +932,22 @@ func actor(pos: Vector2, enemy: bool, frame: int, scale_value: float, face: floa
 	var at := pos + world_offset
 	var rect := Rect2(at - Vector2(size.x / 2.0, size.y * 0.93), size)
 	if face < 0:
-		rect.position.x += rect.size.x
 		rect.size.x = -rect.size.x
 	draw_texture_rect_region(ACTORS, rect, source, tint)
+
+func visible_world(position_value: Vector2) -> bool:
+	# Includes tall altar tops, shadows, and hit labels beyond the viewport edge.
+	return Rect2(-150,-100,730,1040).has_point(position_value+world_offset)
 
 func _draw() -> void:
 	var reduced: bool = profile.data.settings.reduced_effects
 	if run.mission == 1 and run.mode == "campaign" and run.benchmark_count == 0:
-		draw_texture_rect(GARAGE_FLOOR, Rect2(world_offset - Vector2(35,35), Vector2(1270,1270)), false)
+		WorldArt.draw_floor(self,world_offset)
 	else:
 		draw_texture_rect(FLOOR, Rect2(world_offset, Vector2(1200, 1200)), false)
 	Presentation.draw_ambience(self, run, world_offset, anim_time, reduced)
 	CombatEffects.draw_ground(self,run,world_offset,anim_time,reduced)
+	CombatEffects.Ember.draw_ground(self,run,world_offset,reduced)
 	if not run.practice and run.benchmark_count == 0:
 		draw_field_sites()
 		draw_defenses()
@@ -955,19 +982,38 @@ func _draw() -> void:
 						draw_line(from, from + direction.rotated(angle) * 210, Color("ffad7c"), 2)
 	var actors: Array[Dictionary] = []
 	for enemy in run.enemies:
-		actors.append(enemy)
+		if visible_world(enemy.pos):
+			actors.append(enemy)
 	actors.append({"pos": run.player, "player": true})
+	for shot in run.shots:
+		if visible_world(shot.pos):
+			actors.append({"pos":shot.pos,"shot":shot})
+	if not run.practice and run.benchmark_count == 0:
+		for site in run.field.sites:
+			if not visible_world(site.pos):
+				continue
+			var visual: Dictionary = site.duplicate()
+			visual.exhausted = site.kind == "relic" and run.field.relics.size() >= 3
+			actors.append({"pos":site.pos,"site":visual})
 	actors.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.pos.y < b.pos.y)
 	# Consecutive shared textures batch; per-actor polygons/transforms do not.
 	for item in actors:
+		if item.has("site") or item.has("shot"):
+			continue
 		var scale_value := 1.0 if item.has("player") else (1.7 if item.boss else 0.8)
 		var size := Vector2(34, 12.92) * scale_value
 		draw_texture_rect(SHADOW, Rect2(item.pos + world_offset - size / 2, size), false)
 	Presentation.draw_player_ground(self, run, world_offset, anim_time, reduced)
+	CombatEffects.draw_wisps(self,run,world_offset,anim_time,reduced,false)
 	for item in actors:
-		if item.has("player"):
-			var breath := 0.0 if reduced else sin(anim_time * (12.0 if moving else 2.8)) * (1.3 if moving else 0.6)
-			actor(run.player - Vector2(0,breath), false, int(anim_time * 8) % 4 if moving else 1, 1.0, -1.0 if run.facing.x < 0 else 1.0)
+		if item.has("shot"):
+			CombatEffects.draw_shot(self,item.shot,world_offset,anim_time,reduced)
+		elif item.has("site"):
+			WorldArt.draw_site_body(self,item.site,world_offset,anim_time,reduced)
+		elif item.has("player"):
+			var pose := CombatEffects.Ember.cast_pose(run)
+			var face := -1.0 if (run.facing.x if pose.is_empty() else pose.direction.x) < 0 else 1.0
+			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced)
 		elif item.boss and run.mission > 0:
 			BossArt.draw_boss(self, item, run.mission, world_offset)
 		else:
@@ -989,6 +1035,7 @@ func _draw() -> void:
 				draw_texture_rect_region(GARAGE_ENEMIES, rect, source, Color.WHITE.lerp(Color(1.6,1.6,1.7), flash) if not reduced else Color.WHITE)
 			else:
 				actor(item.pos + recoil, true, (int(anim_time * 7) + item.id) % 4, scale_value, item.face, tint)
+	CombatEffects.draw_effects(self,run,world_offset,anim_time,reduced)
 	for item in run.enemies:
 		var mark: Vector2 = item.pos + world_offset - Vector2(0, 56 if run.mission == 1 else 42)
 		if item.boss and run.mission == 4:
@@ -1002,7 +1049,7 @@ func _draw() -> void:
 			var at: Vector2 = item.pos + world_offset - Vector2(20, 85 if item.boss else (52 if run.mission == 1 else 38))
 			draw_rect(Rect2(at, Vector2(40, 4)), INK)
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))
-	CombatEffects.draw_projectiles(self,run,world_offset,anim_time,reduced)
+	CombatEffects.draw_wisps(self,run,world_offset,anim_time,reduced,true)
 	if run.shield > 0:
 		draw_arc(run.player + world_offset - Vector2(0, 18), 30, 0, TAU, 32, Color("b5dfff"), 2)
 	if run.talents.slow_left > 0:
@@ -1013,7 +1060,6 @@ func _draw() -> void:
 		var at: Vector2 = shot.pos + world_offset - Vector2(0, 18)
 		draw_circle(at, 6, Color("ff7181"))
 		draw_arc(at, 8, 0, TAU, 12, Color("ffe1b0"), 1)
-	CombatEffects.draw_effects(self,run,world_offset,anim_time,reduced)
 	for effect in run.effects:
 		if CombatEffects.handles_effect(effect.kind):
 			continue
@@ -1037,25 +1083,11 @@ func _draw() -> void:
 
 func draw_field_sites() -> void:
 	for site in run.field.sites:
-		var at: Vector2 = site.pos + world_offset
-		var color := GOLD if site.kind in ["shop", "cache"] else VIOLET
-		if site.opened or (site.kind == "relic" and run.field.relics.size() >= 3):
-			color = Color("59637b")
-		draw_circle(at, 29, Color("0b1023"))
-		draw_arc(at, 29, 0, TAU, 24, color.darkened(0.4), 3)
-		if not site.opened:
-			draw_circle(at, Run.Field.RADIUS, Color(color, 0.06))
-			draw_arc(at, Run.Field.RADIUS, 0, TAU, 48, Color(color, 0.28), 1)
-		if site.progress > 0 and not site.opened:
-			draw_arc(at, Run.Field.RADIUS, -PI / 2, -PI / 2 + TAU * site.progress / site.duration, 48, color, 4)
-		if site.kind == "cache":
-			draw_prop(3 if site.opened else 2, at, Vector2(56, 53))
-		elif site.kind == "shop":
-			draw_prop(0, at, Vector2(132, 150))
-		else:
-			draw_prop(1, at, Vector2(132, 150), Color("858095") if run.field.relics.size() >= 3 else Color.WHITE)
-		if site.cooldown > 0:
-			draw_arc(at, 34, -PI / 2, -PI / 2 + TAU * (1.0 - site.cooldown / 45.0), 32, Color("929bb4"), 2)
+		if not visible_world(site.pos):
+			continue
+		var visual: Dictionary = site.duplicate()
+		visual.exhausted = site.kind == "relic" and run.field.relics.size() >= 3
+		WorldArt.draw_site_ground(self,visual,world_offset,anim_time,profile.data.settings.reduced_effects)
 	for drop in run.field.drops:
 		var at: Vector2 = drop.pos + world_offset
 		draw_circle(at, 5, GOLD)

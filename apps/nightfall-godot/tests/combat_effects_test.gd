@@ -6,6 +6,7 @@ const FLOOR = preload("res://assets/mission-one/garage-yard.png")
 var checks := 0
 var failures := 0
 var destination := ""
+var draw_calls := {}
 class EffectCanvas extends Node2D:
 	var run: RefCounted
 	var clock := 0.15
@@ -34,6 +35,9 @@ func configure_fixture(id: String) -> RefCounted:
 	run.elapsed = 0.2
 	run.spells[id] = {"rank":2,"branch":"spread","evolved":false}
 	match id:
+		"pistol":
+			run.shots.append({"pos":Vector2(170,240),"velocity":Vector2(450,-30),"kind":"pistol","life":0.7})
+			run.vfx_events.append({"kind":"bullet_hit","pos":Vector2(295,240),"direction":Vector2.RIGHT,"life":0.08,"duration":0.12})
 		"ember":
 			run.shots.append({"pos":Vector2(140,240),"velocity":Vector2(450,-30),"kind":"ember","life":0.7})
 			run.effects.append({"kind":"ember","from":Vector2(295,240),"to":Vector2(295,240),"life":0.2,"duration":0.3})
@@ -57,7 +61,7 @@ func verify() -> void:
 		check(not Effects.handles_effect(kind),"Renderer leaves " + kind + " telegraph to its existing owner")
 	var canvas := EffectCanvas.new()
 	root.add_child(canvas)
-	for id in ["ember","frost","chain","wisp","lance","ground","blades","gravity"]:
+	for id in ["pistol","ember","frost","chain","wisp","lance","ground","blades","gravity"]:
 		canvas.run = configure_fixture(id)
 		canvas.title = id.capitalize() + " · visual fixture"
 		var before: Dictionary = canvas.run.snapshot()
@@ -70,8 +74,28 @@ func verify() -> void:
 			if not destination.is_empty() and DisplayServer.get_name() != "headless":
 				DirAccess.make_dir_recursive_absolute(destination)
 				await RenderingServer.frame_post_draw
+				draw_calls[id + ("-reduced" if reduced else "-normal")] = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
 				root.get_texture().get_image().save_png(destination.path_join("%s-%s.png" % [id,"reduced" if reduced else "normal"]))
+		for phase in [0.0, 0.85]:
+			canvas.run = configure_fixture(id)
+			canvas.clock = 0.02 + phase * 0.6
+			canvas.run.elapsed = canvas.clock
+			for effect: Dictionary in canvas.run.effects:
+				effect.life = effect.duration * (1.0 - phase)
+			var phase_before: Dictionary = canvas.run.snapshot()
+			for reduced in [false, true]:
+				canvas.reduced = reduced
+				canvas.queue_redraw()
+				await process_frame
+				await process_frame
+				check(canvas.run.snapshot() == phase_before, id + " phase rendering stays read-only")
+				if not destination.is_empty() and DisplayServer.get_name() != "headless":
+					await RenderingServer.frame_post_draw
+					root.get_texture().get_image().save_png(destination.path_join("%s-%s-%s.png" % [id, "contact" if phase == 0.0 else "late", "reduced" if reduced else "normal"]))
+
 	canvas.queue_free()
 	await process_frame
-	print("Nightfall combat effects: %d checks, %d failures; eight spell families, normal and reduced" % [checks,failures])
+	if not draw_calls.is_empty():
+		print("Fixture draw calls (floor/title included): ", draw_calls)
+	print("Nightfall combat effects: %d checks, %d failures; eight spell families plus pistol, normal and reduced, contact and late phases" % [checks,failures])
 	quit(1 if failures else 0)

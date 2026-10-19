@@ -25,6 +25,7 @@ var shots: Array[Dictionary] = []
 var hostile_shots: Array[Dictionary] = []
 var effects: Array[Dictionary] = []
 var feedback: Array[Dictionary] = []
+var vfx_events: Array[Dictionary] = []
 var spells: Dictionary = {}
 var offers: Array[Dictionary] = []
 var enemies: Array[Dictionary] = []
@@ -195,6 +196,7 @@ func restore(saved: Dictionary) -> bool:
 	training_style = saved.get("training_style", "accurate")
 	training_bonuses = saved.get("training_bonuses", Training.bonuses(Training.fresh())).duplicate()
 	paused = true
+	vfx_events.clear()
 	return true
 
 func result() -> Dictionary:
@@ -615,6 +617,14 @@ func nearest_enemy(from: Vector2, radius: float, excluded: Array[int] = []) -> D
 func add_effect(kind: String, from: Vector2, to: Vector2, duration: float = 0.3) -> void:
 	if effects.size() < 64:
 		effects.append({"kind": kind, "from": from, "to": to, "life": duration, "duration": duration})
+	if kind == "ember":
+		add_vfx("ember_hit", from, Vector2.UP, 0.72)
+
+func add_vfx(kind: String, position: Vector2, direction: Vector2, duration: float) -> void:
+	# Transient presentation events are deliberately excluded from saves and RNG.
+	if vfx_events.size() >= 48:
+		vfx_events.pop_front()
+	vfx_events.append({"kind":kind,"pos":position,"direction":direction,"life":duration,"duration":duration})
 
 func cast_spell(id: String) -> bool:
 	if paused or phase not in ["waves", "boss"] or not spells.has(id):
@@ -628,6 +638,7 @@ func cast_spell(id: String) -> bool:
 			var count := int(spell_mod(id, "count"))
 			if shots.size() > MAX_SHOTS - count:
 				return false
+			add_vfx("ember_cast", player, player.direction_to(target.pos), 0.30)
 			for index in count:
 				var angle := (index - (count - 1) / 2.0) * 0.14
 				shots.append({"pos": player, "velocity": player.direction_to(target.pos).rotated(angle) * 500.0,
@@ -744,6 +755,9 @@ func tick(delta: float, direction: Vector2) -> void:
 	if paused or phase not in ["waves", "boss"]:
 		return
 	elapsed += delta
+	for event in vfx_events:
+		event.life -= delta
+	vfx_events = vfx_events.filter(func(event: Dictionary): return event.life > 0)
 	for event in feedback:
 		event.life -= delta
 	feedback = feedback.filter(func(event: Dictionary): return event.life > 0)
@@ -827,6 +841,8 @@ func tick(delta: float, direction: Vector2) -> void:
 				if critical:
 					amount *= 1.5
 				damage_enemy(enemy, amount, shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol", critical)
+				if shot.get("kind", "pistol") == "pistol":
+					add_vfx("bullet_hit",enemy.pos,shot.velocity.normalized(),0.20)
 				if shot.get("kind", "pistol") == "ember":
 					enemy.burn = maxf(enemy.burn, 2.0)
 					enemy.burn_dps = maxf(enemy.burn_dps, shot.burn_dps)

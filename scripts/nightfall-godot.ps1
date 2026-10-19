@@ -30,6 +30,8 @@ if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_training_ui_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/magic_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_effects_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/animated_vfx_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/preview_isolation_test.gd','--','--vfx-preview')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/specialization_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/field_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/reward_cards_test.gd')
