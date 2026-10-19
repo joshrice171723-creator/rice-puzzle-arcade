@@ -122,4 +122,4 @@ static func show_tree(home: Control) -> void:
 	home.MenuSkin.action(unlock, "gold")
 	home.button("Back to Class", func(): home.navigate("class"), actions, 48).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	home.text_line("Unlock choices here. Spell ranks reset each run.", 12)
-	summary.tooltip_text = "Earn 1 point per mastery level through level 9. Unlocks persist between expeditions."
+	summary.tooltip_text = "Earn 1 shared talent point per Combat Level gained. Unlocks persist between expeditions."

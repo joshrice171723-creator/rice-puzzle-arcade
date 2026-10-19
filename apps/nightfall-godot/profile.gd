@@ -7,7 +7,8 @@ const Salvage = preload("res://salvage.gd")
 const Skills = preload("res://skill_tree.gd")
 const Daily = preload("res://daily_progress.gd")
 const ZoneOne = preload("res://zone_one.gd")
-const VERSION := 4
+const Training = preload("res://combat_progression.gd")
+const VERSION := 5
 const BUILD_SLOTS := ["1", "2", "3"]
 const SHOP_OFFERS := {"key": {"name": "Supply key", "cost": 25, "currency": "gems", "grant": "cache_keys", "amount": 1}, "parts": {"name": "10 Workshop Parts", "cost": 200, "currency": "credits", "grant": "parts", "amount": 10}}
 var path := "user://haven.json"
@@ -27,6 +28,7 @@ func fresh() -> Dictionary:
 		items.append({"id": index, "slot": Content.SLOTS[index], "name": Content.STARTER_NAMES[index], "rarity": "common", "level": 1})
 		equipment[Content.SLOTS[index]] = index
 	return {"version": VERSION, "credits": 0, "parts": 0, "gems": 0, "survivor_xp": 0,
+		"combat_xp": Training.fresh(), "training_style": "accurate", "legacy_talent_points": 0,
 		"mastery": {"scavenger": 0, "engineer": 0, "warden": 0, "arcanist": 0}, "class": "scavenger",
 		"inventory": items, "equipment": equipment, "next_item": Content.SLOTS.size(), "missions": {}, "zone_claims": [],
 		"loadouts": {}, "locked_items": [], "affix_rolls": 0, "daily": Daily.fresh(),
@@ -45,6 +47,10 @@ func valid(candidate: Variant) -> bool:
 	for key: String in defaults:
 		if not candidate.has(key):
 			return false
+	if not Training.valid(candidate.combat_xp) or candidate.training_style not in Training.STYLES:
+		return false
+	if not candidate.legacy_talent_points is int or candidate.legacy_talent_points < 0 or candidate.legacy_talent_points > 36:
+		return false
 	if not Daily.valid(candidate.daily):
 		return false
 	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates", "cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "rare_choices", "contract_clears", "affix_rolls"]:
@@ -118,8 +124,8 @@ func valid(candidate: Variant) -> bool:
 			seen.append(ability)
 			if not Skills.prerequisites_met(id, ability, learned):
 				return false
-		if Skills.spent(id, learned) > mini(Skills.POINT_CAP, Content.mastery_level(candidate.mastery[id])):
-			return false
+	if talent_spent(candidate) > Training.combat_level(candidate.combat_xp) - 1 + candidate.legacy_talent_points:
+		return false
 	if not candidate.loadouts is Dictionary or not candidate.locked_items is Array:
 		return false
 	var locked_ids: Array = []
@@ -160,9 +166,9 @@ func read_candidate(file_path: String) -> Variant:
 	if parser.parse(FileAccess.get_file_as_string(file_path)) != OK:
 		return null
 	var parsed: Variant = normalize_numbers(parser.data)
-	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, VERSION] and not parsed.has("settings"):
+	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, 4, VERSION] and not parsed.has("settings"):
 		parsed.settings = fresh().settings
-	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, VERSION]:
+	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, 4, VERSION]:
 		var defaults := fresh()
 		if parsed.version < 4:
 			parsed.daily = Daily.fresh()
@@ -187,6 +193,10 @@ func read_candidate(file_path: String) -> Variant:
 					parsed.next_item += 1
 					parsed.inventory.append(item)
 					parsed.equipment[slot] = item.id
+		if parsed.version < 5:
+			parsed.combat_xp = Training.fresh()
+			parsed.training_style = "accurate"
+			parsed.legacy_talent_points = talent_spent(parsed)
 		parsed.version = VERSION
 	return parsed
 
@@ -197,7 +207,12 @@ func normalize_numbers(value: Variant) -> Variant:
 		return int(value)
 	if value is Dictionary:
 		for key in value:
-			value[key] = normalize_numbers(value[key])
+			if key == "combat_xp" and value[key] is Dictionary:
+				for stat in value[key]:
+					if value[key][stat] is int or value[key][stat] is float:
+						value[key][stat] = float(value[key][stat])
+			else:
+				value[key] = normalize_numbers(value[key])
 	elif value is Array:
 		for index in value.size():
 			value[index] = normalize_numbers(value[index])
@@ -491,10 +506,30 @@ func select_class(id: String) -> bool:
 	data["class"] = id
 	return commit(previous)
 
+func talent_spent(candidate: Dictionary) -> int:
+	var spent := 0
+	var trees: Variant = candidate.get("skill_unlocks", {})
+	if not trees is Dictionary:
+		return 0
+	for id in Content.CLASSES:
+		var unlocks: Variant = trees.get(id, [])
+		if unlocks is Array:
+			for ability in unlocks:
+				if ability is String:
+					spent += Skills.cost(id, ability)
+	return spent
+
 func skill_points(class_id: String) -> int:
 	if class_id not in Content.CLASSES:
 		return 0
-	return maxi(0, mini(Skills.POINT_CAP, Content.mastery_level(data.mastery[class_id])) - Skills.spent(class_id, data.skill_unlocks[class_id]))
+	return maxi(0, Training.combat_level(data.combat_xp) - 1 + data.legacy_talent_points - talent_spent(data))
+
+func set_training_style(id: String) -> bool:
+	if id not in Training.STYLES or not can_change_loadout():
+		return false
+	var previous := data.duplicate(true)
+	data.training_style = id
+	return commit(previous)
 
 func ability_pool(class_id: String) -> Array:
 	return Skills.pool(class_id, data.skill_unlocks[class_id])
@@ -523,6 +558,8 @@ func stats() -> Dictionary:
 		result.blueprints.append("ward")
 	result.mastery = Content.mastery_level(data.mastery[data["class"]])
 	result.ability_pool = ability_pool(data["class"])
+	result.training_style = data.training_style
+	result.training_bonuses = Training.bonuses(data.combat_xp)
 	for slot: String in Content.SLOTS:
 		var item := item_by_id(data.equipment[slot])
 		var values := Content.item_stats(item)
@@ -544,6 +581,7 @@ func stats() -> Dictionary:
 	result.spell_bonus = 0.03 if sets.riftweaver >= 2 else 0.0
 	if sets.riftweaver >= 3:
 		result.cooldown += 0.04
+	result.hp *= 1.0 + result.training_bonuses.hp
 	result.speed = minf(result.speed, 1.15)
 	result.cooldown = minf(result.cooldown, 0.15)
 	result.pickup = minf(result.pickup, 1.50)
@@ -566,6 +604,9 @@ func start_attempt(mission: int) -> Dictionary:
 
 func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 	if blocked or data.active_attempt.is_empty() or data.active_attempt.id != id or id <= data.last_banked:
+		return {}
+	var combat_earned: Variant = outcome.get("combat_xp", Training.fresh())
+	if not Training.valid(combat_earned):
 		return {}
 	var previous := data.duplicate(true)
 	var attempt: Dictionary = data.active_attempt
@@ -650,6 +691,15 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 	data.cache_keys += reward.keys
 	data.survivor_xp += reward.survivor_xp
 	data.mastery[attempt["class"]] += reward.mastery_xp
+	reward.combat_xp = Training.fresh()
+	reward.combat_before = Training.combat_level(data.combat_xp)
+	if outcome.get("progress_eligible", true):
+		for stat in Training.STATS:
+			var updated := minf(Training.MAX_XP, data.combat_xp[stat] + combat_earned[stat])
+			reward.combat_xp[stat] = updated - data.combat_xp[stat]
+			data.combat_xp[stat] = updated
+	reward.combat_after = Training.combat_level(data.combat_xp)
+	reward.talent_points = reward.combat_after - reward.combat_before
 	data.daily = daily_state()
 	Daily.record(data.daily, outcome)
 	data.last_banked = id

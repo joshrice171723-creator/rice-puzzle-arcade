@@ -172,8 +172,8 @@ static func show_page(home: Control) -> void:
 		choose.size.y = 44
 	var tree := fixed_button(home,page,"Talent Preview",Rect2(9,552,180,44),func(): home.page="talents"; home.tree_ability=""; home.rebuild(),false,17)
 	tree.name = "OpenClassSkills"
-	var mastery := fixed_button(home,page,"Mastery",Rect2(197,552,180,44),func(): home.page="mastery"; home.rebuild(),true)
-	mastery.name = "OpenClassMastery"
+	var training := fixed_button(home,page,"Training",Rect2(197,552,180,44),func(): home.navigate("combat_training"),true)
+	training.name = "OpenCombatTraining"
 	home.status_label.tooltip_text = "Permanent class unlocks add choices to future runs. Spell ranks reset each run."
 
 static func decorate_navigation(home: Control) -> void:

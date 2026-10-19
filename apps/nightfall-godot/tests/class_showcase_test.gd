@@ -51,8 +51,11 @@ func run() -> void:
 	home.find_child("TalentPreviewOpenTree",true,false).pressed.emit()
 	check(home.page == "skills" and home.tree_ability == "gravity","Preview opens the selected ability in the real skill tree")
 	home.navigate("class")
-	home.find_child("OpenClassMastery",true,false).pressed.emit()
-	check(home.page == "mastery","Mastery opens the real permanent talents")
+	home.find_child("OpenCombatTraining",true,false).pressed.emit()
+	check(home.page == "combat_training" and home.active_tab() == "class","Class opens permanent combat training")
+	home.navigate("talents")
+	home.find_child("TalentPreviewOpenMastery",true,false).pressed.emit()
+	check(home.page == "mastery","Talent preview retains the real permanent mastery talents")
 	arena.profile.data.settings.reduced_effects = true
 	home.navigate("class")
 	hero = home.find_child("ClassHero",true,false)

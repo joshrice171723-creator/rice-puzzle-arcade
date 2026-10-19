@@ -313,7 +313,10 @@ func show_haven() -> void:
 	power_view = false
 	run.paused = true
 	clear_input()
-	save_checkpoint()
+	if not save_checkpoint():
+		last_screen = ""
+		update_modal()
+		return
 	home.show()
 	home.rebuild()
 	modal.hide()
@@ -386,11 +389,13 @@ func abandon_campaign() -> void:
 		home.message = "Expedition ended. %d credits and protected loot returned to Haven." % result.credits
 	home.rebuild()
 
-func save_checkpoint() -> void:
+func save_checkpoint() -> bool:
 	if testing or attempt_id == 0 or profile.data.active_attempt.is_empty():
-		return
+		return true
 	if profile.checkpoint(run.snapshot()):
 		last_checkpoint_key = run.phase + str(run.field.revision)
+		return true
+	return false
 
 func begin_practice(mission: int = 1, build: String = "Balanced") -> void:
 	if not profile.practice_unlocked(mission) or build not in home.Preparation.BUILDS:
@@ -530,6 +535,8 @@ func update_modal() -> void:
 				make_button("Progress", func(): progress_view = true; last_screen = "", information, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				make_button("How to play", func(): help_view = true; last_screen = "", information, 40).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				make_button("Save & return to Base", show_haven, modal_body)
+				if not profile.error.is_empty():
+					FieldUI.label(self, profile.error + " Your current expedition is still open; retry saving before leaving.", 13)
 			if diagnostics:
 				var row := HBoxContainer.new()
 				modal_body.add_child(row)
@@ -584,6 +591,14 @@ func update_modal() -> void:
 					MenuSkin.icon(wallet_row, MenuArt.item(currency), Vector2(25,27))
 					MenuSkin.label(wallet_row, "+%d" % reward_receipt[currency], 17, GOLD)
 				MenuSkin.label(details, "+%d Survivor XP · +%d Mastery XP" % [reward_receipt.survivor_xp, reward_receipt.mastery_xp], 14, VIOLET, true)
+				var training_lines := PackedStringArray()
+				for stat in reward_receipt.get("combat_xp", {}):
+					if reward_receipt.combat_xp[stat] > 0:
+						training_lines.append("%s +%.1f" % [stat.capitalize(), reward_receipt.combat_xp[stat]])
+				if not training_lines.is_empty():
+					MenuSkin.label(details, "Combat XP · " + " / ".join(training_lines), 12, VIOLET, true)
+				if reward_receipt.get("talent_points", 0) > 0:
+					MenuSkin.label(details, "Combat %d/99 · +%d talent points" % [reward_receipt.combat_after, reward_receipt.talent_points], 14, GOLD, true)
 				if reward_receipt.get("keys", 0) > 0:
 					var key_row := HBoxContainer.new()
 					details.add_child(key_row)

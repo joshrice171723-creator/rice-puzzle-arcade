@@ -48,7 +48,7 @@ func verify() -> void:
 	file.close()
 	check(p.load_save() and p.valid(p.data), "Version 2 migrates to valid version 3")
 	check(p.data.active_attempt == legacy.active_attempt and p.data.inventory == legacy.inventory, "Migration preserves checkpoint and inventory")
-	check(p.skill_points("scavenger") == 9 and p.data.skill_unlocks.scavenger.is_empty(), "Existing mastery credits all earned tree points")
+	check(p.skill_points("scavenger") == 0 and p.data.skill_unlocks.scavenger.is_empty(), "Migration keeps mastery separate from combat talent points")
 	p.data.active_attempt = {}
 	check(p.save_loadout("1", "Scavenging"), "Save current equipment build")
 	var extra: Dictionary = p.Loot.equipment("weapon", "rare", p.data.next_item)
@@ -70,7 +70,9 @@ func verify() -> void:
 	check(not p.unlock_skill("warden", "ember"), "Locked class cannot purchase skills")
 	check(not p.unlock_skill("scavenger", "gravity"), "Capstone requires both parent branches")
 	p.data.mastery.engineer = 0
-	check(not p.unlock_skill("engineer", "frost"), "No mastery points means no unlock")
+	check(not p.unlock_skill("engineer", "frost"), "Mastery alone cannot grant combat talent points")
+	for stat in p.Training.STATS:
+		p.data.combat_xp[stat] = float(p.Training.threshold(10))
 	for ability: String in Skills.BRANCHES.scavenger:
 		check(p.unlock_skill("scavenger", ability), "Unlock prerequisite-ordered node " + ability)
 	check(p.skill_points("scavenger") == 0 and p.ability_pool("scavenger").size() == 8, "Nine earned points unlock all five nodes")
@@ -92,7 +94,8 @@ func verify() -> void:
 	var before: Dictionary = p.data.duplicate(true)
 	check(not p.save_loadout("1", "Locked") and not p.apply_loadout("2") and not p.remove_loadout("2") and not p.set_item_locked(extra.id, true) and not p.unlock_skill("engineer", "frost") and p.data == before, "Active expedition blocks build and skill mutations")
 	p.data.active_attempt = {}
-	p.data.mastery.engineer = 100
+	for stat in p.Training.STATS:
+		p.data.combat_xp[stat] = float(p.Training.threshold(11))
 	before = p.data.duplicate(true)
 	p.path = "user://missing-progression-tools-dir/save.json"
 	check(not p.save_loadout("1", "Write fail") and p.data == before, "Failed build write rolls back")
@@ -196,7 +199,8 @@ func verify() -> void:
 	home.find_child("TalentPreviewOpenTree", true, false).pressed.emit()
 	await settle()
 	check(home.page == "skills" and home.active_tab() == "class", "Class opens its permanent tree")
-	p.data.mastery.engineer = 300
+	for stat in p.Training.STATS:
+		p.data.combat_xp[stat] = float(p.Training.threshold(12))
 	home.body.get_node("ClassSkillTree/Skill_lance").pressed.emit()
 	await settle()
 	check(not home.body.get_node("HBoxContainer/UnlockSkill").disabled if home.body.has_node("HBoxContainer/UnlockSkill") else not button_in(home, "Unlock ·").disabled, "Earned point enables eligible tree node")

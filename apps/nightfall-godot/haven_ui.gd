@@ -36,6 +36,7 @@ const Preparation = preload("res://preparation_ui.gd")
 const Armory = preload("res://armory_ui.gd")
 const SkillTreeUI = preload("res://skill_tree_ui.gd")
 const DailyUI = preload("res://daily_ui.gd")
+const CombatTrainingUI = preload("res://combat_training_ui.gd")
 const ItemDetail = preload("res://item_detail_ui.gd")
 const EquipmentWorkshop = preload("res://equipment_workshop_ui.gd")
 var merge_donors: Array = []
@@ -153,7 +154,7 @@ func active_tab() -> String:
 		return "shop"
 	if page in ["mission", "rewards", "contracts", "zones", "daily", "calendar"]:
 		return "mission"
-	if page in ["class", "mastery", "skills", "talents"]:
+	if page in ["class", "mastery", "skills", "talents", "combat_training"]:
 		return "class"
 	return "gear" if page in ["gear", "builds", "filters", "merge", "substats", "sets"] else "haven"
 
@@ -344,6 +345,7 @@ func rebuild() -> void:
 		"haven": haven_page()
 		"class": class_page()
 		"talents": TalentPreview.show_page(self)
+		"combat_training": CombatTrainingUI.show_page(self)
 		"skills": SkillTreeUI.show_tree(self)
 		"settings": settings_page()
 		"cache": LootUI.show(self)

@@ -1,6 +1,7 @@
 extends RefCounted
 ## Fixed-step combat and attempt-local exploration rules.
 
+const Training = preload("res://combat_progression.gd")
 const DURATION := 240.0
 const Content = preload("res://combat_content.gd")
 const Field = preload("res://field.gd")
@@ -49,6 +50,9 @@ var last_damage_at := -100.0
 var wisp_wait := 0.0
 var survivor_xp := 0
 var mastery_xp := 0
+var combat_xp := Training.fresh()
+var training_style := "accurate"
+var training_bonuses := Training.bonuses(Training.fresh())
 var mission := 0
 var duration := DURATION
 var boss_name := "The Breaker"
@@ -95,6 +99,8 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	var definition: Dictionary = Haven.MISSIONS[mission - 1]
 	duration = definition.duration
 	boss_name = definition.boss
+	training_style = stats.get("training_style", "accurate")
+	training_bonuses = stats.get("training_bonuses", Training.bonuses(Training.fresh())).duplicate()
 	base_health = stats.hp
 	health = max_health()
 	damage = stats.power * 0.6
@@ -131,10 +137,15 @@ func snapshot() -> Dictionary:
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
 		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
+		"combat_xp": combat_xp.duplicate(), "training_style": training_style, "training_bonuses": training_bonuses.duplicate(),
 		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus}
 
 func restore(saved: Dictionary) -> bool:
 	if saved.get("version") != 1 or not saved.get("combat") is Dictionary or not saved.get("field") is Dictionary:
+		return false
+	if not Training.valid(saved.get("combat_xp", Training.fresh())) or saved.get("training_style", "accurate") not in Training.STYLES:
+		return false
+	if not Training.valid_bonuses(saved.get("training_bonuses", Training.bonuses(Training.fresh()))):
 		return false
 	for key in SNAPSHOT_KEYS:
 		if not saved.combat.has(key) or typeof(saved.combat[key]) != typeof(get(key)):
@@ -179,6 +190,9 @@ func restore(saved: Dictionary) -> bool:
 	# Old expeditions keep their original eight-spell pool until they finish.
 	available_spells = saved_pool.duplicate()
 	equipment_spell_bonus = clampf(saved.get("equipment_spell_bonus", 0.0), 0, 0.03)
+	combat_xp = saved.get("combat_xp", Training.fresh()).duplicate()
+	training_style = saved.get("training_style", "accurate")
+	training_bonuses = saved.get("training_bonuses", Training.bonuses(Training.fresh())).duplicate()
 	paused = true
 	return true
 
@@ -187,6 +201,7 @@ func result() -> Dictionary:
 	var loot: Array = field.banked_loot(won)
 	return {"victory": won, "credits": field.credits, "survivor_xp": survivor_xp,
 		"kills": kills, "seconds": elapsed, "progress_eligible": not practice and benchmark_count == 0,
+		"combat_xp": combat_xp.duplicate() if not practice and benchmark_count == 0 else Training.fresh(),
 		"mastery_xp": mastery_xp, "loot": loot, "damage_taken": damage_taken,
 		"caches": field.caches_opened, "lost": field.bag.size() - loot.size(), "rescued": rescued}
 
@@ -280,14 +295,20 @@ func dismantle_structure() -> bool:
 	return true
 
 func damage_enemy(enemy: Dictionary, amount: float, source: Vector2, elemental: bool = false) -> void:
-	if enemy.hp <= 0:
+	if enemy.hp <= 0 or not is_finite(amount) or amount <= 0:
 		return
 	var mitigation := 1.0
 	if mission == 4 and enemy.boss and not elemental:
 		var forward: Vector2 = enemy.get("forward", Vector2.RIGHT)
 		if (source - enemy.pos).normalized().dot(forward) > 0.3:
 			mitigation = 0.5
-	enemy.hp -= amount * mitigation
+	var dealt := minf(enemy.hp, amount * mitigation * (1.0 + training_bonuses.magic if elemental else 1.0 + training_bonuses.physical))
+	var remaining: float = enemy.get("reward_hp", enemy.hp)
+	var eligible := minf(dealt, remaining)
+	enemy.reward_hp = maxf(0, remaining - eligible)
+	enemy.hp -= dealt
+	if not practice and benchmark_count == 0:
+		Training.award(combat_xp, training_style, eligible, enemy.max_hp, enemy.boss)
 
 func max_health() -> float:
 	return base_health * (field.health_multiplier() + 0.08 * passive_rank("vital"))
@@ -370,7 +391,7 @@ func spawn_enemy(boss: bool = false, kind: String = "drifter") -> void:
 	if boss and mission > 0:
 		hp = Haven.MISSIONS[mission - 1].health
 	enemies.append({"id": next_id, "pos": pos, "hp": hp, "max_hp": hp,
-		"speed": stats.speed, "boss": boss, "kind": kind, "contact": stats.contact,
+		"reward_hp": hp, "speed": stats.speed, "boss": boss, "kind": kind, "contact": stats.contact,
 		"tell": 0.0, "attack_wait": 2.0, "target": pos, "face": 1.0,
 		"forward": Vector2.LEFT, "windup": 0.95,
 		"attack": "", "cycle": 0, "rush_left": 0.0, "rush_direction": Vector2.ZERO,
@@ -475,7 +496,7 @@ func make_offers() -> void:
 func spell_offer(id: String, current_rank: int = 0) -> Dictionary:
 	var rank := current_rank if current_rank > 0 else (int(spells[id].rank) + 1 if spells.has(id) else 1)
 	var info: Dictionary = Content.SPELLS[id]
-	var scale := (1.0 + 0.25 * (rank - 1)) * spell_scale() * spell_mod(id, "damage")
+	var scale: float = (1.0 + 0.25 * (rank - 1)) * spell_scale() * spell_mod(id, "damage") * (1.0 + training_bonuses.magic)
 	var detail := ""
 	match id:
 		"ember": detail = "%d bolt(s), each %.0f impact + %.0f burn over 2s." % [int(spell_mod(id, "count", 1)), 36 * scale, 12 * scale * spell_mod(id, "burn") / spell_mod(id, "damage")]
@@ -597,7 +618,7 @@ func tick_enemy(enemy: Dictionary, delta: float) -> void:
 	if enemy.hp <= 0:
 		return
 	if enemy.burn > 0:
-		enemy.hp -= enemy.burn_dps * minf(delta, enemy.burn)
+		damage_enemy(enemy, enemy.burn_dps * minf(delta, enemy.burn), enemy.pos, true)
 		enemy.burn = maxf(0, enemy.burn - delta)
 	if enemy.hp <= 0:
 		return
@@ -743,6 +764,8 @@ func tick(delta: float, direction: Vector2) -> void:
 		for enemy in enemies:
 			if enemy.hp > 0.0 and enemy.id not in shot.get("hits", []) and shot.pos.distance_squared_to(enemy.pos) < pow(32.0 if enemy.boss else 17.0, 2):
 				var amount: float = talents.basic_damage(self, shot, shot.get("damage", damage * field.damage_multiplier()))
+				if shot.get("kind", "pistol") == "pistol" and training_bonuses.crit > 0 and rng.randf() < training_bonuses.crit:
+					amount *= 1.5
 				damage_enemy(enemy, amount, shot.pos - shot.velocity.normalized() * 40, shot.get("kind", "pistol") != "pistol")
 				if shot.get("kind", "pistol") == "ember":
 					enemy.burn = maxf(enemy.burn, 2.0)
@@ -801,7 +824,7 @@ func hurt(amount: float) -> void:
 		return
 	if amount <= 0:
 		return
-	var reduced := amount * maxf(0.35, (1.0 - minf(0.5, armor / (armor + 150.0))) * (0.9 if "obsidian" in field.relics else 1.0) * (1.0 - defenses.mitigation(player)))
+	var reduced := amount * maxf(0.35, (1.0 - minf(0.5, armor / (armor + 150.0))) * (0.9 if "obsidian" in field.relics else 1.0) * (1.0 - defenses.mitigation(player)) * (1.0 - training_bonuses.reduction))
 	var absorbed := minf(shield, reduced)
 	shield -= absorbed
 	health = maxf(0.0, health - (reduced - absorbed))

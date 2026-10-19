@@ -89,9 +89,26 @@ func journey() -> void:
 	arena.run.field.add_loot("parts", "Parts", 5)
 	arena.run.field.add_loot("gear", "Outrider Boots", 1, "rare", "boots")
 	arena.run.field.set_secure(0, true)
+	# A failed Base transition must not replace this live run with an older checkpoint.
+	arena.run.spawn_enemy()
+	var target: Dictionary = arena.run.enemies.back()
+	arena.run.damage_enemy(target, 12, arena.run.player)
+	var pending_xp: Dictionary = arena.run.combat_xp.duplicate()
+	var previous_snapshot: Dictionary = arena.profile.saved_run()
+	arena.profile.path = "user://missing-expedition-checkpoint-dir/save.json"
+	var live_run: RefCounted = arena.run
+	arena.show_haven()
+	check(not arena.home.visible and arena.run == live_run and arena.run.paused and arena.run.combat_xp == pending_xp, "Failed return to Base keeps live earned combat XP paused in memory")
+	check(arena.profile.saved_run() == previous_snapshot and not arena.profile.error.is_empty(), "Failed checkpoint preserves old disk snapshot and surfaces save error")
+	arena.profile.path = PATH
+	arena.show_haven()
+	check(arena.home.visible and arena.profile.error.is_empty(), "Retry saves before opening Base")
+	arena.resume_campaign()
+	check(arena.run.combat_xp == pending_xp, "Resume after successful retry restores all pending combat XP")
 	arena.show_haven()
 	arena.abandon_campaign()
 	check(arena.profile.data.active_attempt.is_empty() and arena.profile.data.last_result.parts == 5 and arena.profile.data.last_result.lost == 1, "Abandon banks protected loot and loses unsecured gear exactly once")
+	check(arena.profile.data.last_result.combat_xp == pending_xp, "Ending saved expedition banks all recovered combat XP")
 	arena.queue_free()
 	await process_frame
 	cleanup()
