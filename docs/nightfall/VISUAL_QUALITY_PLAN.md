@@ -2,9 +2,9 @@
 
 October 18, 2026. Owner: Joshua Rice. Design and engineering lead: Codex.
 
-**Status: saved plan, not authorization to implement this revision.** The current functional baseline is commit `d6e3626`. Its menus work, but Joshua has explicitly rejected their visual quality as below the approved concepts and the Undead Slayer references. Passing automated tests or exporting an APK does not close that gap.
+**Status: Gear V0–V2 implementation authorized and in review; visual acceptance remains open.** On October 18 Joshua explicitly authorized an art agent to start this plan in parallel with feature development, then requested the reference item-detail composition as a popup over dimmed Gear. The earlier deferred status is superseded for this bounded Gear slice. The original rejected visual baseline remains `d6e3626`; this iteration is built on `4e30cb8` plus the coordinated feature work. Passing tests or exporting an APK does not establish visual acceptance.
 
-**Latest scheduling decision:** Joshua said to save this work for last and continue features. This visual plan remains the final polish target. New functional menus may reuse the current components without implying visual acceptance.
+**Latest scheduling decision:** Gear art, materials, layout and item popup may proceed alongside features. Review the [Gear iteration report](visual-iterations/gear-v1/REPORT.md) and its actual Godot captures before carrying this treatment across the remaining menus. Shared rollout, installed-build review and final visual acceptance remain open.
 
 The objective is a welcoming, polished, illustrated mobile action RPG: recognizable Nightfall identity, appealing characters, rich but restrained materials, clear equipment progression, concise interface copy, and consistent phone-scale composition. Keep Godot and the existing game systems. First bring **Gear** to the target standard, then use its accepted components and art treatment across Shop, Expedition, Base and Class. Combat presentation follows as a separate stage.
 

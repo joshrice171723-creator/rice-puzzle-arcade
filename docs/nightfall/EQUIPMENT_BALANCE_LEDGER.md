@@ -2,6 +2,8 @@
 
 Owner: dedicated equipment/balance workstream. Updated October 18, 2026.
 
+For the authored twenty-zone expansion, use the [campaign balance design package](balance-design/DESIGN_INDEX.md). Its future numbers and acquisition gates are proposals, not replacements for the implemented baseline recorded here. The current profile is version 4 following the daily-reward migration.
+
 This is the item catalog and balancing reference for the feature build. It distinguishes values actually present in source from the larger campaign design. Numerical comparisons below are calculated from source formulas, not evidence of player difficulty or measured win rates. The campaign currently contains only the five Blackout Outskirts missions. Later-zone rewards are design commitments, not obtainable content.
 
 ## 1. Source of truth and maintenance

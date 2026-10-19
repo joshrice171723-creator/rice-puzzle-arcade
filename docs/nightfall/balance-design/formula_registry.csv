@@ -1,0 +1,37 @@
+id,label,formula,scope
+round,nonnegative half-up,floor(x+0.5),Enemy HP/hits and reward grants
+display,player stats2dp;TTK1dp,round for display only,Use full precision internally
+hp_zone,H(z),1+0.13*(z-1)+0.002*(z-1)^2,Normal/boss HP
+hit_zone,D(z),1+0.16*(z-1)+0.003*(z-1)^2,Normal/boss hit
+mission_normal,M(m),1+0.025*(m-1),Normal HP/hit; boss hit only
+boss_hp,base list,"[1800,1980,2160,2340,3000][m-1]*H(z)",Do not multiply M again
+boss_heavy,base34,round(34*D(z)*M(m)),Signature attack coefficient afterward
+boss_standard,base22,round(22*D(z)*M(m)),Captain standard
+primary,"Q(L,R)",(1+0.05*(L-1))*R,Item-local affix after Q
+equip_cap,highest unlocked zone,"min(30,4+z+floor(z/3))",Not selected preview
+family_survivor,first zone f,1+floor((f-1)/2),Family gate separately required
+survivor_xp,levelL,60*L*(L-1),Level1 starts0
+mastery_xp,masteryM,50*M*(M+1),Rank0 starts0
+survivor_hp,baseHP,120+4*(L-1),Max276 at40
+combat_thresholds,levels1-12,0;16;40;70;108;154;208;270;340;418;504;598,11max choices
+upgrade_credits,currentL,40*L if L<=10 else400+20*(L-10),WorkshopII ceil(0.9*cost)
+upgrade_parts,currentL,L+1 if L<=5 else6+floor((L-5)/3),No Parts discount
+clear_credits,standard,165+45*(z-1),M5x1.5 half-up
+clear_parts,standard,3+floor(z/2),M5x1.5 half-up
+clear_survivor_xp,standard,85+15*(z-1),M5x1.5 half-up
+clear_mastery_xp,standard,45+5*(z-1),M5x1.5 half-up
+physical_dr,armorA,"min(0.5,A/(A+150))",Elemental excludes armor
+mixed_ehp,70%physical,HP/(0.7*(1-DR)+0.3),No resistance/shield/heal
+spell_cdr,permanent+run,"min(0.30,min(0.15,permanent)+0.06*ChannelRank)",Wisp and class powers excluded
+crit_mean,basiconly,1+chance*(criticalMultiplier-1),Default1.025;maximum1.40
+run_hp,percent sum,profileHP*(1+0.08*Vital+0.10*Vitality+0.12*Moonstone),Moonstone indicator0/1
+wave_budget,allcounts,sum(count*archetypeCost)+3*eliteConversions,Conversions replace normal bodies
+wave_xp,allcounts,(sum(count*normalXP)+8*eliteConversions)*zoneXPScale,Scale1/1.15/1.35
+packet_count,j0toK-1,floor((j+1)*N/K)-floor(j*N/K),K=segmentseconds/5
+quality_score,fiveaxes1-5,(25*impact+20*coverage+25*reliability+20*independence+10*counterplay)/5,S90 A80 B70 C60 D50 Ebelow50
+hit_tolerance,strictlypositiveHP,"max(0,ceil(HP/effectiveHit-1e-6)-1)",Exactly lethal hit not survived
+contract_reward,standardbase,round(0.65*standardCreditsOrXP),Parts6+floor((z-1)/2)
+shields,all sources,"min(0.30*maxHP,sum(differentSources))",Same source refreshesmaxremaining
+healing_cap,continuous,"min(0.01*maxHP per second,totalContinuousRates)",Medkit finite excluded
+pickup_cap,permanent/run,permanent<=1.50;final<=4.0*baseRadius,New finalcap proposed
+level_budget,offer count,highestReachedCombatLevel-1,Max3spell and3passive families

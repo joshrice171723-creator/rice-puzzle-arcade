@@ -1,0 +1,21 @@
+zone,new_contract_wins,cumulative_contract_wins,additional_minutes,cumulative_contract_credits,cumulative_contract_parts,wallet_after_target_credits,wallet_after_target_parts,survivor_xp_including_contracts,survivor_level,mastery_xp_including_contracts,mastery_level,contract_survivor_xp,contract_mastery_xp,notes
+1,5,5,17.5,535,30,188,2,953,4,498,2,55,29,successes only; no ads or salvage; fixed target budget; gadget level 1
+2,0,5,0.0,535,30,1153,11,1743,5,893,3,65,33,successes only; no ads or salvage; fixed target budget; gadget level 1
+3,5,10,17.5,1365,65,1676,6,3016,7,1511,5,75,36,successes only; no ads or salvage; fixed target budget; gadget level 1
+4,0,10,0.0,1365,65,2771,16,4026,8,1986,5,85,39,successes only; no ads or salvage; fixed target budget; gadget level 1
+5,0,10,0.0,1365,65,3844,17,5144,9,2504,6,94,42,successes only; no ads or salvage; fixed target budget; gadget level 1
+6,5,15,17.5,2635,105,2449,2,6894,11,3294,7,104,46,successes only; no ads or salvage; fixed target budget; gadget level 1
+7,0,15,0.0,2635,105,3507,22,8237,12,3897,8,114,49,successes only; no ads or salvage; fixed target budget; gadget level 1
+8,0,15,0.0,2635,105,4982,50,9687,13,4542,9,124,52,successes only; no ads or salvage; fixed target budget; gadget level 1
+9,0,15,0.0,2635,105,3360,13,11250,14,5225,9,133,55,successes only; no ads or salvage; fixed target budget; gadget level 1
+10,3,18,10.5,3748,135,3348,9,13349,15,6127,10,143,59,successes only; no ads or salvage; fixed target budget; gadget level 1
+11,0,18,0.0,3748,135,5346,41,15132,16,6895,11,153,62,successes only; no ads or salvage; fixed target budget; gadget level 1
+12,0,18,0.0,3748,135,3986,18,17027,17,7705,11,163,65,successes only; no ads or salvage; fixed target budget; gadget level 1
+13,0,18,0.0,3748,135,6384,49,19030,18,8558,12,172,68,successes only; no ads or salvage; fixed target budget; gadget level 1
+14,0,18,0.0,3748,135,9204,94,21145,19,9448,13,182,72,successes only; no ads or salvage; fixed target budget; gadget level 1
+15,4,22,14.0,5816,187,5020,7,24136,20,10681,14,192,75,successes only; no ads or salvage; fixed target budget; gadget level 1
+16,0,22,0.0,5816,187,8240,81,26471,21,11656,14,202,78,successes only; no ads or salvage; fixed target budget; gadget level 1
+17,0,22,0.0,5816,187,11733,148,28919,22,12674,15,211,81,successes only; no ads or salvage; fixed target budget; gadget level 1
+18,0,22,0.0,5816,187,10593,136,31474,23,13734,16,221,85,successes only; no ads or salvage; fixed target budget; gadget level 1
+19,0,22,0.0,5816,187,14486,201,34142,24,14832,16,231,88,successes only; no ads or salvage; fixed target budget; gadget level 1
+20,0,22,0.0,5816,187,18646,272,36917,25,15972,17,241,91,successes only; no ads or salvage; fixed target budget; gadget level 1

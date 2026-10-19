@@ -1,0 +1,19 @@
+from_mission,to_mission,archetype,old_equipment_level,old_survivor_level,old_boss_dps,old_signature_hp,new_arrival_hp,new_arrival_ttk_with_old_dps,boss_hp_change_pct,normal_hp_change_from_previous_finale_pct,normal_damage_change_from_previous_finale_pct,zone_arrival_hp_growth_pct,zone_arrival_damage_growth_pct,wave_seconds_before,wave_seconds_after,note
+Z01M5,Z02M1,Wayfarer,1,1,36.29,3000,2038,56.16,-32.067,2.909,5.727,13.2,16.3,240,300,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z01M5,Z02M1,Bastion,1,1,32.9,3000,2038,61.95,-32.067,2.909,5.727,13.2,16.3,240,300,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z01M5,Z02M1,Spellweaver,1,1,34.84,3000,2038,58.5,-32.067,2.909,5.727,13.2,16.3,240,300,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z05M5,Z06M1,Wayfarer,6,8,49.22,4656,3060,62.17,-34.278,-0.422,0.98,9.536,11.078,300,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z05M5,Z06M1,Bastion,6,8,38.54,4656,3060,79.4,-34.278,-0.422,0.98,9.536,11.078,300,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z05M5,Z06M1,Spellweaver,6,8,53.45,4656,3060,57.25,-34.278,-0.422,0.98,9.536,11.078,300,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z10M5,Z11M1,Wayfarer,13,13,71.57,6996,4500,62.88,-35.678,-2.542,-1.738,7.204,8.088,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z10M5,Z11M1,Bastion,13,13,54.94,6996,4500,81.91,-35.678,-2.542,-1.738,7.204,8.088,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z10M5,Z11M1,Spellweaver,13,13,74.33,6996,4500,60.54,-35.678,-2.542,-1.738,7.204,8.088,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z15M5,Z16M1,Wayfarer,20,18,87.23,9636,6120,70.16,-36.488,-3.77,-3.225,5.853,6.452,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z15M5,Z16M1,Bastion,20,18,66.96,9636,6120,91.4,-36.488,-3.77,-3.225,5.853,6.452,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z15M5,Z16M1,Spellweaver,20,18,90.58,9636,6120,67.56,-36.488,-3.77,-3.225,5.853,6.452,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z18M5,Z19M1,Wayfarer,24,21,99.74,11364,7178,71.97,-36.836,-4.291,-3.839,5.28,5.777,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z18M5,Z19M1,Bastion,24,21,76.56,11364,7178,93.76,-36.836,-4.291,-3.839,5.28,5.777,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z18M5,Z19M1,Spellweaver,24,21,103.57,11364,7178,69.31,-36.836,-4.291,-3.839,5.28,5.777,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z19M5,Z20M1,Wayfarer,25,22,102.06,11964,7546,73.94,-36.927,-4.441,-4.013,5.115,5.585,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z19M5,Z20M1,Bastion,25,22,78.34,11964,7546,96.32,-36.927,-4.441,-4.013,5.115,5.585,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover
+Z19M5,Z20M1,Spellweaver,25,22,105.98,11964,7546,71.2,-36.927,-4.441,-4.013,5.115,5.585,360,360,Old final-boss draft held fixed for throughput stress; next run earns its own choices; no actual carryover

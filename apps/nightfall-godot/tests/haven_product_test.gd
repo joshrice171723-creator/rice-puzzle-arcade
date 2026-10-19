@@ -114,7 +114,7 @@ func verify() -> void:
 	purchase.pressed.emit()
 	await settle()
 	check(p.data.gems == gems_before, "First shop tap shows confirmation without spending")
-	find_button(home, "Confirm: Supply key").pressed.emit()
+	find_button(home, "Confirm:\nSupply key").pressed.emit()
 	await settle()
 	check(p.data.gems == gems_before - 25, "Second shop tap commits the displayed purchase")
 	home.navigation.get_child(3).pressed.emit()

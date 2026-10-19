@@ -1,0 +1,430 @@
+{
+  "date": "2026-10-19",
+  "base_commit": "4e30cb8da540afd39ca650d8001b2cf5d3080823",
+  "status": "local implemented iteration, not native release or visual approval",
+  "implementation": [
+    "apps/nightfall-godot/haven_ui.gd",
+    "apps/nightfall-godot/haven_art.gd",
+    "apps/nightfall-godot/item_detail_ui.gd"
+  ],
+  "assets": [
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/contact-shadow.svg",
+      "purpose": "hero foot contact shadow",
+      "source": "apps/nightfall-godot/assets/gear/contact-shadow.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        220,
+        32
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/detail-panel.svg",
+      "purpose": "popup cobalt enamel frame",
+      "source": "apps/nightfall-godot/assets/gear/detail-panel.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        402,
+        552
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/frame-common.svg",
+      "purpose": "item frame material",
+      "source": "apps/nightfall-godot/assets/gear/frame-common.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        96,
+        96
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/frame-epic.svg",
+      "purpose": "item frame material",
+      "source": "apps/nightfall-godot/assets/gear/frame-epic.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        96,
+        96
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/frame-legendary.svg",
+      "purpose": "item frame material",
+      "source": "apps/nightfall-godot/assets/gear/frame-legendary.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        96,
+        96
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/frame-mythic.svg",
+      "purpose": "item frame material",
+      "source": "apps/nightfall-godot/assets/gear/frame-mythic.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        96,
+        96
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/frame-rare.svg",
+      "purpose": "item frame material",
+      "source": "apps/nightfall-godot/assets/gear/frame-rare.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        96,
+        96
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/frame-uncommon.svg",
+      "purpose": "item frame material",
+      "source": "apps/nightfall-godot/assets/gear/frame-uncommon.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        96,
+        96
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/ribbon-0.svg",
+      "purpose": "rarity popup title banner",
+      "source": "apps/nightfall-godot/assets/gear/ribbon-0.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        360,
+        54
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/ribbon-1.svg",
+      "purpose": "rarity popup title banner",
+      "source": "apps/nightfall-godot/assets/gear/ribbon-1.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        360,
+        54
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/ribbon-2.svg",
+      "purpose": "rarity popup title banner",
+      "source": "apps/nightfall-godot/assets/gear/ribbon-2.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        360,
+        54
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/ribbon-3.svg",
+      "purpose": "rarity popup title banner",
+      "source": "apps/nightfall-godot/assets/gear/ribbon-3.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        360,
+        54
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/ribbon-4.svg",
+      "purpose": "rarity popup title banner",
+      "source": "apps/nightfall-godot/assets/gear/ribbon-4.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        360,
+        54
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/ribbon-5.svg",
+      "purpose": "rarity popup title banner",
+      "source": "apps/nightfall-godot/assets/gear/ribbon-5.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        360,
+        54
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/stage-halo.svg",
+      "purpose": "stage atmosphere",
+      "source": "apps/nightfall-godot/assets/gear/stage-halo.svg",
+      "production": "original code-native SVG",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "item frames 68x59 equipped / about 66x65 inventory; popup-specific assets retain source proportions",
+      "dimensions": [
+        320,
+        300
+      ],
+      "transparent_bounds": "Vector artwork stays inside the viewBox; no external bitmap matte or atlas neighbors."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/stone-plinth.png",
+      "purpose": "illustrated hero ground plane",
+      "source": "docs/nightfall/art-sources/gear/stone-plinth-source.png",
+      "production": "built-in imagegen; alpha crop and Lanczos runtime downscale",
+      "approval": "implemented iteration; human acceptance pending",
+      "reference": "docs/nightfall/art-concepts/nightfall-b-sharper-base-gear.png",
+      "intended_display": "216x80 design units",
+      "dimensions": [
+        768,
+        283
+      ],
+      "alpha_bounds": [
+        0,
+        1,
+        767,
+        277
+      ],
+      "ground_contact": "center top ellipse; runtime boot plane around stage y219",
+      "prompt": "Production transparent stone hero plinth for Nightfall Beaconbound equipment screen. One low circular blue-gray cut stone dais, three-quarter top-down view, wide ellipse, hand-painted sharp polished fantasy mobile style, crisp dark outlines and readable facets. Warm upper-left light, cool cobalt edges and subtle violet fill. Engraved seams and thick chunky front blocks. No character, scenery, text, UI controls or external cast shadow. Full centered object with transparency; attractive at 200px wide."
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/action-blue.svg",
+      "source": "apps/nightfall-godot/assets/gear/action-blue.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        160.0,
+        72.0
+      ],
+      "purpose": "Beveled item popup action",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/action-disabled.svg",
+      "source": "apps/nightfall-godot/assets/gear/action-disabled.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        160.0,
+        72.0
+      ],
+      "purpose": "Beveled item popup action",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/action-gold.svg",
+      "source": "apps/nightfall-godot/assets/gear/action-gold.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        160.0,
+        72.0
+      ],
+      "purpose": "Beveled item popup action",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/action-violet.svg",
+      "source": "apps/nightfall-godot/assets/gear/action-violet.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        160.0,
+        72.0
+      ],
+      "purpose": "Beveled item popup action",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/nav-dock.svg",
+      "source": "apps/nightfall-godot/assets/gear/nav-dock.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        414.0,
+        68.0
+      ],
+      "purpose": "Shared menu frame",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/nav-header.svg",
+      "source": "apps/nightfall-godot/assets/gear/nav-header.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        430.0,
+        58.0
+      ],
+      "purpose": "Shared menu frame",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/nav-settings.svg",
+      "source": "apps/nightfall-godot/assets/gear/nav-settings.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        38.0,
+        38.0
+      ],
+      "purpose": "Shared menu frame",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/nav-tab-active.svg",
+      "source": "apps/nightfall-godot/assets/gear/nav-tab-active.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        80.0,
+        64.0
+      ],
+      "purpose": "Shared menu frame",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/nav-tab-pressed.svg",
+      "source": "apps/nightfall-godot/assets/gear/nav-tab-pressed.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        80.0,
+        64.0
+      ],
+      "purpose": "Shared menu frame",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/nav-tab-rest.svg",
+      "source": "apps/nightfall-godot/assets/gear/nav-tab-rest.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        80.0,
+        64.0
+      ],
+      "purpose": "Shared menu frame",
+      "approval": "implemented iteration; human acceptance pending"
+    },
+    {
+      "runtime": "apps/nightfall-godot/assets/gear/nav-wallet.svg",
+      "source": "apps/nightfall-godot/assets/gear/nav-wallet.svg",
+      "production": "original code-native SVG",
+      "dimensions": [
+        68.0,
+        34.0
+      ],
+      "purpose": "Shared menu frame",
+      "approval": "implemented iteration; human acceptance pending"
+    }
+  ],
+  "captures": [
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-inspection-430x760.png",
+      "size": [
+        430,
+        760
+      ],
+      "fixture": "explicit disposable mixed-rarity / funded Epic boots fixture; never player save"
+    },
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-mixed-rarity-fixture-430x760.png",
+      "size": [
+        430,
+        760
+      ],
+      "fixture": "explicit disposable mixed-rarity / funded Epic boots fixture; never player save"
+    },
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-popup-epic-boots-fixture-320x568.png",
+      "size": [
+        320,
+        565
+      ],
+      "fixture": "explicit disposable mixed-rarity / funded Epic boots fixture; never player save"
+    },
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-popup-epic-boots-fixture-430x760.png",
+      "size": [
+        430,
+        760
+      ],
+      "fixture": "explicit disposable mixed-rarity / funded Epic boots fixture; never player save"
+    },
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-popup-quick-confirm-fixture-430x760.png",
+      "size": [
+        430,
+        760
+      ],
+      "fixture": "explicit disposable mixed-rarity / funded Epic boots fixture; never player save"
+    },
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-starter-320x568.png",
+      "size": [
+        320,
+        565
+      ],
+      "fixture": "fresh eight-item starter, real initial balances"
+    },
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-starter-430x760.png",
+      "size": [
+        430,
+        760
+      ],
+      "fixture": "fresh eight-item starter, real initial balances"
+    },
+    {
+      "path": "docs/nightfall/visual-iterations/gear-v1/gear-starter-860x760.png",
+      "size": [
+        430,
+        760
+      ],
+      "fixture": "fresh eight-item starter, real initial balances"
+    }
+  ]
+}

@@ -5,13 +5,15 @@ const Content = preload("res://haven_content.gd")
 const Loot = preload("res://loot.gd")
 const Salvage = preload("res://salvage.gd")
 const Skills = preload("res://skill_tree.gd")
-const VERSION := 3
+const Daily = preload("res://daily_progress.gd")
+const VERSION := 4
 const BUILD_SLOTS := ["1", "2", "3"]
 const SHOP_OFFERS := {"key": {"name": "Supply key", "cost": 25, "currency": "gems", "grant": "cache_keys", "amount": 1}, "parts": {"name": "10 Workshop Parts", "cost": 200, "currency": "credits", "grant": "parts", "amount": 10}}
 var path := "user://haven.json"
 var data: Dictionary = {}
 var error := ""
 var blocked := false
+var utc_now: Callable = func() -> int: return int(Time.get_unix_time_from_system())
 
 func _init(save_path: String = "user://haven.json") -> void:
 	path = save_path
@@ -26,7 +28,7 @@ func fresh() -> Dictionary:
 	return {"version": VERSION, "credits": 0, "parts": 0, "gems": 0, "survivor_xp": 0,
 		"mastery": {"scavenger": 0, "engineer": 0, "warden": 0, "arcanist": 0}, "class": "scavenger",
 		"inventory": items, "equipment": equipment, "next_item": Content.SLOTS.size(), "missions": {}, "zone_claims": [],
-		"loadouts": {}, "locked_items": [], "affix_rolls": 0,
+		"loadouts": {}, "locked_items": [], "affix_rolls": 0, "daily": Daily.fresh(),
 		"skill_unlocks": {"scavenger": [], "engineer": [], "warden": [], "arcanist": []},
 		"facilities": {"workshop": 1, "quartermaster": 1, "infirmary": 1},
 		"next_attempt": 1, "active_attempt": {}, "last_result": {}, "last_banked": 0,
@@ -42,6 +44,8 @@ func valid(candidate: Variant) -> bool:
 	for key: String in defaults:
 		if not candidate.has(key):
 			return false
+	if not Daily.valid(candidate.daily):
+		return false
 	for key in ["credits", "parts", "gems", "survivor_xp", "next_item", "next_attempt", "last_banked", "breaker_plates", "cache_keys", "cache_opened", "rare_misses", "epic_misses", "cache_seed", "rare_choices", "contract_clears", "affix_rolls"]:
 		if not (candidate[key] is int or candidate[key] is float) or candidate[key] < 0 or candidate[key] != floor(candidate[key]):
 			return false
@@ -155,10 +159,12 @@ func read_candidate(file_path: String) -> Variant:
 	if parser.parse(FileAccess.get_file_as_string(file_path)) != OK:
 		return null
 	var parsed: Variant = normalize_numbers(parser.data)
-	if parsed is Dictionary and parsed.get("version") in [1, 2, VERSION] and not parsed.has("settings"):
+	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, VERSION] and not parsed.has("settings"):
 		parsed.settings = fresh().settings
-	if parsed is Dictionary and parsed.get("version") in [1, 2, VERSION]:
+	if parsed is Dictionary and parsed.get("version") in [1, 2, 3, VERSION]:
 		var defaults := fresh()
+		if parsed.version < 4:
+			parsed.daily = Daily.fresh()
 		if parsed.version < 3:
 			parsed.loadouts = {}
 			parsed.locked_items = []
@@ -343,6 +349,31 @@ func upgrade_item(id: int) -> bool:
 	data.credits -= cost.credits
 	data.parts -= cost.parts
 	item_by_id(id).level += 1
+	return commit(previous)
+
+func quick_upgrade_cost(id: int) -> Dictionary:
+	var item := item_by_id(id)
+	if item.is_empty():
+		return {}
+	var cost := {"levels": 0, "credits": 0, "parts": 0}
+	for level in range(int(item.level), 5):
+		var credits := ceili(40 * level * (0.9 if data.facilities.workshop >= 2 else 1.0))
+		var parts := level + 1
+		if cost.credits + credits > data.credits or cost.parts + parts > data.parts:
+			break
+		cost.levels += 1
+		cost.credits += credits
+		cost.parts += parts
+	return cost if cost.levels > 0 else {}
+
+func quick_upgrade_item(id: int) -> bool:
+	var cost := quick_upgrade_cost(id)
+	if not can_change_loadout() or cost.is_empty():
+		return false
+	var previous := data.duplicate(true)
+	data.credits -= cost.credits
+	data.parts -= cost.parts
+	item_by_id(id).level += cost.levels
 	return commit(previous)
 
 func salvage(id: int) -> bool:
@@ -618,6 +649,8 @@ func finish_attempt(id: int, outcome: Dictionary) -> Dictionary:
 	data.cache_keys += reward.keys
 	data.survivor_xp += reward.survivor_xp
 	data.mastery[attempt["class"]] += reward.mastery_xp
+	data.daily = daily_state()
+	Daily.record(data.daily, outcome)
 	data.last_banked = id
 	data.last_result = reward
 	data.active_attempt = {}
@@ -738,4 +771,37 @@ func set_setting(key: String, value: Variant) -> bool:
 		return false
 	var previous := data.duplicate(true)
 	data.settings[key] = value
+	return commit(previous)
+
+func daily_state() -> Dictionary:
+	return Daily.at_day(data.daily, maxi(0, floori(float(utc_now.call()) / 86400.0)))
+
+func claim_daily_bonus() -> bool:
+	if blocked:
+		return false
+	var next := daily_state()
+	var count := Daily.available_bonuses(next)
+	if count <= 0:
+		return false
+	var previous := data.duplicate(true)
+	for key in Daily.BONUS:
+		data[key] += Daily.BONUS[key] * count
+	next.pending_bonuses = 0
+	next.claimed = Daily.completed(next) >= 3
+	data.daily = next
+	return commit(previous)
+
+func claim_calendar() -> bool:
+	if blocked:
+		return false
+	var next := daily_state()
+	if next.day <= next.calendar_day:
+		return false
+	var reward: Dictionary = Daily.CALENDAR[next.calendar_count % Daily.CALENDAR.size()]
+	var previous := data.duplicate(true)
+	for key in reward:
+		data[key] += reward[key]
+	next.calendar_count += 1
+	next.calendar_day = next.day
+	data.daily = next
 	return commit(previous)

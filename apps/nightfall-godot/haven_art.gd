@@ -11,6 +11,18 @@ const OUTSKIRTS = preload("res://assets/menu-outskirts.png")
 const MOON = preload("res://assets/menu-moon.svg")
 const SWORD = preload("res://assets/menu-sword.svg")
 const SHIELD = preload("res://assets/menu-shield.svg")
+const GEAR_PLINTH = preload("res://assets/gear/stone-plinth.png")
+const GEAR_HALO = preload("res://assets/gear/stage-halo.svg")
+const CONTACT_SHADOW = preload("res://assets/gear/contact-shadow.svg")
+const GEAR_FRAMES = [preload("res://assets/gear/frame-common.svg"), preload("res://assets/gear/frame-uncommon.svg"), preload("res://assets/gear/frame-rare.svg"), preload("res://assets/gear/frame-epic.svg"), preload("res://assets/gear/frame-legendary.svg"), preload("res://assets/gear/frame-mythic.svg")]
+const CHROME = {
+	"header": preload("res://assets/gear/nav-header.svg"),
+	"wallet": preload("res://assets/gear/nav-wallet.svg"),
+	"dock": preload("res://assets/gear/nav-dock.svg"),
+	"tab": preload("res://assets/gear/nav-tab-rest.svg"),
+	"selected": preload("res://assets/gear/nav-tab-active.svg"),
+	"pressed": preload("res://assets/gear/nav-tab-pressed.svg"),
+	"settings": preload("res://assets/gear/nav-settings.svg")}
 const DISPLAY_FONT = preload("res://assets/fonts/Cinzel.ttf")
 const BODY_FONT = preload("res://assets/fonts/BarlowSemiCondensed-SemiBold.ttf")
 const ITEM_NAMES := ["weapon", "helmet", "body", "boots", "charm", "gadget", "ring", "pants", "credits", "parts", "gems", "hp"]
@@ -77,3 +89,16 @@ static func picture(parent: Node, texture: Texture2D, rect: Rect2) -> TextureRec
 	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(node)
 	return node
+
+static func chrome_style(id: String) -> StyleBoxTexture:
+	var face := StyleBoxTexture.new()
+	face.texture = CHROME[id]
+	face.set_texture_margin_all(7 if id in ["tab", "selected", "pressed", "dock"] else 5)
+	face.set_content_margin_all(4 if id in ["tab", "selected", "pressed"] else 2)
+	return face
+
+static func strong_font() -> FontVariation:
+	var font := FontVariation.new()
+	font.base_font = BODY_FONT
+	font.variation_embolden = 0.65
+	return font

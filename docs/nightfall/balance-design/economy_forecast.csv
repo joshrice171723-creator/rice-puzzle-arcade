@@ -1,0 +1,21 @@
+zone,earned_credits_no_ads,earned_parts_60pct_caches,earned_survivor_xp,survivor_level,single_class_mastery_xp,single_class_mastery_level,typical_gear_level,seven_slot_upgrade_credits,seven_slot_upgrade_parts,rank3_affixes_funded,facilities_credits,facilities_parts,total_expense_credits,total_expense_parts,net_credits,net_parts,contract_credits,contract_parts,additional_successful_contracts_for_deficit,contract_minutes_at_210s,excluded
+1,1543,41,678,3,353,2,3,840,35,0,1050,34,1890,69,-347,-28,107,6,5,17.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+2,3498,87,1468,5,748,3,4,1680,63,1,1050,34,2880,106,618,-19,137,6,4,14.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+3,5861,133,2366,6,1186,4,6,4200,140,2,1050,34,5550,192,311,-59,166,7,9,31.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+4,8636,185,3376,8,1661,5,7,5880,182,2,1050,34,7230,234,1406,-49,195,7,7,24.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+5,11819,237,4494,9,2179,6,8,7840,224,3,1050,34,9340,285,2479,-48,224,8,6,21.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+6,15414,315,5724,10,2739,6,10,12600,322,3,2550,69,15600,418,-186,-103,254,8,13,45.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+7,19422,393,7067,11,3342,7,11,15400,371,4,2550,69,18550,476,872,-83,283,9,10,35.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+8,23837,477,8517,12,3987,8,12,18340,427,4,2550,69,21490,532,2347,-55,312,9,7,24.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+9,28665,561,10080,13,4670,9,14,24640,539,5,2550,69,27940,653,725,-92,341,10,10,35.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+10,33900,650,11750,14,5395,9,15,28000,602,5,5550,129,34300,776,-400,-126,371,10,13,45.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+11,39548,754,13533,15,6163,10,16,31500,665,6,5550,129,37950,848,1598,-94,400,11,9,31.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+12,45608,864,15428,16,6973,11,18,38920,798,6,5550,129,45370,981,238,-117,429,11,11,38.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+13,52076,974,17431,17,7826,12,19,42840,868,7,5550,129,49440,1060,2636,-86,458,12,8,28.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+14,58956,1089,19546,18,8716,12,20,46900,938,7,5550,129,53500,1130,5456,-41,488,12,4,14.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+15,66244,1204,21769,19,9649,13,22,55440,1092,7,10550,229,67040,1384,-796,-180,517,13,14,49.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+16,73944,1355,24104,20,10624,14,23,59920,1169,7,10550,229,71520,1461,2424,-106,546,13,9,31.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+17,82057,1506,26552,21,11642,14,24,64540,1253,7,10550,229,76140,1545,5917,-39,575,14,3,10.5,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+18,90577,1662,29107,22,12702,15,26,74200,1421,7,10550,229,85800,1713,4777,-51,605,14,4,14.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+19,99510,1818,31775,23,13800,16,27,79240,1512,7,10550,229,90840,1804,8670,14,634,15,0,0.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income
+20,108850,1980,34550,24,14940,16,28,84420,1603,7,10550,229,96020,1895,12830,85,663,15,0,0.0,salvage; ten-medal materials; random loot; ads; rescue; crafts; rerolls; prior contract income

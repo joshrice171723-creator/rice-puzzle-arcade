@@ -1,0 +1,101 @@
+mission_id,name,foundation,hp,standard_hit,heavy_hit,speed_m_s,contact_hit,telegraph_min_s,attack_cycle_s,recovery_s,phase_2_hp,phase_3_hp,adds_alive_cap,adds_total_cap,adds_reward_cap_xp,damage_rule,zone_variation
+Z01M1,Garage Mauler,Bruiser,1800,22,34,1.1,12,0.85,6,2.2,900,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,slow overhead strike and a short charge.
+Z01M2,Fence Runner,Hunter,1980,23,35,1.6,12,0.85,5.5,1.8,990,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,a clearly marked straight dash followed by recovery.
+Z01M3,Porchcaller,Caller,2160,23,36,1.0,13,0.85,8,2.4,1080,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons small Drifter groups.
+Z01M4,Scrapback,Guardian,2340,24,37,1.1,13,0.85,7,2.5,1170,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,protected front and exposed rear.
+Z01M5,The Breaker,Signature,3000,24,37,1.0,13,0.85,7,2.2,1500,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z02M1,Dockhammer,Bruiser,2038,26,40,1.1,14,0.85,6,2.2,1019,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,heavy swings through narrow lanes.
+Z02M2,Railhook,Hunter,2241,26,41,1.6,14,0.85,5.5,1.8,1121,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,pulls toward a marked impact point.
+Z02M3,Manifest Keeper,Caller,2445,27,42,1.0,15,0.85,8,2.4,1223,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons enemies from visible container entrances.
+Z02M4,Container Guard,Guardian,2649,28,43,1.1,15,0.85,7,2.5,1325,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,directional shield with a slow turning rate.
+Z02M5,Chainjaw,Signature,3396,28,43,1.0,15,0.85,7,2.2,1698,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z03M1,Doorbreaker,Bruiser,2282,29,45,1.1,16,0.85,6,2.2,1141,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,a short forward burst followed by a wide swing.
+Z03M2,Windowshade,Hunter,2511,30,46,1.6,16,0.85,5.5,1.8,1256,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,repositions behind cover before firing.
+Z03M3,Hearth Whisper,Caller,2739,31,48,1.0,17,0.85,8,2.4,1370,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons Wisps and fragile decoys.
+Z03M4,Pale Watchman,Guardian,2967,32,49,1.1,17,0.85,7,2.5,1484,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,guard stance interrupted by attacks from its flank.
+Z03M5,The Whisperer,Signature,3804,32,50,1.0,18,0.85,7,2.2,1902,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z04M1,Siltbreaker,Bruiser,2534,33,51,1.1,18,0.85,6,2.2,1267,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,splashing slams leave brief slow patches.
+Z04M2,Gutter Skater,Hunter,2788,34,53,1.6,19,0.85,5.5,1.8,1394,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,dashes along marked water lanes.
+Z04M3,Canal Cantor,Caller,3041,35,54,1.0,19,0.85,8,2.4,1521,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons enemies from fixed drains.
+Z04M4,Stallwarden,Guardian,3295,36,55,1.1,19,0.85,7,2.5,1648,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,shielded advance with an exposed turning animation.
+Z04M5,The Drowned Bell,Signature,4224,36,56,1.0,20,0.85,7,2.2,2112,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z05M1,Hammerbound,Bruiser,2794,37,57,1.1,20,0.85,6,2.2,1397,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,two heavy swings with different directions.
+Z05M2,Spark Chaser,Hunter,3073,38,59,1.6,21,0.85,5.5,1.8,1537,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,dash followed by a short projectile burst.
+Z05M3,Furnace Tender,Caller,3352,39,60,1.0,21,0.85,8,2.4,1676,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,calls explosive minions.
+Z05M4,Plate Sentinel,Guardian,3632,40,62,1.1,22,0.85,7,2.5,1816,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,armored front with glowing rear vents.
+Z05M5,The Forge Warden,Signature,4656,41,63,1.0,22,0.85,7,2.2,2328,0,4,12,12,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z06M1,Orchard Stomper,Bruiser,3060,41,64,1.1,23,0.95,6,2.2,1530,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,stomps create short root lines.
+Z06M2,Briarhound,Hunter,3366,42,65,1.6,23,0.95,5.5,1.8,1683,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,fast lunges with a long miss recovery.
+Z06M3,Scarecrow Hexer,Caller,3672,43,67,1.0,24,0.95,8,2.4,1836,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,calls enemies into marked patches.
+Z06M4,Barkbound,Guardian,3978,44,69,1.1,24,0.95,7,2.5,1989,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,protected stance broken by repositioning.
+Z06M5,The Rootmother,Signature,5100,45,70,1.0,25,0.95,7,2.2,2550,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z07M1,Bilge Mauler,Bruiser,3334,45,70,1.1,25,0.95,6,2.2,1667,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,heavy directional strikes.
+Z07M2,Hookrunner,Hunter,3667,47,72,1.6,25,0.95,5.5,1.8,1834,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,fast hook attacks with narrow lanes.
+Z07M3,Deck Cantor,Caller,4000,48,74,1.0,26,0.95,8,2.4,2000,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,calls enemies from marked boarding points.
+Z07M4,Anchor Guard,Guardian,4334,49,76,1.1,27,0.95,7,2.5,2167,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,slow shielded advance and an anchor sweep.
+Z07M5,Captain Undertow,Signature,5556,50,77,1.0,27,0.95,7,2.2,2778,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z08M1,Icebreaker,Bruiser,3614,50,77,1.1,27,0.95,6,2.2,1807,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,delayed frost slam.
+Z08M2,Snowstalker,Hunter,3976,51,79,1.6,28,0.95,5.5,1.8,1988,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,visible tracks precede a dash.
+Z08M3,Rime Caller,Caller,4337,52,81,1.0,29,0.95,8,2.4,2169,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons fragile frost creatures.
+Z08M4,Frostplate,Guardian,4699,54,83,1.1,29,0.95,7,2.5,2350,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,directional armor and a slow cone attack.
+Z08M5,The Pale Howler,Signature,6024,55,85,1.0,30,0.95,7,2.2,3012,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z09M1,Coilbreaker,Bruiser,3902,54,84,1.1,30,0.95,6,2.2,1951,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,charged melee strikes.
+Z09M2,Static Runner,Hunter,4293,56,86,1.6,30,0.95,5.5,1.8,2147,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,dash leaves a short-lived lightning trail.
+Z09M3,Relay Hexer,Caller,4683,57,88,1.0,31,0.95,8,2.4,2342,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons capped Siphoner groups.
+Z09M4,Mast Sentinel,Guardian,5073,58,90,1.1,32,0.95,7,2.5,2537,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,shields one direction while charging a ranged attack.
+Z09M5,The Antenna Saint,Signature,6504,60,92,1.0,33,0.95,7,2.2,3252,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z10M1,Platform Crusher,Bruiser,4198,59,91,1.1,32,0.95,6,2.2,2099,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,slams across a broad front.
+Z10M2,Railstalker,Hunter,4617,61,94,1.6,33,0.95,5.5,1.8,2309,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,follows tracks before dashing.
+Z10M3,Tunnel Caller,Caller,5037,62,96,1.0,34,0.95,8,2.4,2519,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons through visible tunnel entrances.
+Z10M4,Turnstile Guard,Guardian,5457,63,98,1.1,35,0.95,7,2.5,2729,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,alternates shield direction.
+Z10M5,The Railbreaker,Signature,6996,65,100,1.0,35,0.95,7,2.2,3498,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z11M1,Quarry Fist,Bruiser,4500,64,99,1.1,35,0.95,6,2.2,2250,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,powerful but slow impacts.
+Z11M2,Shard Prowler,Hunter,4950,65,101,1.6,36,0.95,5.5,1.8,2475,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,leaps between marked positions.
+Z11M3,Dust Speaker,Caller,5400,67,104,1.0,37,0.95,8,2.4,2700,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons creatures through cracking ground.
+Z11M4,Granite Guard,Guardian,5850,69,106,1.1,37,0.95,7,2.5,2925,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,frontal plates and exposed sides.
+Z11M5,The Stone Maw,Signature,7500,70,108,1.0,38,0.95,7,2.2,3750,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z12M1,Wardbreaker,Bruiser,4810,69,106,1.1,37,0.95,6,2.2,2405,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,slams leave small contamination pools.
+Z12M2,Fever Hound,Hunter,5291,70,109,1.6,38,0.95,5.5,1.8,2646,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,lunges followed by a brief exhaustion window.
+Z12M3,Blight Nurse,Caller,5772,72,111,1.0,39,0.95,8,2.4,2886,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons and supports weak enemies.
+Z12M4,Isolation Guard,Guardian,6252,74,114,1.1,40,0.95,7,2.5,3126,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,protected front and a narrow spray attack.
+Z12M5,The Plague Matron,Signature,8016,76,117,1.0,41,0.95,7,2.2,4008,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z13M1,Vine Mauler,Bruiser,5126,74,114,1.1,40,0.95,6,2.2,2563,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,sweeping vine arms.
+Z13M2,Thorn Skipper,Hunter,5639,76,117,1.6,41,0.95,5.5,1.8,2820,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,marked leaps and scattered thorns.
+Z13M3,Seed Speaker,Caller,6152,77,120,1.0,42,0.95,8,2.4,3076,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons fragile seed pods.
+Z13M4,Glass Sentinel,Guardian,6664,79,123,1.1,43,0.95,7,2.5,3332,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,rotates a directional protective shell.
+Z13M5,The Glass Gardener,Signature,8544,81,125,1.0,44,0.95,7,2.2,4272,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z14M1,Pipehammer,Bruiser,5450,79,122,1.1,43,0.95,6,2.2,2725,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,"long, sweeping melee attacks."
+Z14M2,Spark Hound,Hunter,5995,81,125,1.6,44,0.95,5.5,1.8,2998,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,quick movement followed by delayed ignition.
+Z14M3,Fume Caller,Caller,6540,83,128,1.0,45,0.95,8,2.4,3270,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons small explosive enemies.
+Z14M4,Tank Sentinel,Guardian,7086,85,131,1.1,46,0.95,7,2.5,3543,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,frontal shielding and slow side attacks.
+Z14M5,The Oilbound,Signature,9084,87,134,1.0,47,0.95,7,2.2,4542,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z15M1,Roofbreaker,Bruiser,5782,84,130,1.1,46,0.95,6,2.2,2891,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,heavy landing attacks.
+Z15M2,Gutterwing,Hunter,6360,86,133,1.6,47,0.95,5.5,1.8,3180,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,rapid repositioning and short dives.
+Z15M3,Rooftop Caller,Caller,6938,88,137,1.0,48,0.95,8,2.4,3469,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons from visible ledges.
+Z15M4,Parapet Guard,Guardian,7516,91,140,1.1,49,0.95,7,2.5,3758,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,slow pressure with directional protection.
+Z15M5,The Sky Reaver,Signature,9636,93,143,1.0,51,0.95,7,2.2,4818,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z16M1,Spillway Brute,Bruiser,6120,90,139,1.1,49,0.95,6,2.2,3060,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,heavy directional slams.
+Z16M2,Current Runner,Hunter,6732,92,142,1.6,50,0.95,5.5,1.8,3366,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,fast sweeps along marked lanes.
+Z16M3,Turbine Caller,Caller,7344,94,145,1.0,51,0.95,8,2.4,3672,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons near inactive machinery.
+Z16M4,Gate Sentinel,Guardian,7956,96,149,1.1,53,0.95,7,2.5,3978,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,shielded stance followed by a vulnerable overhead strike.
+Z16M5,The Dam Keeper,Signature,10200,99,152,1.0,54,0.95,7,2.2,5100,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z17M1,Breach Hammer,Bruiser,6466,95,147,1.1,52,0.95,6,2.2,3233,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,close-range assault attacks.
+Z17M2,Redline Scout,Hunter,7112,98,151,1.6,53,0.95,5.5,1.8,3556,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,dashes between firing positions.
+Z17M3,Command Echo,Caller,7759,100,155,1.0,55,0.95,8,2.4,3880,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,calls coordinated reinforcement groups.
+Z17M4,Blastdoor Guard,Guardian,8405,102,158,1.1,56,0.95,7,2.5,4203,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,defensive stance and slow artillery shots.
+Z17M5,The Hollow Marshal,Signature,10776,105,162,1.0,57,0.95,7,2.2,5388,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z18M1,Breaker of Tides,Bruiser,6818,101,156,1.1,55,0.95,6,2.2,3409,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,heavy wave-shaped attacks.
+Z18M2,Stormstalker,Hunter,7500,103,160,1.6,56,0.95,5.5,1.8,3750,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,lightning-marked dashes.
+Z18M3,Squall Caller,Caller,8182,106,164,1.0,58,0.95,8,2.4,4091,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons a small airborne group.
+Z18M4,Thunder Guard,Guardian,8864,108,168,1.1,59,0.95,7,2.5,4432,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,directional shield and delayed electric strike.
+Z18M5,The Tempest Colossus,Signature,11364,111,172,1.0,61,0.95,7,2.2,5682,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z19M1,Rift Mauler,Bruiser,7178,107,165,1.1,58,0.95,6,2.2,3589,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,slams and marked ruptures.
+Z19M2,Veil Hunter,Hunter,7896,109,169,1.6,60,0.95,5.5,1.8,3948,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,telegraphed relocations and dashes.
+Z19M3,Echo Priest,Caller,8614,112,173,1.0,61,0.95,8,2.4,4307,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,summons weaker echoes of familiar enemies.
+Z19M4,Eclipse Sentinel,Guardian,9332,115,177,1.1,63,0.95,7,2.5,4666,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,rotates protection and attacks through exposed lanes.
+Z19M5,The Hollow Regent,Signature,11964,117,181,1.0,64,0.95,7,2.2,5982,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table
+Z20M1,Dawn Crusher,Bruiser,7546,113,174,1.1,61,0.95,6,2.2,3773,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,heavy attacks with changing directions.
+Z20M2,Last Shadow,Hunter,8300,116,179,1.6,63,0.95,5.5,1.8,4150,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,precision dashes and repositioning.
+Z20M3,Night Herald,Caller,9055,118,183,1.0,65,0.95,8,2.4,4528,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,carefully limited mixed summons.
+Z20M4,Crown Sentinel,Guardian,9809,121,187,1.1,66,0.95,7,2.5,4905,0,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,directional defenses and combined ranged/melee attacks.
+Z20M5,The Night Sovereign,Signature,12576,124,192,1.0,68,0.95,7,2.2,8803,4402,6,18,18,all-element resistance 0%; physical front30% only for Guardian; no immunity,See signature attack table

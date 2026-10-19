@@ -1,0 +1,41 @@
+ability,rank,branch,branch_name,rank_multiplier,impact_power,burn_total_power,cooldown_s,projectile_count,max_targets,range_or_radius_m,single_target_power_per_s_at_full_contact,evolution_name,evolution_pair,evolution_extra_power_per_cast,notes,internal_quality_grade,implementation_status
+ember,1,none,Learn,1.0,0.9,0.3,5,1,1,7,0.24,,,0,spread embers cannot shotgun,S,Implemented family; future normalized targets/crit/stacking rules proposed here
+ember,2,focus,Cinder Spear,1.25,1.35,0.28125,5,1,2,7,0.32625,,,0,spread embers cannot shotgun,S,Implemented family; future normalized targets/crit/stacking rules proposed here
+ember,2,spread,Ember Volley,1.25,0.73125,0.24375,5,2,1,7,0.195,,,0,spread embers cannot shotgun,S,Implemented family; future normalized targets/crit/stacking rules proposed here
+ember,3,focus,Cinder Spear,1.5,1.62,0.3375,5,1,2,7,0.3915,Wildfire Bolt,focus,0.2,spread embers cannot shotgun,S,Implemented family; future normalized targets/crit/stacking rules proposed here
+ember,3,spread,Ember Volley,1.5,0.8775,0.2925,5,2,1,7,0.234,Wildfire Bolt,focus,0.2,spread embers cannot shotgun,S,Implemented family; future normalized targets/crit/stacking rules proposed here
+frost,1,none,Learn,1.0,0.65,0.0,8,1,10,4.5,0.08125,,,0,see evolution rules,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+frost,2,focus,Cold Snap,1.25,1.05625,0.0,8,1,10,3.45,0.132031,,,0,see evolution rules,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+frost,2,spread,Winter Reach,1.25,0.65,0.0,8,1,10,5.7,0.08125,,,0,see evolution rules,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+frost,3,focus,Cold Snap,1.5,1.2675,0.0,8,1,10,3.45,0.158438,Winter Halo,vital,0,see evolution rules,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+frost,3,spread,Winter Reach,1.5,0.78,0.0,8,1,10,5.7,0.0975,Winter Halo,vital,0,see evolution rules,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+chain,1,none,Learn,1.0,0.7,0.0,7,1,3,6,0.1,,,0,additional chain hits cannot return to same enemy,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+chain,2,focus,Charged Arc,1.25,1.18125,0.0,7,1,3,4.2,0.16875,,,0,additional chain hits cannot return to same enemy,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+chain,2,spread,Forked Current,1.25,0.7,0.0,7,1,4,5.4,0.1,,,0,additional chain hits cannot return to same enemy,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+chain,3,focus,Charged Arc,1.5,1.4175,0.0,7,1,3,4.2,0.2025,Thunder Relay,mechanic,0,additional chain hits cannot return to same enemy,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+chain,3,spread,Forked Current,1.5,0.84,0.0,7,1,4,5.4,0.12,Thunder Relay,mechanic,0,additional chain hits cannot return to same enemy,A,Implemented family; future normalized targets/crit/stacking rules proposed here
+wisp,1,none,Learn,1.0,0.25,0.0,1.1,1,1,2.25,0.227273,,,0,shared 1.1 s per-target cooldown unaffected by CDR,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+wisp,2,focus,Hunting Wisp,1.25,0.421875,0.0,1.1,1,1,1.8,0.383523,,,0,shared 1.1 s per-target cooldown unaffected by CDR,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+wisp,2,spread,Twin Wisps,1.25,0.203125,0.0,1.1,2,1,2.25,0.184659,,,0,shared 1.1 s per-target cooldown unaffected by CDR,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+wisp,3,focus,Hunting Wisp,1.5,0.50625,0.0,1.1,1,1,1.8,0.460227,Soul Lantern,magnet,0,shared 1.1 s per-target cooldown unaffected by CDR,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+wisp,3,spread,Twin Wisps,1.5,0.24375,0.0,1.1,2,1,2.25,0.221591,Soul Lantern,magnet,0,shared 1.1 s per-target cooldown unaffected by CDR,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+lance,1,none,Learn,1.0,1.4,0.0,9,1,3,8,0.155556,,,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+lance,2,focus,Obsidian Needle,1.25,2.275,0.0,9,1,2,8,0.252778,,,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+lance,2,spread,Stone Fan,1.25,1.4,0.0,9,1,3,8,0.155556,,,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+lance,3,focus,Obsidian Needle,1.5,2.73,0.0,9,1,2,8,0.303333,Rift Spear,pierce,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+lance,3,spread,Stone Fan,1.5,1.68,0.0,9,1,3,8,0.186667,Rift Spear,pierce,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+ground,1,none,Learn,1.0,0.2,0.0,12,1,8,2.7,0.066667,,,0,four ticks/cast,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+ground,2,focus,Sanctum,1.25,0.3125,0.0,12,1,8,2.1,0.104167,,,0,four ticks/cast,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+ground,2,spread,Beacon Field,1.25,0.1875,0.0,12,1,8,3.6,0.0625,,,0,four ticks/cast,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+ground,3,focus,Sanctum,1.5,0.375,0.0,12,1,8,2.1,0.125,Sanctuary,vital,0,four ticks/cast,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+ground,3,spread,Beacon Field,1.5,0.225,0.0,12,1,8,3.6,0.075,Sanctuary,vital,0,four ticks/cast,C,Implemented family; future normalized targets/crit/stacking rules proposed here
+blades,1,none,Learn,1.0,0.55,0.0,6,2,2,7,0.183333,,,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+blades,2,focus,Spectral Daggers,1.25,0.825,0.0,6,2,2,7,0.275,,,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+blades,2,spread,Fan of Knives,1.25,0.48125,0.0,6,3,3,7,0.240625,,,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+blades,3,focus,Spectral Daggers,1.5,0.99,0.0,6,2,2,7,0.33,Phantom Flurry,quick,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+blades,3,spread,Fan of Knives,1.5,0.5775,0.0,6,3,3,7,0.28875,Phantom Flurry,quick,0,see evolution rules,B,Implemented family; future normalized targets/crit/stacking rules proposed here
+gravity,1,none,Learn,1.0,0.4,0.0,12,1,10,3.9,0.033333,,,0,see evolution rules,D,Implemented family; future normalized targets/crit/stacking rules proposed here
+gravity,2,focus,Crushing Knot,1.25,0.75,0.0,12,1,10,3,0.0625,,,0,see evolution rules,D,Implemented family; future normalized targets/crit/stacking rules proposed here
+gravity,2,spread,Wide Orbit,1.25,0.375,0.0,12,1,10,5.1,0.03125,,,0,see evolution rules,D,Implemented family; future normalized targets/crit/stacking rules proposed here
+gravity,3,focus,Crushing Knot,1.5,0.9,0.0,12,1,10,3,0.075,Collapsed Star,channel,0.2,see evolution rules,D,Implemented family; future normalized targets/crit/stacking rules proposed here
+gravity,3,spread,Wide Orbit,1.5,0.45,0.0,12,1,10,5.1,0.0375,Collapsed Star,channel,0.2,see evolution rules,D,Implemented family; future normalized targets/crit/stacking rules proposed here

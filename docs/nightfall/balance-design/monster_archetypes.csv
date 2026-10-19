@@ -1,0 +1,18 @@
+id,name,base_hp,base_hit,speed_m_s,range_m,telegraph_s,attack_cycle_s,combat_xp,spawn_cost,damage_type,resistance,first_zone,elite_bonus_combat_xp
+drifter,Drifter,48,10,1.1,0.65,0.35,1.4,1,1,physical,none,1,8
+runner,Rift Runner,32,8,2.8,0.6,0.55,2.0,1,1.1,physical,none,1,8
+spitter,Ash Spitter,40,12,0.8,6.0,0.9,3.4,2,1.5,fire,fire 10%,1,8
+plate,Plateback,95,16,0.85,0.85,0.85,2.8,3,2.8,physical,front physical 30%; rear 0%,2,8
+wisp,Hollow Wisp,30,10,1.6,5.0,0.85,3.2,2,1.5,arcane,arcane 10%,3,8
+drowner,Canal Drowner,58,13,1.0,3.5,1.0,4.0,2,1.8,frost,frost 10%,4,8
+volatile,Cinderling,24,20,1.6,1.3,1.2,5.0,2,1.8,fire,fire 15%,5,8
+briar,Briarhound,52,14,2.3,3.5,0.85,3.5,2,2,physical,none,6,8
+hook,Harpoon Husk,65,16,1.1,6.0,1.1,4.6,3,2.4,physical,none,7,8
+rime,Rime Stalker,62,14,1.5,4.0,1.0,4.2,3,2.2,frost,frost 15%,8,8
+siphoner,Signal Siphoner,50,12,1.0,5.0,1.1,4.5,3,2.4,lightning,lightning 15%,9,8
+shard,Shard Burrower,80,18,1.3,4.5,1.2,4.8,3,2.5,physical,physical 10%,11,8
+blight,Blight Attendant,60,12,0.9,5.0,1.0,4.8,3,2.5,toxin,toxin 15%,12,8
+prism,Prism Pod,55,15,0.55,5.5,1.2,4.2,3,2.3,arcane,arcane 15%,13,8
+wing,Gutterwing Skirmisher,48,16,2.1,4.0,1.0,4.1,3,2.3,physical,none,15,8
+marshal,Hollow Trooper,76,17,1.15,6.5,1.1,4.4,3,2.6,physical,physical 10%,17,8
+echo,Veil Echo,56,18,1.7,5.0,1.1,4.5,3,2.5,arcane,arcane 15%,19,8

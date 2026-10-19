@@ -186,6 +186,7 @@ func result() -> Dictionary:
 	var won := phase == "victory"
 	var loot: Array = field.banked_loot(won)
 	return {"victory": won, "credits": field.credits, "survivor_xp": survivor_xp,
+		"kills": kills, "seconds": elapsed, "progress_eligible": not practice and benchmark_count == 0,
 		"mastery_xp": mastery_xp, "loot": loot, "damage_taken": damage_taken,
 		"caches": field.caches_opened, "lost": field.bag.size() - loot.size(), "rescued": rescued}
 

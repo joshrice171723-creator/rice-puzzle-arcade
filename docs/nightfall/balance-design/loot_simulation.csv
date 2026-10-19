@@ -1,0 +1,5 @@
+band,cohorts,openings_per_cohort,seed,common_fraction,uncommon_fraction,rare_fraction,epic_fraction,legendary_fraction,median_first_epic_or_better,p90_first_epic_or_better,median_first_legendary,p90_first_legendary,note
+Zones1-5,20000,80,20261020,0.51997,0.2844,0.1568,0.03884,0.0,30,30,Unavailable,Unavailable,Includes pity overrides; not raw published odds or family guarantees
+Zones6-10,20000,80,20261020,0.29631,0.34534,0.28181,0.07654,0.0,10,30,Unavailable,Unavailable,Includes pity overrides; not raw published odds or family guarantees
+Zones11-15,20000,80,20261020,0.14994,0.29948,0.40916,0.14141,0.0,5,16,Unavailable,Unavailable,Includes pity overrides; not raw published odds or family guarantees
+AfterZone15,20000,80,20261020,0.14986,0.29969,0.37897,0.14034,0.03114,4,13,23,76,Includes pity overrides; not raw published odds or family guarantees

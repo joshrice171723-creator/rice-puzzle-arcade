@@ -1,0 +1,126 @@
+catalog,id,name,grade,score,impact,coverage,reliability,independence,counterplay,niche,status
+equipment,outrider_hood,Outrider Hood,B,77.0,2,4,5,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,outrider_vest,Outrider Vest,B,77.0,2,4,5,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,outrider_boots,Outrider Boots,B,77.0,2,4,5,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,outrider_trousers,Outrider Trousers,B,77.0,2,4,5,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,ironwatch_helm,Ironwatch Helm,S,91.0,4,4,5,5,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,ironwatch_cuirass,Ironwatch Cuirass,S,91.0,4,4,5,5,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,ironwatch_boots,Ironwatch Boots,S,91.0,4,4,5,5,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,ironwatch_greaves,Ironwatch Greaves,S,91.0,4,4,5,5,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,riftweaver_cowl,Riftweaver Cowl,A,83.0,4,4,5,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,riftweaver_robe,Riftweaver Robe,A,83.0,4,4,5,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,riftweaver_boots,Riftweaver Boots,A,83.0,4,4,5,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,riftweaver_leggings,Riftweaver Leggings,A,83.0,4,4,5,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,scrapwright_goggles,Scrapwright Goggles,D,54.0,3,2,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,scrapwright_apron,Scrapwright Apron,D,54.0,3,2,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,scrapwright_workboots,Scrapwright Workboots,D,54.0,3,2,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,scrapwright_overalls,Scrapwright Overalls,D,54.0,3,2,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,cinderweave_veil,Cinderweave Veil,C,62.0,3,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,cinderweave_mantle,Cinderweave Mantle,C,62.0,3,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,cinderweave_sabatons,Cinderweave Sabatons,C,62.0,3,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,cinderweave_legwraps,Cinderweave Legwraps,C,62.0,3,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,rimebound_mask,Rimebound Mask,C,65.0,3,2,4,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,rimebound_coat,Rimebound Coat,C,65.0,3,2,4,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,rimebound_snowshoes,Rimebound Snowshoes,C,65.0,3,2,4,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,rimebound_breeches,Rimebound Breeches,C,65.0,3,2,4,3,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,stormrunner_visor,Stormrunner Visor,B,77.0,3,4,4,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,stormrunner_jacket,Stormrunner Jacket,B,77.0,3,4,4,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,stormrunner_striders,Stormrunner Striders,B,77.0,3,4,4,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,stormrunner_chaps,Stormrunner Chaps,B,77.0,3,4,4,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,graveward_hood,Graveward Hood,C,68.0,3,3,3,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,graveward_tabard,Graveward Tabard,C,68.0,3,3,3,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,graveward_treads,Graveward Treads,C,68.0,3,3,3,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,graveward_leggings,Graveward Leggings,C,68.0,3,3,3,4,5,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,eclipse_circlet,Eclipse Circlet,C,67.0,4,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,eclipse_raiment,Eclipse Raiment,C,67.0,4,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,eclipse_walkers,Eclipse Walkers,C,67.0,4,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,eclipse_trousers,Eclipse Trousers,C,67.0,4,4,3,2,4,Four-slot set component; compare at equal rarity/level and account for completing a threshold.,Authored hypothesis; no player measurements
+equipment,service_pistol,Service Pistol,S,91.0,4,4,5,5,5,40 raw DPS; reliable aim,Authored hypothesis; no player measurements
+equipment,hunting_rifle,Hunting Rifle,B,78.0,4,3,4,4,5,40 raw DPS; 0.20 s reacquire cost after target change,Authored hypothesis; no player measurements
+equipment,ember_staff,Ember Staff,A,80.0,4,4,4,4,4,40 raw DPS at full burn; burn refresh preserves unspent damage; no stacked infinite burns,Authored hypothesis; no player measurements
+equipment,pump_shotgun,Pump Shotgun,D,55.0,3,3,2,3,3,40 raw DPS all pellets; average 3 pellets at 4 m is 24 DPS; shots pierce no targets,Authored hypothesis; no player measurements
+equipment,furnace_hammer,Furnace Hammer,C,64.0,3,4,3,3,3,40 single-target DPS; 0.25 s attack release delay; no player movement lock,Authored hypothesis; no player measurements
+equipment,runeblade,Runeblade,B,73.0,4,4,3,4,3,40 single-target DPS; strongest coverage requires proximity,Authored hypothesis; no player measurements
+equipment,salvage_repeater,Salvage Repeater,B,76.0,4,3,4,4,4,40 raw DPS; 10% spread outside 5 m; no ammunition economy,Authored hypothesis; no player measurements
+equipment,frost_bow,Frost Bow,A,82.0,4,4,4,4,5,40 raw DPS; chill 10% for 1.2 s; bosses 5%; strongest slow only,Authored hypothesis; no player measurements
+equipment,storm_scepter,Storm Scepter,B,70.0,3,5,3,3,4,28 single-target DPS; 40 across two; chain cannot return to initial enemy,Authored hypothesis; no player measurements
+equipment,railspike_lance,Railspike Lance,A,80.0,4,4,4,4,4,40 single-target DPS; second target 50% damage,Authored hypothesis; no player measurements
+equipment,quarry_maul,Quarry Maul,C,62.0,3,3,3,3,4,40 raw DPS; elite stagger 0.35 s once 8 s; boss stagger immune,Authored hypothesis; no player measurements
+equipment,purifier_carbine,Purifier Carbine,B,73.0,3,3,4,4,5,40 raw DPS; after three hits same enemy next burst converts 20% damage to fire; total unchanged,Authored hypothesis; no player measurements
+equipment,prism_wand,Prism Wand,B,71.0,4,4,3,3,4,40 raw DPS; one ricochet at 35% damage to other target; no boss wall bounce,Authored hypothesis; no player measurements
+equipment,vapor_torch,Vapor Torch,D,50.0,2,4,2,2,3,40 raw DPS; maximum 3 targets; after 2 s continuous attack 0.5 s vent so sustained 32 DPS,Authored hypothesis; no player measurements
+equipment,parapet_rifle,Parapet Rifle,C,67.0,4,3,3,3,4,40 raw DPS; +15% damage beyond 7 m; -15% below 4 m; no additive crit perk,Authored hypothesis; no player measurements
+equipment,pressure_harpoon,Pressure Harpoon,B,71.0,3,3,4,4,4,40 raw DPS; ordinary enemy pull 0.5 m; pulling heavy enemies disabled,Authored hypothesis; no player measurements
+equipment,marshal_carbine,Marshal Carbine,B,73.0,3,3,4,4,5,40 raw DPS; after Dodge first burst splits into 2 x 10 targeting two enemies; not double damage,Authored hypothesis; no player measurements
+equipment,tempest_fork,Tempest Fork,A,80.0,4,4,4,4,4,40 raw DPS; alternate hits fork 20% to one extra target; first hit never duplicates,Authored hypothesis; no player measurements
+equipment,hollow_edge,Hollow Edge,B,70.0,4,3,4,3,3,40 raw DPS; marked target takes full damage through front armor; other resists remain,Authored hypothesis; no player measurements
+equipment,dawn_beacon,Dawn Beacon,B,71.0,4,4,3,3,4,40 raw DPS; first shot after class power creates a 6%-max HP shield 4 s; internal cooldown 20 s,Authored hypothesis; no player measurements
+equipment,beacon_pendant,Beacon Pendant,C,60.0,1,1,5,4,5,No intrinsic modifier; +5 base HP preserves starter budget,Authored hypothesis; no player measurements
+equipment,beacon_ring,Beacon Ring,C,60.0,1,1,5,4,5,No intrinsic modifier; +5 base HP,Authored hypothesis; no player measurements
+equipment,hunter_s_sigil,Hunter's Sigil,A,82.0,3,4,5,4,5,+3 percentage points crit chance; consumes permanent 25% cap,Authored hypothesis; no player measurements
+equipment,switchyard_loop,Switchyard Loop,D,53.0,3,2,2,3,4,+8% flanking physical damage while behind target; no bonus against omnidirectional enemies,Authored hypothesis; no player measurements
+equipment,whisperglass_band,Whisperglass Band,D,50.0,1,2,3,3,5,Reveal disguised enemy outline within 6 m; -10% decoy incoming damage,Authored hypothesis; no player measurements
+equipment,tidal_token,Tidal Token,C,64.0,2,2,4,4,5,Slow duration on you -20%; never reduces telegraph or control immunity,Authored hypothesis; no player measurements
+equipment,ember_locket,Ember Locket,C,68.0,3,3,5,2,4,+4% fire damage; additive element budget,Authored hypothesis; no player measurements
+equipment,foundry_band,Foundry Band,B,77.0,2,3,5,5,5,+5 armor; consumes armor reduction cap,Authored hypothesis; no player measurements
+equipment,wayfinder_coin,Wayfinder Coin,A,82.0,3,4,5,4,5,+5% combat XP and +5% pickup; existing global caps apply,Authored hypothesis; no player measurements
+equipment,rootknot_ring,Rootknot Ring,E,46.0,2,2,2,3,3,Standing still 0.8 s grants 5%-max HP shield 3 s; cooldown 18 s; movement cancels charge,Authored hypothesis; no player measurements
+equipment,anchor_signet,Anchor Signet,D,59.0,1,2,4,4,5,Forced movement distance -20%; no immunity to attack damage,Authored hypothesis; no player measurements
+equipment,rime_rosary,Rime Rosary,C,65.0,2,2,5,3,5,+6% frost resistance,Authored hypothesis; no player measurements
+equipment,clockwork_seal,Clockwork Seal,A,87.0,4,4,5,4,5,+2% permanent spell cooldown reduction and +5% repair speed,Authored hypothesis; no player measurements
+equipment,conductor_loop,Conductor Loop,C,63.0,2,3,5,2,4,+3% lightning damage,Authored hypothesis; no player measurements
+equipment,stationkeeper_token,Stationkeeper Token,E,49.0,2,2,3,2,4,+8% turret attack range; no additional turret count,Authored hypothesis; no player measurements
+equipment,quarry_heart,Quarry Heart,B,74.0,3,3,5,4,3,+8 armor; -1% movement; cap-aware comparison required,Authored hypothesis; no player measurements
+equipment,graveward_bead,Graveward Bead,E,48.0,2,2,2,3,4,Health pickup overheal grants shield up to 4% max HP for 4 s; cooldown 12 s,Authored hypothesis; no player measurements
+equipment,prism_rosette,Prism Rosette,C,62.0,3,4,3,2,4,After applying two elements +4% spell damage 4 s; cooldown 10 s,Authored hypothesis; no player measurements
+equipment,refinery_coil,Refinery Coil,D,54.0,1,2,5,2,4,Burn duration +15% at unchanged total damage; improves status uptime only,Authored hypothesis; no player measurements
+equipment,reaver_feather,Reaver Feather,S,91.0,4,4,5,5,5,+2% movement and +2 percentage points crit chance,Authored hypothesis; no player measurements
+equipment,spillway_seal,Spillway Seal,C,64.0,2,3,4,3,5,+5% frost resistance; shield duration +0.5 s maximum,Authored hypothesis; no player measurements
+equipment,command_locket,Command Locket,D,53.0,2,3,3,2,4,+4% structure damage; does not buff player spells,Authored hypothesis; no player measurements
+equipment,tempest_band,Tempest Band,D,58.0,3,3,3,2,4,After Dodge next lightning hit +20% power; cooldown 12 s; proc cannot crit,Authored hypothesis; no player measurements
+equipment,hollow_prism,Hollow Prism,C,67.0,4,4,3,2,4,After three distinct elemental statuses next class power +15% damage or shield; cooldown 12 s,Authored hypothesis; no player measurements
+equipment,dawnkeeper_ring,Dawnkeeper Ring,A,80.0,3,3,5,5,4,Once per run crossing below 30% HP grants 6% max HP shield 5 s; no resurrection,Authored hypothesis; no player measurements
+equipment,field_medkit,Field Medkit,S,95.0,5,5,4,5,5,Auto at <=25% HP: heal 20% max HP once per run; Infirmary II 25%; no rarity/level increase,Authored hypothesis; no player measurements
+equipment,survey_lantern,Survey Lantern,B,73.0,2,3,5,4,5,Reveal containers and hidden foes within 10 m; +5% pickup; no permanent reward multiplier,Authored hypothesis; no player measurements
+equipment,repair_drone,Repair Drone,E,49.0,3,2,2,2,4,After 4 s without enemy within 5 m repair nearest structure 2% max HP/s for 4 s; cooldown 20 s; no player heal,Authored hypothesis; no player measurements
+equipment,decoy_beacon,Decoy Beacon,B,70.0,3,4,3,4,4,Auto below 35% HP distract up to 6 ordinary enemies for 3 s; twice per run at 30 s cooldown; bosses/elites immune,Authored hypothesis; no player measurements
+equipment,shock_mine_kit,Shock Mine Kit,C,66.0,3,4,3,3,4,Every second Dodge drops mine: 60% Power lightning in 1.5 m after 0.8 s; cooldown 12 s; maximum 1 mine; despawn 8 s,Authored hypothesis; no player measurements
+equipment,ash_filter,Ash Filter,C,69.0,3,2,4,4,5,Auto at toxin/fire ground hit: clear one ground damage over time and grant 2 s immunity to that patch; cooldown 30 s; initial hit still applies,Authored hypothesis; no player measurements
+equipment,purification_ampoule,Purification Ampoule,D,55.0,2,2,3,3,5,Auto at two distinct negative statuses: clear both; cooldown 35 s; twice per run; no heal,Authored hypothesis; no player measurements
+equipment,prism_compass,Prism Compass,C,64.0,2,2,4,4,5,Every 15 s highlights next safe lane and +5% pickup 4 s; hint only never erases attack,Authored hypothesis; no player measurements
+equipment,ward_projector,Ward Projector,A,87.0,4,3,5,5,5,Once at boss arrival shield 10% max HP 8 s; no replenishment from phase change,Authored hypothesis; no player measurements
+equipment,command_relay,Command Relay,C,66.0,3,4,3,3,4,After class power nearby one turret gains +10% damage 4 s; cooldown 20 s; if no turret next basic hit+20% Power,Authored hypothesis; no player measurements
+equipment,storm_grounder,Storm Grounder,D,58.0,3,2,3,3,4,Dodge leaves ground point 3 s; one incoming lightning projectile converts to 4% max HP shield; cooldown 20 s,Authored hypothesis; no player measurements
+equipment,beacon_anchor,Beacon Anchor,B,75.0,3,4,4,4,4,Once per run at <=20% HP slows ordinary enemies 20% for 3 s; bosses 5%; 6% max HP shield; no invulnerability,Authored hypothesis; no player measurements
+automatic_attack_ability,ember,ember,S,94.0,5,4,5,5,4,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+automatic_attack_ability,frost,frost,A,84.0,4,5,4,4,4,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+automatic_attack_ability,chain,chain,A,84.0,4,5,4,4,4,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+automatic_attack_ability,wisp,wisp,C,60.0,3,3,3,3,3,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+automatic_attack_ability,lance,lance,B,76.0,4,4,4,3,4,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+automatic_attack_ability,ground,ground,C,61.0,3,4,2,3,4,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+automatic_attack_ability,blades,blades,B,76.0,4,3,4,4,4,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+automatic_attack_ability,gravity,gravity,D,57.0,2,4,3,2,4,"Evaluated across single-target boss, mixed wave and movement-pressure contexts; branch tradeoffs remain separate.",Authored hypothesis; no player measurements
+set,outrider,Outrider,B,77.0,2,4,5,4,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,ironwatch,Ironwatch,S,91.0,4,4,5,5,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,riftweaver,Riftweaver,A,83.0,4,4,5,3,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,scrapwright,Scrapwright,D,54.0,3,2,3,2,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,cinderweave,Cinderweave,C,62.0,3,4,3,2,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,rimebound,Rimebound,C,65.0,3,2,4,3,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,stormrunner,Stormrunner,B,77.0,3,4,4,4,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,graveward,Graveward,C,68.0,3,3,3,4,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+set,eclipse,Eclipse,C,67.0,4,4,3,2,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,heavy_rounds,Heavy Rounds,B,78.0,3,3,5,4,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,quick_hands,Quick Hands,A,87.0,4,4,5,4,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,arcane_focus,Arcane Focus,A,83.0,4,4,5,3,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,vital_reserve,Vital Reserve,S,95.0,4,5,5,5,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,fleet_foot,Fleet Foot,S,90.0,4,5,4,5,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,field_mechanic,Field Mechanic,D,54.0,3,2,3,2,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,magnetic_harness,Magnetic Harness,A,86.0,3,4,5,5,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,piercing_shot,Piercing Shot,C,66.0,3,4,3,3,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+passive,efficient_channel,Efficient Channel,A,83.0,4,4,5,3,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+relic,emberleaf,Emberleaf,C,66.0,3,3,3,4,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+relic,obsidian_heart,Obsidian Heart,S,91.0,4,5,5,5,3,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+relic,storm_feather,Storm Feather,B,75.0,3,4,4,4,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+relic,wisp_lantern,Wisp Lantern,C,66.0,2,3,4,4,4,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+relic,moonstone,Moonstone,S,95.0,4,5,5,5,5,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
+relic,cinder_lens,Cinder Lens,B,79.0,4,4,5,3,3,Grade within this catalog; caps and opportunity cost apply.,Authored hypothesis; no player measurements
