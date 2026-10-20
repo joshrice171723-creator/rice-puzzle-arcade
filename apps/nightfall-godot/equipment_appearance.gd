@@ -67,8 +67,6 @@ static func item_preview(item: Dictionary) -> Texture2D:
 	if not FileAccess.file_exists(path):return null
 	var definition: Variant=JSON.parse_string(FileAccess.get_file_as_string(path))
 	var part_name: String={"helmet":"helmet","body":"torso","pants":"thigh","boots":"foot"}[item.slot]
-	if item.slot=="pants" and definition is Dictionary and definition.get("parts",{}).has("pants_preview"):
-		part_name="pants_preview"
 	if not definition is Dictionary or not definition.get("parts") is Dictionary or not definition.parts.has(part_name) or not ResourceLoader.exists(definition.get("texture","")):
 		return null
 	var source: Variant=load(definition.texture)

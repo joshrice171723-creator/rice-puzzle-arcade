@@ -3,7 +3,6 @@ extends RefCounted
 const Art = preload("res://haven_art.gd")
 const Content = preload("res://haven_content.gd")
 const MenuSkin = preload("res://menu_skin.gd")
-const Portrait = preload("res://class_portrait.gd")
 const HALL = preload("res://assets/class-showcase/hall.png")
 const CONTROLS = preload("res://assets/class-showcase/controls.png")
 const ORDER := ["scavenger", "warden", "arcanist", "engineer"]
@@ -106,12 +105,16 @@ static func show_page(home: Control) -> void:
 	page.add_child(hall_view)
 	var hall := Art.picture(hall_view, HALL, Rect2(0,-8,386,416))
 	hall.stretch_mode = TextureRect.STRETCH_SCALE
-	var hero := Portrait.new()
-	hero.name = "ClassHero"
-	hero.position = Vector2(58,35)
-	hero.size = Vector2(270,309)
+	var hero := TextureRect.new()
+	hero.name = "ClassCoverArt"
+	hero.position = Vector2(40,27)
+	hero.size = Vector2(306,310)
+	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero.texture = hero_texture(id)
+	hero.set_meta("cover_class", id)
 	page.add_child(hero)
-	hero.configure(hero_texture(id), id, home.profile.data.settings.reduced_effects,preload("res://equipment_appearance.gd").from_profile(home.profile,id))
 	var title := Art.picture(page, texture("ribbon"), Rect2(36,0,314,38))
 	title.stretch_mode = TextureRect.STRETCH_SCALE
 	caption(page,"Class",Rect2(66,0,254,35),25)

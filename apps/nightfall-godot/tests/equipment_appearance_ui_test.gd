@@ -3,6 +3,7 @@ const Profile=preload("res://profile.gd")
 const Appearance=preload("res://equipment_appearance.gd")
 const Rig=preload("res://layered_actor_rig.gd")
 const Actor=preload("res://gear_actor.gd")
+const Showcase=preload("res://class_showcase.gd")
 const PATH="user://nightfall_equipped_actor_ui_fixture.json"
 var checks:=0
 var failures:=0
@@ -107,11 +108,7 @@ func verify() -> void:
 			for slot in Appearance.ARMOR:
 				var part: String={"helmet":"helmet","body":"torso","pants":"thigh","boots":"foot"}[slot]
 				var gear:=Rig.definition("gear_"+look.slots[slot])
-				if slot=="pants" and gear.parts.has("thigh_l") and gear.parts.has("thigh_r"):
-					for side in ["l","r"]:
-						check(definition.parts["thigh_"+side].region==gear.parts["thigh_"+side].region,"Real rig single-leg substitution "+id+" "+side)
-				else:
-					check(definition.parts[part].region==gear.parts[part].region,"Real rig part substitution "+id+" "+slot)
+				check(definition.parts[part].region==gear.parts[part].region,"Real rig part substitution "+id+" "+slot)
 		home.navigate("gear")
 		await settle()
 		var equipped: Node2D=home.find_child("EquippedHero",true,false)
@@ -120,9 +117,9 @@ func verify() -> void:
 		home.inspected_class="scavenger"
 		home.navigate("class")
 		await settle()
-		var hero: Control=home.find_child("ClassHero",true,false)
-		check(hero.portrait.appearance==look,"Class showcase uses the same equipped actor")
-		check(hero.portrait.get_meta("layered_actor_id","")=="scavenger","Class showcase draws the articulated class rig")
+		var hero: TextureRect=home.find_child("ClassCoverArt",true,false)
+		check(hero.get_meta("cover_class","")=="scavenger" and hero.texture is Texture2D,"Class showcase uses the dedicated Scavenger cover art")
+		check(hero.find_child("ClassEquippedActor",true,false)==null and Showcase.hero_texture("scavenger") is AtlasTexture,"Class cover remains separate from the equipment and gameplay actor")
 		await capture("class-"+family+"-430")
 	for width in [430,320]:
 		root.size=Vector2i(width,760 if width==430 else 568)

@@ -136,11 +136,6 @@ static func definition_for_appearance(class_id: String, appearance: Dictionary =
 		var gear:=definition("gear_"+set_id)
 		var names: Array={"body":["torso","cape","upper_arm","forearm"],"pants":["thigh","hips"],"boots":["shin","foot"],"helmet":["helmet"]}[slot]
 		for part_name in names:
-			if part_name=="thigh" and gear.parts.has("thigh_l") and gear.parts.has("thigh_r"):
-				result.parts.erase("thigh")
-				for side in ["l","r"]:
-					result.parts["thigh_"+side]=gear.parts["thigh_"+side].duplicate(true)
-				continue
 			if gear.parts.has(part_name):
 				result.parts.erase(part_name+"_l")
 				result.parts.erase(part_name+"_r")

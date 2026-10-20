@@ -68,12 +68,8 @@ func _initialize() -> void:
 					var appearance:={"slots":{slot:style}}
 					var composed:=Rig.definition_for_appearance(id,appearance)
 					var gear:=Rig.definition("gear_"+style)
-					if slot=="pants" and gear.parts.has("thigh_l") and gear.parts.has("thigh_r"):
-						for side in ["l","r"]:
-							check(composed.parts["thigh_"+side].region==gear.parts["thigh_"+side].region,id+" selected pants use the matching single-leg atlas region")
-					else:
-						var part_name: String={"body":"torso","pants":"thigh","boots":"foot","helmet":"helmet"}[slot]
-						check(composed.parts[part_name].region==gear.parts[part_name].region,id+" selected"+slot+" uses the actual equipped set's atlas region")
+					var part_name: String={"body":"torso","pants":"thigh","boots":"foot","helmet":"helmet"}[slot]
+					check(composed.parts[part_name].region==gear.parts[part_name].region,id+" selected"+slot+" uses the actual equipped set's atlas region")
 					check(composed.texture==Rig.definition(id).texture,id+" mixed equipment retains one hero atlas texture")
 		for n in 128:
 			var styles:=["none","outrider","ironwatch","riftweaver"]
