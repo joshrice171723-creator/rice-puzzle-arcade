@@ -119,7 +119,7 @@ func verify() -> void:
 		await settle()
 		var hero: TextureRect=home.find_child("ClassCoverArt",true,false)
 		check(hero.get_meta("cover_class","")=="scavenger" and hero.texture is Texture2D,"Class showcase uses the dedicated Scavenger cover art")
-		check(hero.find_child("ClassEquippedActor",true,false)==null and Showcase.hero_texture("scavenger") is AtlasTexture,"Class cover remains separate from the equipment and gameplay actor")
+		check(hero.find_child("ClassEquippedActor",true,false)==null and Showcase.hero_texture("scavenger").resource_path.ends_with("assets/class-showcase/scavenger.png"),"Class cover remains separate from the equipment and gameplay actor")
 		await capture("class-"+family+"-430")
 	for width in [430,320]:
 		root.size=Vector2i(width,760 if width==430 else 568)

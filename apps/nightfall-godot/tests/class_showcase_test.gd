@@ -31,7 +31,7 @@ func run() -> void:
 		await process_frame
 		check(home.inspected_class == id,"Portrait selects the "+id+" preview")
 		hero=home.find_child("ClassCoverArt",true,false)
-		var expected_asset: String="assets/class-showcase/arcanist.png" if id=="arcanist" else "assets/class-showcase/roster.png"
+		var expected_asset: String="assets/class-showcase/scavenger.png" if id=="scavenger" else ("assets/class-showcase/arcanist.png" if id=="arcanist" else "assets/class-showcase/roster.png")
 		check(hero is TextureRect and hero.get_meta("cover_class","")==id and cover_source(hero.texture).ends_with(expected_asset),"Class page loads the "+id+" cover art independently")
 		check(home.body.get_global_rect().end.y <= home.navigation.position.y,"Showcase fits above navigation for "+id)
 		check(arena.profile.data == before,"Previewing "+id+" does not change the player's profile")

@@ -8,6 +8,12 @@ const CONTROLS = preload("res://assets/class-showcase/controls.png")
 const ORDER := ["scavenger", "warden", "arcanist", "engineer"]
 const REGIONS := {"blue": Rect2i(40,219,559,142), "gold": Rect2i(657,219,560,142), "portrait": Rect2i(82,662,480,467), "ribbon": Rect2i(627,836,606,123)}
 static var textures: Dictionary = {}
+static var scavenger_cover: Texture2D
+
+static func scavenger_cover_texture() -> Texture2D:
+	if scavenger_cover == null:
+		scavenger_cover = load("res://assets/class-showcase/scavenger.png")
+	return scavenger_cover
 
 static func texture(kind: String) -> Texture2D:
 	if not textures.has(kind):
@@ -44,6 +50,8 @@ static func action(button: Button, gold: bool = false, font_size: int = 19) -> v
 	button.add_theme_constant_override("outline_size", 3)
 
 static func hero_texture(id: String) -> Texture2D:
+	if id == "scavenger":
+		return scavenger_cover_texture()
 	if id == "arcanist" and ResourceLoader.exists("res://assets/class-showcase/arcanist.png"):
 		return load("res://assets/class-showcase/arcanist.png")
 	if ResourceLoader.exists("res://assets/class-showcase/roster.png"):
@@ -56,6 +64,12 @@ static func hero_texture(id: String) -> Texture2D:
 	return Art.hero(id)
 
 static func portrait_texture(id: String) -> Texture2D:
+	if id == "scavenger":
+		var scavenger_portrait := AtlasTexture.new()
+		scavenger_portrait.atlas = scavenger_cover_texture()
+		scavenger_portrait.region = Rect2(72,18,346,316)
+		scavenger_portrait.filter_clip = true
+		return scavenger_portrait
 	var source := hero_texture(id)
 	var atlas := AtlasTexture.new()
 	if source is AtlasTexture:
@@ -114,7 +128,12 @@ static func show_page(home: Control) -> void:
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hero.texture = hero_texture(id)
 	hero.set_meta("cover_class", id)
+	hero.pivot_offset = Vector2(hero.size.x * 0.5, hero.size.y)
 	page.add_child(hero)
+	# Keep the full cover intact while giving the hero a calm, readable life sign.
+	var idle := page.create_tween().set_loops()
+	idle.tween_property(hero, "position:y", 30.0, 1.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	idle.tween_property(hero, "position:y", 27.0, 1.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	var title := Art.picture(page, texture("ribbon"), Rect2(36,0,314,38))
 	title.stretch_mode = TextureRect.STRETCH_SCALE
 	caption(page,"Class",Rect2(66,0,254,35),25)
