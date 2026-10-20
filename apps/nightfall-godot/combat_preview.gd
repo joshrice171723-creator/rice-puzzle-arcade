@@ -12,6 +12,7 @@ var elapsed := 0.0
 var stage_elapsed := 0.0
 var campaign := false
 var contract := false
+var manual_input := false
 var finished := false
 var frames: Array[float] = []
 var samples: Array[Dictionary] = []
@@ -35,6 +36,7 @@ func _ready() -> void:
 		var mode := FileAccess.get_file_as_string("user://combat-preview.flag").strip_edges()
 		campaign = mode == "campaign"
 		contract = mode == "contract"
+		manual_input = mode == "input"
 	caption = Label.new()
 	caption.position = Vector2(12,602)
 	caption.add_theme_font_size_override("font_size",11)
@@ -42,6 +44,11 @@ func _ready() -> void:
 	caption.add_theme_constant_override("outline_size",4)
 	arena.hud_root.get_parent().add_child(caption)
 	configure(0)
+	if manual_input:
+		arena.run.enemies.clear()
+		arena.run.spawn_wait = 3600
+		arena.run.spells.clear()
+		caption.text = "Arrow-key check • isolated review profile"
 
 func record() -> void:
 	if frames.is_empty():
@@ -142,6 +149,13 @@ static func steer(run: RefCounted) -> Vector2:
 
 func _process(delta: float) -> void:
 	if finished:
+		return
+	if manual_input:
+		elapsed += delta
+		if elapsed >= report_at:
+			report_at = elapsed+0.25
+			var file := FileAccess.open("user://arrow-input-review.json",FileAccess.WRITE)
+			file.store_string(JSON.stringify({"x":arena.run.player.x,"y":arena.run.player.y,"seconds":elapsed}))
 		return
 	elapsed += delta
 	stage_elapsed += delta

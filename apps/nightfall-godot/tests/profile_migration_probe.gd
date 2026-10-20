@@ -32,7 +32,7 @@ func _initialize()->void:
 		run.configure(profile.data.active_attempt.mission,profile.stats())
 		check(run.restore(saved),"Actual saved expedition resumes under expanded world rules")
 		check(run.BOUNDS.has_point(run.player) and run.elapsed==saved.combat.elapsed and run.kills==saved.combat.kills,"Resume preserves elapsed time and kills, with reachable world coordinates")
-		check(run.snapshot().world_version==2,"Resaved expedition carries world migration marker")
+		check(run.snapshot().world_version==3,"Resaved expedition carries world migration marker")
 	check(FileAccess.get_file_as_string(args[0])==source,"Read-only migration probe never rewrites the backup")
 	print("Actual profile migration: %d checks, %d failures" %[checks,failures])
 	quit(1 if failures else 0)

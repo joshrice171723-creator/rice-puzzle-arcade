@@ -111,7 +111,7 @@ static func show_page(home: Control) -> void:
 	hero.position = Vector2(58,35)
 	hero.size = Vector2(270,309)
 	page.add_child(hero)
-	hero.configure(hero_texture(id), id, home.profile.data.settings.reduced_effects)
+	hero.configure(hero_texture(id), id, home.profile.data.settings.reduced_effects,preload("res://equipment_appearance.gd").from_profile(home.profile,id))
 	var title := Art.picture(page, texture("ribbon"), Rect2(36,0,314,38))
 	title.stretch_mode = TextureRect.STRETCH_SCALE
 	caption(page,"Class",Rect2(66,0,254,35),25)

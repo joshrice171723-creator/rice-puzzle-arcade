@@ -13,7 +13,7 @@ func _initialize() -> void:
  var profile = Profile.new("user://neighborhood_rules_fixture.json")
  var run = Run.new(8)
  run.configure(1,profile.stats())
- check(Run.BOUNDS.get_area() == 4*930*930,"Walkable neighborhood is four times the original area")
+ check(Run.BOUNDS.size.x/Run.World.HERO_SPEED>=65,"Walking across the neighborhood takes over a minute at base speed")
  var start: Vector2 = run.player
  run.spawn_wait=10;run.fire_wait=10
  run.tick(0.25,Vector2.RIGHT)
@@ -71,7 +71,7 @@ func _initialize() -> void:
  original.combat_xp.attack=240.0
  var old: Dictionary=original.snapshot()
  old.erase("world_version");old.erase("exp_curve")
- for site: Dictionary in old.field.sites:site.pos*=0.5
+ for site: Dictionary in old.field.sites:site.pos*=0.2
  var resumed=Run.new()
  resumed.configure(1,profile.stats())
  check(resumed.restore(old),"Pre-expansion checkpoint resumes")
@@ -79,7 +79,18 @@ func _initialize() -> void:
  var again=Run.new()
  again.configure(1,profile.stats())
  check(again.restore(resumed.snapshot()) and again.player==resumed.player and again.combat_xp==resumed.combat_xp,"Repeated save/load cannot multiply coordinates or training")
- old.player=Vector2(135,150)
+ var version_two: Dictionary=original.snapshot()
+ version_two.world_version=2
+ version_two.combat.player=Vector2(1200,1200)
+ for site: Dictionary in version_two.field.sites:site.pos/=2.5
+ var expanded_again=Run.new()
+ expanded_again.configure(1,profile.stats())
+ check(expanded_again.restore(version_two) and expanded_again.player==Run.World.CENTER and expanded_again.combat_xp.attack==240,"Previous neighborhood save expands without changing already migrated XP")
+ check(expanded_again.snapshot().world_version==3,"Expanded perimeter writes current world version")
+ var expanded_once=Run.new()
+ expanded_once.configure(1,profile.stats())
+ check(expanded_once.restore(expanded_again.snapshot()) and expanded_once.player==expanded_again.player,"World-three checkpoint is not expanded again")
+ old.combat.player=Neighborhood.entries()[0].footprint.get_center()/5.0
  var edge_resume=Run.new()
  edge_resume.configure(1,profile.stats())
  check(edge_resume.restore(old) and not Neighborhood.entries()[0].footprint.grow(10).has_point(edge_resume.player) and edge_resume.player==edge_resume.clamp_position(edge_resume.player),"Legacy left-edge checkpoint resolves into walkable space")

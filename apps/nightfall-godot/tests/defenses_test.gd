@@ -31,7 +31,7 @@ func _initialize() -> void:
 	r.defenses.structures[0].hp = 0
 	r.defenses.tick(0, r)
 	check(r.defenses.used_capacity() == 5, "Destroyed structures release capacity")
-	r.player = r.World.CENTER + Vector2(-180, -280)
+	r.player = r.field.sites[0].pos - r.facing * 90.0
 	check(not r.place_structure("barricade"), "Structures cannot obstruct shrine activation rings")
 	r.player = r.World.BOUNDS.end - Vector2(10, 0)
 	check(not r.place_structure("barricade"), "Placement cannot leave arena bounds")

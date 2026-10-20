@@ -92,6 +92,26 @@ func verify() -> void:
 		arena.run.spells.clear()
 		marked(arena.modal_body,"reward_card_action")[0].pressed.emit()
 		check(arena.run.spells.has("ember") and arena.run.phase == "waves","Card learns the selected automatic attack")
+		for group in [["wisp","ground","gravity"],["ember","frost","chain"],["rounds","mechanic","pierce"]]:
+			arena.run.phase = "upgrade"
+			arena.run.spells.clear()
+			arena.run.passives = {"focus":1,"vital":1,"mechanic":1,"magnet":1,"channel":1}
+			arena.run.offers.clear()
+			for id in group:
+				if arena.run.Content.SPELLS.has(id):
+					arena.run.offers.append(arena.run.spell_offer(id,3))
+				else:
+					var info: Dictionary=arena.run.Content.PASSIVES[id]
+					arena.run.offers.append({"id":id,"name":info.name+" • Rank 1/3","description":info.description})
+			arena.last_screen = ""
+			arena.update_modal()
+			await settle()
+			check(root.get_visible_rect().encloses(arena.modal.get_global_rect()),"Long evolved/passive choices fit phone")
+			for card in marked(arena.modal_body,"reward_card"):
+				var description: Label=card.find_child("RewardDescription",true,false)
+				check(description!=null and card.get_global_rect().encloses(description.get_global_rect()),"Full description is visible without inner scrolling")
+			if group[0]=="wisp":await screenshot("evolved-powers-"+str(dimensions.x))
+		arena.run.passives.clear()
 	field.active_site = -1
 	arena.run.player = Vector2(600,500)
 	arena.run.phase = "waves"

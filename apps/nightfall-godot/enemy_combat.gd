@@ -77,6 +77,9 @@ static func tick(run: RefCounted, enemy: Dictionary, delta: float) -> void:
 	enemy.motion = float(enemy.get("motion", 0.0)) + pos.distance_to(enemy.pos) * 0.16
 	enemy.moving = pos.distance_squared_to(enemy.pos) > 0.001
 	enemy.velocity = (enemy.pos-pos)/maxf(delta,0.0001)
+	enemy.motion_blend = move_toward(float(enemy.get("motion_blend",0.0)),1.0 if enemy.moving else 0.0,delta*8.0)
+	if enemy.moving:
+		enemy.motion_direction = enemy.velocity.normalized()
 
 static func next_attack(run: RefCounted, enemy: Dictionary) -> String:
 	if enemy.boss:

@@ -89,14 +89,10 @@ func _ready() -> void:
 	heading.add_theme_color_override("font_shadow_color", Color("203586"))
 	heading.add_theme_constant_override("shadow_offset_y", 2)
 	add_child(heading)
-	var settings := button("", func(): navigate("settings"), self, 36)
-	settings.position = Vector2(385, 14)
-	settings.size.x = 33
-	settings.icon = Art.item("parts")
-	settings.expand_icon = true
-	settings.add_theme_constant_override("icon_max_width", 24)
-	settings.tooltip_text = "Settings"
-	MenuSkin.action(settings)
+	var settings := bare_icon("Settings", Art.item("parts"), func(): navigate("settings"), self, 31)
+	settings.name = "SettingsButton"
+	settings.position = Vector2(382, 8)
+	settings.size = Vector2(44, 44)
 	wallet = HBoxContainer.new()
 	wallet.position = Vector2(168, 15)
 	wallet.size = Vector2(211, 34)
@@ -202,6 +198,26 @@ func icon_button(label: String, art_id: String, action: Callable, parent: Node, 
 	node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return node
 
+## Art itself is the click target. No painted frame in any interaction state.
+func bare_icon(label: String, image: Texture2D, action: Callable, parent: Node, image_size: int = 60) -> Button:
+	var node := button("", action, parent, maxi(44, image_size + 8))
+	node.tooltip_text = label
+	node.icon = image
+	node.expand_icon = true
+	node.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	node.add_theme_constant_override("icon_max_width", image_size)
+	node.custom_minimum_size.x = maxi(44, image_size + 8)
+	node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	node.set_meta("icon_only", true)
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		node.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	node.add_theme_color_override("icon_normal_color", Color.WHITE)
+	node.add_theme_color_override("icon_hover_color", Color("b9eaff"))
+	node.add_theme_color_override("icon_focus_color", Color("ffe09b"))
+	node.add_theme_color_override("icon_pressed_color", Color("82acd9"))
+	node.add_theme_color_override("icon_disabled_color", Color("687a9c"))
+	return node
+
 func style(fill: Color, border: Color = Color("428ee0")) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = fill
@@ -249,6 +265,10 @@ func page_heading(parent: Node, text: String) -> void:
 	MenuSkin.label(ribbon, text, 25, Color.WHITE, true)
 
 func item_texture(slot: String, equipment: Dictionary = {}) -> Texture2D:
+	if not equipment.is_empty():
+		var wearable: Texture2D=preload("res://equipment_appearance.gd").item_preview(equipment)
+		if wearable!=null:
+			return wearable
 	if slot == "weapon" and not equipment.is_empty():
 		var family: String = preload("res://weapons.gd").family(equipment)
 		if Art.WEAPON_ICONS.has(family):
@@ -388,7 +408,9 @@ func mission_page() -> void:
 	var heading := HBoxContainer.new()
 	body.add_child(heading)
 	page_heading(heading, "Expedition")
-	button("Zones", func(): navigate("zones"), heading, 36).custom_minimum_size.x = 72
+	var zones := bare_icon("Zone map", Art.icon("mission"), func(): navigate("zones"), heading, 40)
+	zones.name = "ZoneMapButton"
+	zones.size_flags_horizontal = Control.SIZE_SHRINK_END
 	MenuSkin.label(body, "%d · %s" % [zone_index+1,ZONES[zone_index]], 21, Color("ffe4a5"), true)
 	var stage := Control.new()
 	stage.custom_minimum_size.y = 138 if not profile.data.active_attempt.is_empty() else 194
@@ -405,6 +427,9 @@ func mission_page() -> void:
 	next.name = "NextZone"
 	next.disabled = zone_index == ZONES.size()-1
 	next.tooltip_text = "Next zone"
+	for arrow in [previous, next]:
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+			arrow.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	if zone_index != 0:
 		MenuSkin.label(body,"Uncharted zone",24,Color("ffe4a5"),true)
 		MenuSkin.label(body,"This region is planned. Its missions and map are not available yet.",16,Color("d7e6ff"))
@@ -434,19 +459,17 @@ func mission_page() -> void:
 	MenuSkin.label(body, "%d. %s" % [mission, definition.name], 22, Color.WHITE, true)
 	MenuSkin.label(body, "Survive 4 minutes · Defeat " + definition.boss, 13, Color("d7e6ff"), true)
 	var modes := HBoxContainer.new()
-	modes.add_theme_constant_override("separation", 8)
+	modes.alignment = BoxContainer.ALIGNMENT_CENTER
+	modes.add_theme_constant_override("separation", 20)
 	body.add_child(modes)
-	icon_button("Salvage contracts", "quartermaster", func(): navigate("contracts"), modes, 67).add_theme_constant_override("icon_max_width", 38)
-	icon_button("Boss training", "training", func(): navigate("training"), modes, 67).add_theme_constant_override("icon_max_width", 38)
-	var rewards := HBoxContainer.new()
-	rewards.add_theme_constant_override("separation", 8)
-	body.add_child(rewards)
-	var chest := button("Rewards · %d/15" % profile.total_medals(), func(): navigate("rewards"), rewards, 44)
-	chest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chest.icon = item_texture("chest")
-	chest.expand_icon = true
-	chest.add_theme_constant_override("icon_max_width", 35)
-	button("Daily objectives", func(): navigate("daily"), rewards, 44).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var contracts := bare_icon("Salvage contracts", Art.icon("quartermaster"), func(): navigate("contracts"), modes)
+	contracts.name = "SalvageContracts"
+	var training := bare_icon("Boss training", Art.icon("training"), func(): navigate("training"), modes)
+	training.name = "BossTraining"
+	var chest := bare_icon("Mastery rewards · %d/15 medals" % profile.total_medals(), item_texture("chest"), func(): navigate("rewards"), modes)
+	chest.name = "MasteryRewards"
+	var daily := bare_icon("Daily objectives", Art.icon("arcanum"), func(): navigate("daily"), modes)
+	daily.name = "DailyObjectives"
 	if not profile.data.active_attempt.is_empty():
 		var resume := button("Resume expedition", func(): resume_requested.emit(), null, 48)
 		MenuSkin.action(resume, "gold")
@@ -492,6 +515,7 @@ func gear_page() -> void:
 	hero.name = "EquippedHero"
 	hero.class_id = profile.data["class"]
 	hero.weapon_family = profile.stats().weapon
+	hero.appearance = profile.stats().appearance
 	hero.reduced = profile.data.settings.reduced_effects
 	hero.position = Vector2(183,211)
 	hero.scale = Vector2.ONE*2.6
@@ -665,11 +689,16 @@ func haven_page() -> void:
 	scene.custom_minimum_size.y = 328
 	body.add_child(scene)
 	Art.picture(scene, preload("res://assets/polish-v2/haven-island.png"), Rect2(-4, -13, 394, 343))
-	var hero := Art.picture(scene, Art.hero(profile.data["class"]), Rect2(163, 162, 68, 86))
-	hero.pivot_offset = Vector2(34, 80)
+	var hero := preload("res://gear_actor.gd").new()
+	hero.name = "BaseEquippedHero"
+	hero.class_id = profile.data["class"]
+	hero.weapon_family = profile.stats().weapon
+	hero.appearance = profile.stats().appearance
+	hero.reduced = profile.data.settings.reduced_effects
+	hero.position = Vector2(197,242)
+	scene.add_child(hero)
 	if not profile.data.settings.reduced_effects:
 		MenuMotion.island(scene, fitted_art_rect(preload("res://assets/polish-v2/haven-island.png"), Rect2(-4,-13,394,343)))
-		MenuMotion.hero(hero)
 	for entry in [["workshop", Vector2(67, 123)], ["infirmary", Vector2(279, 104)], ["quartermaster", Vector2(286, 245)]]:
 		var id: String = entry[0]
 		var node := button("II" if profile.data.facilities[id] == 2 else "I", func(): facility = id; page = "facility"; rebuild(), scene, 40)

@@ -36,6 +36,18 @@ func verify() -> void:
 		released.pressed=false;Input.parse_input_event(released)
 		Input.flush_buffered_events()
 	check(arena.touch_id==-1 and not arena.mouse_stick,"Keyboard leaves the floating stick hidden")
+	for pair in [[KEY_UP,Vector2.UP],[KEY_LEFT,Vector2.LEFT],[KEY_DOWN,Vector2.DOWN],[KEY_RIGHT,Vector2.RIGHT]]:
+		arena.run.player=arena.run.World.CENTER
+		var event=InputEventKey.new()
+		event.keycode=pair[0];event.pressed=true
+		Input.parse_input_event(event);Input.flush_buffered_events()
+		arena._physics_process(0.1)
+		check((arena.run.player-arena.run.World.CENTER).normalized().is_equal_approx(pair[1]),"Logical Android arrow moves: "+OS.get_keycode_string(pair[0]))
+		var released=event.duplicate()
+		released.pressed=false;Input.parse_input_event(released);Input.flush_buffered_events()
+		var stopped: Vector2=arena.run.player
+		arena._physics_process(0.1)
+		check(arena.run.player==stopped,"Released logical arrow stops movement")
 	for origin in [Vector2(95,280),Vector2(340,310),Vector2(180,500)]:
 		root.push_input(touch(origin,true),true)
 		check(arena.touch_id==0 and arena.stick_origin==origin,"Touch anchors the stick at any free part of the field")

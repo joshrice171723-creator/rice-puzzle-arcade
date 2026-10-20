@@ -15,6 +15,7 @@ const RELICS := {
 const TRAIT_COSTS := [30, 45, 65]
 const RADIUS := 60.0
 const SHRINE_RADIUS := 145.0
+const LOOT_PICKUP_RADIUS := 72.0
 
 static func interaction_center(site: Dictionary) -> Vector2:
 	return site.pos + (Vector2.ZERO if site.kind == "cache" else Vector2(0,70))
@@ -48,7 +49,7 @@ func _init(seed_value: int = 41) -> void:
 		["cache", Vector2(810, 350), "Abandoned Tool Chest", 1.5],
 		["cache", Vector2(320, 900), "Outrider's Pack", 1.5],
 		["cache", Vector2(920, 620), "Sealed Supply Crate", 1.5]]:
-		sites.append({"kind": entry[0], "pos": entry[1]*2.0, "name": entry[2], "duration": entry[3],
+		sites.append({"kind": entry[0], "pos": entry[1]*5.0, "name": entry[2], "duration": entry[3],
 			"progress": 0.0, "away": 0.0, "cooldown": 0.0, "opened": false,
 			"must_leave": false, "offers": [], "rerolls": 0})
 
@@ -58,7 +59,7 @@ func available(site: Dictionary) -> bool:
 func tick(delta: float, position: Vector2, charge_speed: float = 1.0) -> bool:
 	if active_site >= 0:
 		return false
-	collect_drops(position, 36.0)
+	collect_drops(position, LOOT_PICKUP_RADIUS)
 	for index in sites.size():
 		var site := sites[index]
 		site.cooldown = maxf(0, site.cooldown - delta)

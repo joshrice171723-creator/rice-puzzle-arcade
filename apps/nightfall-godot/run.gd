@@ -6,6 +6,7 @@ const Projectiles = preload("res://combat_projectiles.gd")
 const EnemyCombat = preload("res://enemy_combat.gd")
 const Training = preload("res://combat_progression.gd")
 const TalentEffects = preload("res://talent_effects.gd")
+const Appearance = preload("res://equipment_appearance.gd")
 const DURATION := 240.0
 const Content = preload("res://combat_content.gd")
 const Field = preload("res://field.gd")
@@ -16,6 +17,7 @@ const Salvage = preload("res://salvage.gd")
 const Talents = preload("res://class_talents.gd")
 const MAX_ENEMIES := 120
 const MAX_SHOTS := 64
+const BASE_PICKUP_RADIUS := 140.0
 const World = preload("res://world_geometry.gd")
 const BOUNDS := World.BOUNDS
 var rng := RandomNumberGenerator.new()
@@ -63,6 +65,7 @@ var mastery_xp := 0
 var combat_xp := Training.fresh()
 var training_style := "accurate"
 var talent_effects := TalentEffects.normalized({})
+var appearance := Appearance.fresh()
 var training_bonuses := Training.bonuses(Training.fresh())
 var mission := 0
 var duration := DURATION
@@ -130,6 +133,9 @@ func configure(mission_number: int, stats: Dictionary) -> void:
 	field.secure_capacity = stats.secure
 	medkit_fraction = stats.medkit
 	class_id = stats["class"]
+	appearance = stats.appearance.duplicate(true) if Appearance.valid(stats.get("appearance")) else Appearance.fresh(class_id,weapon_id)
+	appearance["class"] = class_id
+	appearance.weapon = weapon_id
 	available_spells = stats.get("ability_pool", Content.SPELLS.keys()).duplicate()
 	blueprints.assign(stats.get("blueprints", ["barricade", "trap"]))
 	mastery_level = stats.get("mastery", 0)
@@ -153,11 +159,11 @@ func snapshot() -> Dictionary:
 	var exploration := {}
 	for key in FIELD_KEYS:
 		exploration[key] = field.get(key)
-	return {"version": 1, "world_version": 2, "exp_curve": 2, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
+	return {"version": 1, "world_version": 3, "exp_curve": 2, "combat": values.duplicate(true), "field": exploration.duplicate(true), "rng": rng.state, "field_rng": field.rng.state, "rescued": rescued,
 		"defenses": defenses.structures.duplicate(true), "next_structure": defenses.next_id, "blueprints": blueprints.duplicate(), "mastery": mastery_level,
 		"passives": passives.duplicate(true), "offer_rng": offer_rng.state, "zones": zones.duplicate(true), "wisp_hits": wisp_hits.duplicate(), "permanent_cooldown": permanent_cooldown,
 		"reinforcements_spawned": reinforcements_spawned, "offer_back": offer_back.duplicate(true),
-		"talent_effects":talent_effects.duplicate(true), "combat_xp": combat_xp.duplicate(), "training_style": training_style, "training_bonuses": training_bonuses.duplicate(),
+		"appearance":appearance.duplicate(true), "talent_effects":talent_effects.duplicate(true), "combat_xp": combat_xp.duplicate(), "training_style": training_style, "training_bonuses": training_bonuses.duplicate(),
 		"mode": mode, "extract_progress": extract_progress, "target_slot": target_slot, "target_weapon": target_weapon, "talents": talents.snapshot(), "available_spells": available_spells.duplicate(), "equipment_spell_bonus": equipment_spell_bonus, "weapon": weapon_id, "pickup_xp": experience_values}
 
 func restore(saved: Dictionary) -> bool:
@@ -171,6 +177,11 @@ func restore(saved: Dictionary) -> bool:
 	if not Training.valid(saved.get("combat_xp", Training.fresh())) or saved.get("training_style", "accurate") not in Training.STYLES:
 		return false
 	if not Training.valid_bonuses(saved.get("training_bonuses", Training.bonuses(Training.fresh()))):
+		return false
+	if saved.combat.get("class_id") not in Haven.CLASSES or saved.get("weapon","pistol") not in Weapons.TYPES:
+		return false
+	var saved_appearance: Variant = saved.get("appearance",Appearance.fresh(saved.combat.get("class_id","scavenger"),saved.get("weapon","pistol")))
+	if not Appearance.valid(saved_appearance) or saved_appearance["class"] != saved.combat.get("class_id") or saved_appearance.weapon != saved.get("weapon","pistol"):
 		return false
 	for key in SNAPSHOT_KEYS:
 		if not saved.combat.has(key) or typeof(saved.combat[key]) != typeof(get(key)):
@@ -229,24 +240,25 @@ func restore(saved: Dictionary) -> bool:
 	talent_effects = TalentEffects.normalized(saved.get("talent_effects",{}))
 	training_bonuses = saved.get("training_bonuses", Training.bonuses(Training.fresh())).duplicate()
 	weapon_id = saved.get("weapon", "pistol")
+	appearance = saved_appearance.duplicate(true)
 	pickup_xp.assign(saved.get("pickup_xp", []))
 	sync_pickup_values()
-	if saved.get("world_version",1) < 2:
-		migrate_world()
+	if saved.get("world_version",1) < 3:
+		migrate_world(5.0 if saved.get("world_version",1) < 2 else 2.5)
 	paused = true
 	vfx_events.clear()
 	return true
 
-func migrate_world() -> void:
-	player *= 2.0
+func migrate_world(scale_factor: float) -> void:
+	player *= scale_factor
 	for collection in [enemies, shots, hostile_shots, field.sites, field.drops, defenses.structures, zones]:
 		for item: Dictionary in collection:
 			for key in ["pos","target"]:
-				if item.get(key) is Vector2: item[key] *= 2.0
+				if item.get(key) is Vector2: item[key] *= scale_factor
 	for effect: Dictionary in effects:
 		for key in ["from","to"]:
-			if effect.get(key) is Vector2: effect[key] *= 2.0
-	for index in pickups.size(): pickups[index] *= 2.0
+			if effect.get(key) is Vector2: effect[key] *= scale_factor
+	for index in pickups.size(): pickups[index] *= scale_factor
 	player = move_body(player,player,10)
 	for enemy: Dictionary in enemies:
 		enemy.pos = move_body(enemy.pos,enemy.pos,24 if enemy.boss else 13)
@@ -422,7 +434,8 @@ func separate_enemies(delta: float) -> void:
 					if distance < spacing:
 						var away := offset / distance if distance > 0.01 else Vector2.RIGHT.rotated(enemy.id * 2.39996)
 						push += away * (spacing - distance)
-		enemy.pos = move_body(enemy.pos, enemy.pos + push.limit_length(35.0) * delta * 2.0, 13)
+		if push.length_squared() > 0.0001:
+			enemy.pos = move_body(enemy.pos, enemy.pos + push.limit_length(35.0) * delta * 2.0, 13)
 
 func max_health() -> float:
 	return base_health * (field.health_multiplier() + 0.08 * passive_rank("vital"))
@@ -861,8 +874,8 @@ func tick(delta: float, direction: Vector2) -> void:
 	if phase not in ["waves", "boss"]:
 		return
 	for i in range(pickups.size() - 1, -1, -1):
-		if pickups[i].distance_to(player) < 70.0 * field.pickup_multiplier() * pickup_multiplier * (1.0 + 0.2 * passive_rank("magnet") + (0.2 if spells.get("wisp", {}).get("evolved", false) else 0.0)):
-			pickups[i] = pickups[i].move_toward(player, 220.0 * delta)
+		if pickups[i].distance_to(player) < experience_pickup_radius():
+			pickups[i] = pickups[i].move_toward(player, 360.0 * delta)
 		if pickups[i].distance_to(player) < 14.0:
 			add_feedback("pickup", player - Vector2(0, 15))
 			xp += pickup_xp[i]
@@ -874,8 +887,11 @@ func tick(delta: float, direction: Vector2) -> void:
 		phase = "upgrade"
 		make_offers()
 	if phase in ["waves", "boss"] and not practice and benchmark_count == 0:
+		var credits_before: int = field.credits
 		if field.tick(delta, player,1+talent_effects.interact_speed):
 			phase = "shrine"
+		if field.credits > credits_before:
+			add_feedback("pickup",player-Vector2(0,15))
 		if mode == "salvage":
 			Salvage.tick(self, delta)
 
@@ -899,6 +915,9 @@ func hurt(amount: float) -> void:
 		medkit_used = true
 		health = minf(max_health(), health + max_health() * medkit_fraction)
 		ability_notice = "Field Medkit restored health."
+
+func experience_pickup_radius() -> float:
+	return BASE_PICKUP_RADIUS * field.pickup_multiplier() * pickup_multiplier * (1.0 + 0.2 * passive_rank("magnet") + (0.2 if spells.get("wisp", {}).get("evolved", false) else 0.0))
 
 func sync_pickup_values() -> void:
 	while pickup_xp.size() < pickups.size():

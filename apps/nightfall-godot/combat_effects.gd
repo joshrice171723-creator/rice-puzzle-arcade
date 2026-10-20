@@ -109,7 +109,7 @@ static func shot_visual_position(shot: Dictionary) -> Vector2:
 	var launch: Dictionary = shot.visual_launch
 	var origin: Vector2 = launch.origin
 	var aim: Vector2 = launch.aim
-	var muzzle := HeroMotion.muzzle_offset(launch.class_id,kind,launch.face,aim,launch.clock,0,0,0,0,kind,0)
+	var muzzle := HeroMotion.muzzle_offset(launch.class_id,kind,launch.face,aim,launch.clock,0,0,0,0,kind,0,Vector2.RIGHT,launch.get("appearance",{}))
 	var distance := origin.distance_to(shot.pos)
 	# Blend the short launch height correction into the unchanged torso-height path.
 	# Close targets converge before their existing collision boundary, not after it.

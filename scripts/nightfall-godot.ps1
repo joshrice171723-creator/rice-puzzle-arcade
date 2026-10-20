@@ -27,10 +27,15 @@ if ($Action -eq 'Test') {
     Invoke-Godot @('--headless','--path',$project,'--script','tests/equipment_requirements_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/weapon_muzzle_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/field_controls_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/field_workshop_ui_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/pickup_reach_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/equipment_appearance_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/neighborhood_rules_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/class_talents_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/class_talents_ui_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/enemy_animation_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/jointed_gait_test.gd')
+    Invoke-Godot @('--headless','--path',$project,'--script','tests/layered_actor_rig_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/run_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_test.gd')
     Invoke-Godot @('--headless','--path',$project,'--script','tests/combat_mechanics_test.gd')
@@ -95,6 +100,16 @@ if ($Action -eq 'Android') {
     # Ads 25.5 ships Kotlin 2.3 metadata; match it rather than suppressing checks.
     $config = $config.Replace("'2.1.21'", "'2.3.20'")
     Set-Content "$build/config.gradle" $config -NoNewline
+    # Godot passes plugin dependencies during a normal editor export, but the
+    # generated custom template may not retain that property on a later run.
+    # Keep the internal sample-ad bridge explicit so its Kotlin source always
+    # compiles in this reproducible proof build.
+    $gradleBuild = Get-Content "$build/build.gradle" -Raw
+    $adsMarker = 'implementation "com.google.android.gms:play-services-ads:25.5.0"'
+    if ($gradleBuild -notmatch [regex]::Escape($adsMarker)) {
+        $gradleBuild = $gradleBuild.Replace("dependencies {", "dependencies {`n    // Nightfall's internal sample rewarded-ad bridge.`n    $adsMarker`n    implementation `"com.google.android.ump:user-messaging-platform:4.0.0`"")
+        Set-Content "$build/build.gradle" $gradleBuild -NoNewline
+    }
     $source = Join-Path $build 'src/main/java/com/joshuarice/nightfallproof'
     New-Item -ItemType Directory -Force $source | Out-Null
     Copy-Item "$project/native/NightfallAds.kt" $source

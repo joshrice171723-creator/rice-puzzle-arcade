@@ -2,6 +2,23 @@ extends RefCounted
 ## Ground footprints for the visible altar plinths and caches, independent of tall artwork.
 const Neighborhood = preload("res://neighborhood.gd")
 const World = preload("res://world_geometry.gd")
+const CELL_SIZE := 160.0
+static var scenery_cells: Dictionary = {}
+
+static func solids_near(position: Vector2, radius: float) -> Array:
+	if not scenery_cells.has(radius):
+		var cells := {}
+		for entry: Dictionary in Neighborhood.entries():
+			var solid: Rect2 = entry.footprint.grow(radius)
+			var first := Vector2i((solid.position/CELL_SIZE).floor())
+			var last := Vector2i((solid.end/CELL_SIZE).floor())
+			for x in range(first.x,last.x+1):
+				for y in range(first.y,last.y+1):
+					var cell := Vector2i(x,y)
+					if not cells.has(cell): cells[cell] = []
+					cells[cell].append(solid)
+		scenery_cells[radius] = cells
+	return scenery_cells[radius].get(Vector2i((position/CELL_SIZE).floor()),[])
 
 static func move_body(sites: Array, start: Vector2, finish: Vector2, radius: float, steer: float = 0.0) -> Vector2:
 	var distance := start.distance_to(finish)
@@ -15,6 +32,8 @@ static func move_body(sites: Array, start: Vector2, finish: Vector2, radius: flo
 			var center: Vector2 = site.pos+Vector2(0,-5 if cache else 0)
 			var axes := Vector2(16,10) if cache else Vector2(130,50)
 			axes += Vector2.ONE*radius
+			if absf(candidate.x-center.x) >= axes.x or absf(candidate.y-center.y) >= axes.y:
+				continue
 			var local := (candidate-center)/axes
 			if local.length_squared() >= 1.0:
 				continue
@@ -28,8 +47,7 @@ static func move_body(sites: Array, start: Vector2, finish: Vector2, radius: flo
 				var tangent := (normal/axes).orthogonal().normalized()*steer
 				normal = (normal+tangent*step.length()/axes).normalized()
 			candidate = center+normal*axes
-		for entry: Dictionary in Neighborhood.entries():
-			var solid: Rect2 = entry.footprint.grow(radius)
+		for solid: Rect2 in solids_near(candidate,radius):
 			if not solid.has_point(candidate):
 				continue
 			var projections := [Vector2(solid.position.x-0.1,candidate.y),Vector2(solid.end.x+0.1,candidate.y),Vector2(candidate.x,solid.position.y-0.1),Vector2(candidate.x,solid.end.y+0.1)]

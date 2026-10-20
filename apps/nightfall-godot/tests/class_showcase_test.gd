@@ -20,10 +20,10 @@ func run() -> void:
 	home.navigate("class")
 	await process_frame
 	var hero = home.find_child("ClassHero",true,false)
-	check(hero != null and hero.portrait.material is ShaderMaterial,"Arcanist preview has animated hero")
+	check(hero != null and hero.portrait.get_script()==preload("res://gear_actor.gd") and hero.appearance["class"]=="arcanist","Arcanist showcase uses the shared equipped articulated actor")
 	var initial_position: Vector2 = hero.position
 	await create_timer(0.12).timeout
-	check(hero.elapsed > 0 and hero.position == initial_position,"Hero animates while staying planted on the pedestal")
+	check(hero.elapsed > 0 and hero.position == initial_position,"Shared actor clock advances while its pedestal anchor stays planted")
 	check(home.find_child("SelectClass",true,false).disabled,"Locked preview cannot equip the future class")
 	home.hide()
 	await process_frame

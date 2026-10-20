@@ -9,6 +9,7 @@ const Daily = preload("res://daily_progress.gd")
 const ZoneOne = preload("res://zone_one.gd")
 const Training = preload("res://combat_progression.gd")
 const EquipmentRequirements = preload("res://equipment_requirements.gd")
+const Appearance = preload("res://equipment_appearance.gd")
 const VERSION := 6
 const BUILD_SLOTS := ["1", "2", "3"]
 const SHOP_OFFERS := {"key": {"name": "Supply key", "cost": 25, "currency": "gems", "grant": "cache_keys", "amount": 1}, "parts": {"name": "10 Workshop Parts", "cost": 200, "currency": "credits", "grant": "parts", "amount": 10}}
@@ -752,6 +753,7 @@ func stats() -> Dictionary:
 		"medkit": 0.25 if data.facilities.infirmary >= 2 else 0.20, "class": data["class"], "cooldown": 0.0}
 	var equipped_weapon := item_by_id(data.equipment.weapon)
 	result.weapon = preload("res://weapons.gd").family(equipped_weapon) if equipment_eligible(equipped_weapon) else "pistol"
+	result.appearance = Appearance.from_profile(self)
 	if not equipment_eligible(item_by_id(data.equipment.gadget)):
 		result.medkit = 0.0
 	if data["class"] == "warden":
@@ -1019,6 +1021,13 @@ func saved_run() -> Dictionary:
 	if encoded.is_empty():
 		return {}
 	var decoded: Variant = Marshalls.base64_to_variant(encoded, false)
+	if decoded is Dictionary and not decoded.has("appearance") and decoded.get("combat") is Dictionary:
+		# An active attempt freezes equipment. Reconstruct the old checkpoint's
+		# look from owned references, without applying new equip rules to its stats.
+		var hero: Variant = decoded.combat.get("class_id",data.active_attempt.get("class",data["class"]))
+		if hero is String and hero in Content.CLASSES:
+			decoded.appearance = Appearance.from_profile(self,hero,false)
+			decoded.appearance.weapon = decoded.get("weapon","pistol")
 	return decoded if decoded is Dictionary else {}
 
 func purchase_supply(offer: String) -> bool:

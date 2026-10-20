@@ -3,6 +3,7 @@ extends Node2D
 const Hero = preload("res://hero_cast.gd")
 var class_id := "scavenger"
 var weapon_family := "pistol"
+var appearance: Dictionary = {}
 var reduced := false
 var elapsed := 0.0
 var frame_wait := 0.0
@@ -25,4 +26,4 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	Hero.draw_motion(self,Vector2.ZERO,Vector2.ZERO,1,elapsed,0,0,99,0,class_id=="engineer",reduced,class_id,0,"",weapon_family,Vector2(0.6,-0.8))
+	Hero.draw_motion(self,Vector2.ZERO,Vector2.ZERO,1,elapsed,0,0,99,0,class_id=="engineer",reduced,class_id,0,"",weapon_family,Vector2(0.6,-0.8),99.0,Vector2.RIGHT,appearance)

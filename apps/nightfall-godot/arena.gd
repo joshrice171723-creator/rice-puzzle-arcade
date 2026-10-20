@@ -37,7 +37,10 @@ var moving := false
 var anim_time := 0.0
 var hero_stride := 0.0
 var hero_move_blend := 0.0
+var hero_move_direction := Vector2.RIGHT
 var hero_last_position := Run.World.CENTER
+var field_was_visible := true
+var hud_font_size := 30
 var hud: Label
 var hud_root: Control
 var level_label: Label
@@ -102,6 +105,7 @@ var vfx_preview: Node
 func _ready() -> void:
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	HeroCast.LayeredRig.warmup(run.mission)
 	var combat_requested := OS.is_debug_build() and ("--combat-preview" in OS.get_cmdline_user_args() or "--combat-campaign" in OS.get_cmdline_user_args() or "--combat-contract" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://combat-preview.flag"))
 	var preview_requested := OS.is_debug_build() and ("--vfx-preview" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://vfx-preview.flag"))
 	if preview_requested or combat_requested:
@@ -386,6 +390,7 @@ func configured_run(attempt: Dictionary) -> RefCounted:
 		configured.configure_contract(profile.stats(), attempt.target_slot, attempt.get("target_weapon","pistol"))
 	else:
 		configured.configure(attempt.mission, profile.stats())
+	HeroCast.LayeredRig.warmup(configured.mission)
 	return configured
 
 func activate_attempt(attempt: Dictionary) -> void:
@@ -454,6 +459,7 @@ func begin_practice(mission: int = 1, build: String = "Balanced") -> void:
 	diagnostics = false
 	restart()
 	run.configure(mission, profile.stats())
+	HeroCast.LayeredRig.warmup(mission)
 	run.start_boss_practice(home.Preparation.BUILDS[build])
 	home.hide()
 	last_screen = ""
@@ -740,6 +746,7 @@ func replay() -> void:
 		var spells: Array = run.spells.keys()
 		restart()
 		run.configure(mission_number, profile.stats())
+		HeroCast.LayeredRig.warmup(mission_number)
 		run.start_boss_practice(spells)
 		return
 	if not repeat_practice and run.mode == "salvage":
@@ -800,8 +807,8 @@ func _physics_process(delta: float) -> void:
 	if home.visible or not reward_flow.pending.is_empty():
 		return
 	var direction := Vector2(
-		float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT)),
-		float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN)) - float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP)))
+		float(movement_key(KEY_D) or movement_key(KEY_RIGHT)) - float(movement_key(KEY_A) or movement_key(KEY_LEFT)),
+		float(movement_key(KEY_S) or movement_key(KEY_DOWN)) - float(movement_key(KEY_W) or movement_key(KEY_UP)))
 	if direction == Vector2.ZERO:
 		direction = stick
 	if automated:
@@ -813,10 +820,24 @@ func _physics_process(delta: float) -> void:
 	run.tick(delta, direction)
 	physics_ms = maxf(physics_ms, (Time.get_ticks_usec() - start) / 1000.0)
 
+static func movement_key(key: Key) -> bool:
+	# Android DPAD/external keyboards may supply a logical key without a physical code.
+	return Input.is_physical_key_pressed(key) or Input.is_key_pressed(key)
+
 func _process(delta: float) -> void:
 	var in_field: bool = not home.visible
 	soundscape.apply_settings(profile.data.settings)
 	soundscape.tick(delta, run, home.visible, not reward_flow.pending.is_empty() or not home.shop_flow.pending.is_empty())
+	if not in_field:
+		for control in [hud_root,dodge_button,pause_button,power_hud,health_bar,boss_bar,pack_button,build_button,field_status,boss_warning,metrics]:
+			control.hide()
+		modal.hide()
+		if field_was_visible:
+			queue_redraw()
+		field_was_visible = false
+		hero_last_position = run.player
+		return
+	field_was_visible = true
 	if run.health < previous_health and in_field and profile.data.settings.haptics and OS.get_name() == "Android":
 		Input.vibrate_handheld(35)
 	previous_health = run.health
@@ -834,6 +855,8 @@ func _process(delta: float) -> void:
 	if not run.paused and run.phase in ["waves", "boss"]:
 		anim_time += delta
 		var travel: float = run.player.distance_to(hero_last_position)
+		if travel > 0.05 and travel < 30:
+			hero_move_direction = hero_last_position.direction_to(run.player)
 		hero_move_blend = move_toward(hero_move_blend,1.0 if travel > 0.05 else 0.0,delta*9)
 		if travel < 30:
 			hero_stride += travel*TAU/36.0
@@ -874,7 +897,10 @@ func _process(delta: float) -> void:
 	if run.benchmark_count > 0:
 		time_text = "CROWD TEST"
 	hud.text = time_text
-	hud.add_theme_font_size_override("font_size", 18 if run.boss_id >= 0 else 30)
+	var next_font_size := 18 if run.boss_id >= 0 else 30
+	if hud_font_size != next_font_size:
+		hud_font_size = next_font_size
+		hud.add_theme_font_size_override("font_size",hud_font_size)
 	level_label.text = "Lv. %d" % run.level
 	credit_count.text = str(run.field.credits)
 	kill_count.text = str(run.kills)
@@ -947,7 +973,13 @@ func visible_world(position_value: Vector2) -> bool:
 	# Includes tall altar tops, shadows, and hit labels beyond the viewport edge.
 	return Rect2(-350,-100,1130,1230).has_point(position_value+world_offset)
 
+func visible_actor(position_value: Vector2) -> bool:
+	# Actor silhouettes need much less overscan than tall buildings and altars.
+	return Rect2(-90,-25,610,985).has_point(position_value+world_offset)
+
 func _draw() -> void:
+	if is_instance_valid(home) and home.visible:
+		return
 	var draw_started := Time.get_ticks_usec()
 	var enemy_usec := 0
 	var hero_usec := 0
@@ -955,6 +987,7 @@ func _draw() -> void:
 	set_meta("actor_meshes", [])
 	var cleared_at := Time.get_ticks_usec()
 	WorldArt.draw_floor(self,world_offset)
+	WorldArt.draw_boundary(self,world_offset,false)
 	Presentation.draw_ambience(self, run, world_offset, anim_time, reduced)
 	var terrain_at := Time.get_ticks_usec()
 	CombatEffects.draw_ground(self,run,world_offset,anim_time,reduced)
@@ -974,17 +1007,18 @@ func _draw() -> void:
 		draw_prop(7, at, Vector2(45, 65), Color.WHITE if ready else Color("858095"))
 	var landmarks_at := Time.get_ticks_usec()
 	for index in run.pickups.size():
+		if not visible_world(run.pickups[index]): continue
 		var at: Vector2 = run.pickups[index] + world_offset
 		var value: int = run.pickup_xp[index] if index < run.pickup_xp.size() else 1
-		var size := Vector2.ONE*(12+minf(8,sqrt(value-1)*2))
-		draw_texture_rect(EXPERIENCE, Rect2(at-size*0.5,size), false)
+		var size := Vector2.ONE*(19+minf(9,sqrt(value-1)*2))
+		Presentation.draw_collectible(self,EXPERIENCE,at,size,anim_time,index,Color("82dfff"),reduced,run.pickups[index].distance_to(run.player)<run.experience_pickup_radius(),run.player+world_offset)
 	var pickups_at := Time.get_ticks_usec()
 	CombatVFX.draw_telegraphs(self, run, world_offset, reduced)
 
 	var world_done := Time.get_ticks_usec()
 	var actors: Array[Dictionary] = []
 	for enemy in run.enemies:
-		if visible_world(enemy.pos):
+		if visible_actor(enemy.pos):
 			actors.append(enemy)
 	actors.append({"pos": run.player, "player": true})
 	for shot in run.shots:
@@ -1024,7 +1058,7 @@ func _draw() -> void:
 			var pose := HeroCast.pose(run)
 			var face := -1.0 if (run.facing.x if pose.is_empty() else pose.direction.x) < 0 else 1.0
 			var weapon_pose := HeroCast.weapon_pose(run)
-			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")),run.weapon_id,weapon_pose.direction,weapon_pose.age)
+			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")),run.weapon_id,weapon_pose.direction,weapon_pose.age,hero_move_direction,run.appearance)
 			hero_usec += Time.get_ticks_usec()-hero_started
 		else:
 			var enemy_started := Time.get_ticks_usec()
@@ -1037,6 +1071,7 @@ func _draw() -> void:
 	CombatVFX.draw_effects(self,run,world_offset,anim_time,reduced)
 	CombatVFX.draw_telegraphs(self,run,world_offset,reduced,true)
 	for item in run.enemies:
+		if not visible_actor(item.pos): continue
 		var mark: Vector2 = item.pos + world_offset - Vector2(0, EnemyMotion.body_height(item,run.mission)+12)
 		if item.boss and run.mission == 4:
 			var angle: float = item.forward.angle()
@@ -1056,6 +1091,7 @@ func _draw() -> void:
 		draw_arc(at, 22, 0, TAU, 24, Color("b2a2ef"), 3)
 		draw_string(ThemeDB.fallback_font, at + Vector2(-20, 24), "SLOWED", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("ddd3ff"))
 
+	WorldArt.draw_boundary(self,world_offset,true)
 	var spells_done := Time.get_ticks_usec()
 	Presentation.draw_feedback(self, run, world_offset, reduced,profile.data.settings.get("damage_numbers",true))
 
@@ -1083,7 +1119,7 @@ func draw_field_sites() -> void:
 		if not visible_world(drop.pos):
 			continue
 		var at: Vector2 = drop.pos + world_offset
-		draw_texture_rect(credit_drop,Rect2(at-Vector2(7,9),Vector2(14,18)),false)
+		Presentation.draw_collectible(self,credit_drop,at,Vector2(20,26),anim_time,int(drop.pos.x+drop.pos.y),GOLD,profile.data.settings.reduced_effects)
 	for position in run.talents.cache_positions(run):
 		var at: Vector2 = (position + world_offset - Vector2(0, 48)).clamp(Vector2(18, 188), Vector2(412, 610))
 		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -7), at + Vector2(6, 0), at + Vector2(0, 7), at + Vector2(-6, 0)]), GOLD)

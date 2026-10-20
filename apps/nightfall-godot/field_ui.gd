@@ -1,6 +1,7 @@
 extends RefCounted
 const Cards = preload("res://reward_cards.gd")
-const TRAIT_COPY = {"vitality":"+10% max HP per rank.\nHeal added HP.", "aim":"+6% pistol damage per rank.", "reach":"+25% XP pickup reach per rank."}
+const TRAIT_COPY = {"vitality":"+10% max HP per rank.\nHeal added HP.", "aim":"+6% weapon damage per rank.", "reach":"+25% XP pickup reach per rank."}
+const DEFENSE_ICONS := {"barricade":"body", "turret":"weapon", "trap":"gems", "ward":"charm"}
 
 static func label(arena: Node, text_value: String, size_value: int = 14) -> Label:
 	var node := Label.new()
@@ -64,16 +65,31 @@ static func pack(arena: Node) -> void:
 
 static func build(arena: Node) -> void:
 	var run = arena.run
-	arena.modal_title.text = "Field Defenses"
-	label(arena, "%d scrap • capacity %d/%d" % [run.field.scrap, run.defenses.used_capacity(), run.Defenses.CAPACITY], 16)
+	arena.modal_title.text = "Field Workshop"
+	var summary := PanelContainer.new()
+	var summary_face := Cards.MenuSkin.surface("inset")
+	summary_face.set_content_margin_all(10)
+	summary.add_theme_stylebox_override("panel", summary_face)
+	arena.modal_body.add_child(summary)
+	var summary_row := HBoxContainer.new()
+	summary_row.add_theme_constant_override("separation", 10)
+	summary.add_child(summary_row)
+	Cards.MenuSkin.icon(summary_row, Cards.icon("parts"), Vector2(32,32))
+	var workshop_note := Cards.MenuSkin.label(summary_row, "%d scrap\nFIELD MATERIAL" % run.field.scrap, 14, Color("ffe1a1"))
+	workshop_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Cards.MenuSkin.label(summary_row, "CAPACITY\n%d / %d" % [run.defenses.used_capacity(), run.Defenses.CAPACITY], 14, Color("bde4ff"), true)
+	label(arena, "Place a defense at your feet. It holds this courtyard until it is destroyed.", 13)
+	var choices := Cards.row(arena.modal_body)
 	for id: String in run.blueprints:
 		var info: Dictionary = run.Defenses.TYPES[id]
 		var cost: int = run.build_cost(id)
-		var button: Button = arena.make_button("%s • %d scrap" % [info.name, cost], func(): run.place_structure(id), arena.modal_body)
-		button.disabled = run.field.scrap < cost or run.defenses.used_capacity() + info.capacity > run.Defenses.CAPACITY
-		label(arena, info.description, 13)
-	label(arena, run.defenses.notice, 13)
+		var capacity_text := "Uses %d capacity" % info.capacity
+		var description := "%s\n%s" % [info.description, capacity_text]
+		Cards.add(choices, info.name, description, Cards.icon(DEFENSE_ICONS.get(id, "parts")), "FIELD DEFENSE", "%d scrap" % cost, func(): run.place_structure(id), run.field.scrap < cost or run.defenses.used_capacity() + info.capacity > run.Defenses.CAPACITY)
+	if not run.defenses.notice.is_empty():
+		var notice := label(arena, run.defenses.notice, 13)
+		notice.add_theme_color_override("font_color", Color("ffd5a3"))
 	if run.class_id == "engineer" and run.mastery_level >= 15:
-		var dismantle: Button = arena.make_button("Reclaim nearest • 40% scrap back", func(): run.dismantle_structure(), arena.modal_body, 40)
+		var dismantle: Button = arena.make_button("Reclaim nearest  •  40% scrap back", func(): run.dismantle_structure(), arena.modal_body, 44)
 		dismantle.disabled = run.defenses.nearest_structure(run.player, 150).is_empty()
-	arena.make_button("Back to the field", func(): run.close_build(), arena.modal_body)
+	arena.make_button("Back to the field", func(): run.close_build(), arena.modal_body, 44)

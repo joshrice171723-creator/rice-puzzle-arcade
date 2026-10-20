@@ -53,6 +53,7 @@ static func fire(run: RefCounted, target: Dictionary) -> bool:
 			"pierce":int(spec.pierce) + run.passive_rank("pierce"), "hits":[]}
 		# Render-only launch data. Collision still starts at player feet with the same velocity.
 		shot.visual_launch = {"origin":run.player,"aim":aim,"class_id":run.class_id,
+			"appearance":run.appearance,
 			"face":-1.0 if aim.x < 0 else 1.0,"clock":run.elapsed,
 			"contact_distance":maxf(0.0,run.player.distance_to(target.pos)-(32.0 if target.get("boss",false) else 17.0))}
 		if run.weapon_id == "sabre":

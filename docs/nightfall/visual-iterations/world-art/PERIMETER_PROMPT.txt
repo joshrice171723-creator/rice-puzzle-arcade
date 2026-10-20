@@ -1,0 +1,6 @@
+Use case: stylized-concept. Production TRANSPARENT original Nightfall perimeter fence ATLAS, square1536 with four separated assets in2x2grid. Same smoothpainted3D bluegraybeveledstone iron andwarmamberlantern language as referenceGarage, high3/4overheadgamecamera. Noislands, noenvironment, nocharactersorUItext.
+TOPLEFT: long HORIZONTAL stoneandironperimeterfence segment withtwostoutslatebrickpillars atends, darkironbars between, closed solidbarredfence, warm smalllanternonepillar. Seenfromsouth, groundbaselinehorizontal, allstonefeetclearlytouchsamefloorplane. Wideaspect3:1.
+TOPRIGHT: matching HORIZONTAL CLOSED DOUBLE GATE, barredironandbluewood gate securelyclosedbetweenstonepillars, brasspadlock, nobarrier gaps, wide3:1.
+BOTTOMLEFT: long VERTICAL fence alongleftedgeofworld, seenfromeast so verticalgroundrun recedesfrombottomtotop; threeslimstonepillars linkedwithironbars, clear narrowverticalsilhouette, pillar topsvisibleat3/4perspective andgroundfeetlinedupvertically. Tallaspect1:3.
+BOTTOMRIGHT: matching VERTICAL fencealongrightedgeofworld seenfromwest, mirrorcompositionofbottomleft, tall1:3.
+Generoustransparentmarginsaroundeachasset, isolated4components, no baked shadowsfarfrombase. Bluegraystone, brasshighlights, restrainedivyonlyatfeet. Detailedcleansilhouettesnotpixelart. Allfourpropsfullyvisible uncropped. Truealphaelsewhere noframeslabels.

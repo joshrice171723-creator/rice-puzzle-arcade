@@ -123,10 +123,29 @@ static func dodge_streaks(canvas: Node2D, at: Vector2, direction: Vector2, age: 
 		canvas.draw_line(origin, origin - direction * (9.0 + age * 12.0), Color(0.57,0.83,1.0,alpha * 0.44), 1.5, true)
 
 static func pickup_rune(canvas: Node2D, at: Vector2, age: float, alpha: float) -> void:
-	var center := at + Vector2(0,-age * 9.0)
-	var radius := 3.5 + age * 3.5
+	var center := at + Vector2(0,-age * 15.0)
+	var radius := 5.0 + age * 14.0
 	var points := PackedVector2Array([center + Vector2(0,-radius), center + Vector2(radius,0), center + Vector2(0,radius), center + Vector2(-radius,0), center + Vector2(0,-radius)])
-	canvas.draw_polyline(points, Color(1.0,0.84,0.55,alpha * 0.68), 1.1, true)
+	canvas.draw_polyline(points, Color(1.0,0.90,0.65,alpha * 0.9), 1.6, true)
+	for index in 4:
+		var ray := Vector2.from_angle(index*TAU/4.0+0.4)
+		canvas.draw_line(center+ray*radius*0.7,center+ray*(radius+4),Color(0.75,0.94,1,alpha),1.5,true)
+
+static func draw_collectible(canvas: Node2D, texture: Texture2D, at: Vector2, size: Vector2, time: float, seed_value: int, color: Color, reduced: bool, attracted: bool = false, target: Vector2 = Vector2.ZERO) -> void:
+	# Bounded immediate drawing: no per-loot nodes, particles, lights, or allocations of textures.
+	var phase := time*3.5+float(seed_value)*1.71
+	var center := at+Vector2(0,-2.0 if reduced else -3.0-sin(phase)*1.5)
+	var halo := size*1.45
+	canvas.draw_texture_rect(texture,Rect2(center-halo*0.5,halo),false,Color(color,0.18 if reduced else 0.22+0.06*sin(phase)))
+	if attracted and not reduced:
+		var axis := (target-at).normalized()
+		canvas.draw_line(center-axis*5,center-axis*17,Color(color,0.45),2.0,true)
+	canvas.draw_texture_rect(texture,Rect2(center-size*0.5,size),false)
+	if not reduced:
+		var shine := center+Vector2(size.x*0.22,-size.y*0.3)
+		var length := 2.0+3.5*pow(maxf(0,sin(phase)),4)
+		canvas.draw_line(shine-Vector2(length,0),shine+Vector2(length,0),Color(1,0.98,0.88,0.9),1.3,true)
+		canvas.draw_line(shine-Vector2(0,length),shine+Vector2(0,length),Color(1,0.98,0.88,0.9),1.3,true)
 
 static func muzzle_prongs(canvas: Node2D, at: Vector2, direction: Vector2, age: float, alpha: float) -> void:
 	if age < 0 or age >= 1 or alpha <= 0:
