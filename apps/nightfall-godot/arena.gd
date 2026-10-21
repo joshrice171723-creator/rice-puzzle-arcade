@@ -106,7 +106,7 @@ func _ready() -> void:
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	HeroCast.LayeredRig.warmup(run.mission)
-	var combat_requested := OS.is_debug_build() and ("--combat-preview" in OS.get_cmdline_user_args() or "--combat-campaign" in OS.get_cmdline_user_args() or "--combat-contract" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://combat-preview.flag"))
+	var combat_requested := OS.is_debug_build() and ("--combat-preview" in OS.get_cmdline_user_args() or "--combat-campaign" in OS.get_cmdline_user_args() or "--combat-contract" in OS.get_cmdline_user_args() or "--arcanist-review" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://combat-preview.flag"))
 	var preview_requested := OS.is_debug_build() and ("--vfx-preview" in OS.get_cmdline_user_args() or FileAccess.file_exists("user://vfx-preview.flag"))
 	if preview_requested or combat_requested:
 		testing = true
@@ -1058,7 +1058,7 @@ func _draw() -> void:
 			var pose := HeroCast.pose(run)
 			var face := -1.0 if (run.facing.x if pose.is_empty() else pose.direction.x) < 0 else 1.0
 			var weapon_pose := HeroCast.weapon_pose(run)
-			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")),run.weapon_id,weapon_pose.direction,weapon_pose.age,hero_move_direction,run.appearance)
+			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")),run.weapon_id,weapon_pose.direction,weapon_pose.age,hero_move_direction,run.appearance,run.phase)
 			hero_usec += Time.get_ticks_usec()-hero_started
 		else:
 			var enemy_started := Time.get_ticks_usec()

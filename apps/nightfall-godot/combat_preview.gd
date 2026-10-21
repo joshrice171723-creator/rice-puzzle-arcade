@@ -12,6 +12,7 @@ var elapsed := 0.0
 var stage_elapsed := 0.0
 var campaign := false
 var contract := false
+var arcanist_only := false
 var manual_input := false
 var finished := false
 var frames: Array[float] = []
@@ -32,6 +33,7 @@ var draw_sections: Dictionary = {}
 func _ready() -> void:
 	campaign = "--combat-campaign" in OS.get_cmdline_user_args()
 	contract = "--combat-contract" in OS.get_cmdline_user_args()
+	arcanist_only = "--arcanist-review" in OS.get_cmdline_user_args()
 	if FileAccess.file_exists("user://combat-preview.flag"):
 		var mode := FileAccess.get_file_as_string("user://combat-preview.flag").strip_edges()
 		campaign = mode == "campaign"
@@ -43,7 +45,7 @@ func _ready() -> void:
 	caption.add_theme_color_override("font_outline_color",Color.BLACK)
 	caption.add_theme_constant_override("outline_size",4)
 	arena.hud_root.get_parent().add_child(caption)
-	configure(0)
+	configure(3 if arcanist_only else 0)
 	if manual_input:
 		arena.run.enemies.clear()
 		arena.run.spawn_wait = 3600
@@ -188,7 +190,10 @@ func _process(delta: float) -> void:
 			danger = true
 	if danger and run.dodge():
 		used_dodge += 1
-	if campaign or contract:
+	if arcanist_only:
+		if run.phase in ["victory","defeat"] or stage_elapsed > 55.0:
+			finish()
+	elif campaign or contract:
 		if run.phase in ["victory","defeat"] or elapsed > 420:
 			if contract: arena.bank_result()
 			finish()
@@ -212,7 +217,7 @@ func finish() -> void:
 		get_tree().quit()
 
 func write_report(complete: bool) -> void:
-	var path := "user://combat-contract-metrics.json" if contract else ("user://combat-campaign-metrics.json" if campaign else "user://combat-roster-metrics.json")
+	var path := "user://arcanist-review-metrics.json" if arcanist_only else ("user://combat-contract-metrics.json" if contract else ("user://combat-campaign-metrics.json" if campaign else "user://combat-roster-metrics.json"))
 	var file := FileAccess.open(path,FileAccess.WRITE)
 	file.store_string(JSON.stringify({"complete":complete,"fixture":"starter contract; first-clear prerequisite granted in disposable profile" if contract else ("normal starter mission" if campaign else "practice loadouts, live AI, normal enemy health and damage"), "os":OS.get_name(),"adapter":RenderingServer.get_video_adapter_name(),"stages":samples,"downs":downs,"reward":arena.reward_receipt if contract else {}},"\t"))
 
@@ -221,6 +226,7 @@ func capture_frame() -> void:
 	var directory := "user://combat-review-captures"
 	DirAccess.make_dir_recursive_absolute(directory)
 	await RenderingServer.frame_post_draw
-	arena.get_viewport().get_texture().get_image().save_png(directory.path_join("%s-%03d.png" % ["campaign" if campaign else "roster",capture_count]))
+	var prefix := "arcanist-review" if arcanist_only else ("campaign" if campaign else "roster")
+	arena.get_viewport().get_texture().get_image().save_png(directory.path_join("%s-%03d.png" % [prefix,capture_count]))
 	capture_count += 1
 	capturing = false

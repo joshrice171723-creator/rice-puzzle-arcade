@@ -44,7 +44,7 @@ func fresh() -> Dictionary:
 		"breaker_plates": 0, "cosmetics": [], "tutorial_seen": false, "seen_bosses": [],
 		"shop_day": "", "shop_videos": 0, "last_shop_reward": "",
 		"cache_keys": 0, "cache_opened": 0, "rare_misses": 0, "epic_misses": 0, "cache_seed": randi(), "last_cache": {}, "rare_choices": 0, "contract_clears": 0,
-		"settings": {"music": 0.30, "sound": 0.65, "haptics": true, "reduced_effects": false, "damage_numbers": true, "health_bars": true}}
+		"settings": {"music": 0.0, "sound": 0.0, "haptics": true, "reduced_effects": false, "damage_numbers": true, "health_bars": true}}
 
 func valid(candidate: Variant) -> bool:
 	if not candidate is Dictionary or candidate.get("version") != VERSION or candidate.get("talent_revision") != 2:

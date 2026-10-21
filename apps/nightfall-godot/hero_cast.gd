@@ -7,6 +7,7 @@ const Presentation = preload("res://mission_presentation.gd")
 const Gait = preload("res://jointed_gait.gd")
 const DynamicMesh = preload("res://dynamic_rig_mesh.gd")
 const LayeredRig = preload("res://layered_actor_rig.gd")
+const ArcanistSprite = preload("res://arcanist_sprite.gd")
 const BODIES_REGIONS := {"scavenger":Rect2(20,110,415,720),"engineer":Rect2(460,110,410,720),"warden":Rect2(870,65,460,790),"arcanist":Rect2(1345,115,429,735)}
 const HANDS := {"scavenger":Vector2(0.92,0.55),"engineer":Vector2(0.90,0.55),"warden":Vector2(0.86,0.57),"arcanist":Vector2(0.88,0.59)}
 const COLS := 12
@@ -142,7 +143,10 @@ static func layered_pose(definition: Dictionary, weapon: String, face: float, ai
 			joints[key] += Vector2(dodge*5,dodge*2)
 	return joints
 
-static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, engineer: bool, reduced: bool, class_id: String = "scavenger", hurt: float = 0.0, action: String = "", weapon: String = "pistol", aim: Vector2 = Vector2.RIGHT, weapon_age: float = 99.0, movement_direction: Vector2 = Vector2.RIGHT, appearance: Dictionary = {}) -> void:
+static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, engineer: bool, reduced: bool, class_id: String = "scavenger", hurt: float = 0.0, action: String = "", weapon: String = "pistol", aim: Vector2 = Vector2.RIGHT, weapon_age: float = 99.0, movement_direction: Vector2 = Vector2.RIGHT, appearance: Dictionary = {}, state: String = "") -> void:
+	if class_id == "arcanist":
+		ArcanistSprite.draw_motion(canvas,pos,offset,face,clock,stride,move_blend,cast_age,dodge,reduced,hurt,weapon_age,state)
+		return
 	var definition := LayeredRig.definition_for_appearance(class_id,appearance)
 	if not definition.is_empty():
 		var joints := layered_pose(definition,weapon,face,aim,stride,move_blend,cast_age,dodge,action,weapon_age,movement_direction)
