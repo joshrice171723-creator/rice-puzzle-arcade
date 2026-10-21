@@ -1080,7 +1080,9 @@ func _draw() -> void:
 			draw_polyline(PackedVector2Array([mark + Vector2(-5, 0), mark + Vector2(0, -5), mark + Vector2(5, 0)]), GOLD, 2)
 		elif item.kind == "spitter" and run.mission != 1:
 			draw_arc(mark, 5, 0, TAU, 12, Color("adceff"), 2)
-		if visible_world(item.pos) and profile.data.settings.get("health_bars",true):
+		# Show health only for immediate threats and bosses; full-crowd bars obscure attack tells.
+		var threat_range: bool = bool(item.boss) or item.pos.distance_squared_to(run.player) <= 180.0 * 180.0
+		if visible_world(item.pos) and threat_range and profile.data.settings.get("health_bars",true):
 			var at: Vector2 = item.pos + world_offset - Vector2(20, EnemyMotion.body_height(item,run.mission)+5)
 			draw_rect(Rect2(at, Vector2(40, 4)), INK)
 			draw_rect(Rect2(at, Vector2(40 * item.hp / item.max_hp, 4)), Color("e36d86"))

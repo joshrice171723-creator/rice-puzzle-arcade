@@ -3,6 +3,7 @@ extends RefCounted
 const Shapes = preload("res://draw_shapes.gd")
 const MenuSkin = preload("res://menu_skin.gd")
 const MAX_FEEDBACK := 48
+const MAX_VISIBLE_DAMAGE_LABELS := 8
 const EMBER_COUNT := 12
 const INK := Color("08142b")
 const CYAN := Color("9ddfff")
@@ -42,9 +43,10 @@ static func draw_player_ground(canvas: Node2D, run: RefCounted, offset: Vector2,
 static func draw_feedback(canvas: Node2D, run: RefCounted, offset: Vector2, reduced: bool, show_numbers: bool = true) -> void:
 	var entries: Array = run.feedback
 	var labels: Dictionary = {13: [], 18: [], 22: []}
+	var visible_damage_labels := 0
 	var spark_points := PackedVector2Array()
 	var spark_colors := PackedColorArray()
-	for index in mini(entries.size(), MAX_FEEDBACK):
+	for index in range(mini(entries.size(), MAX_FEEDBACK) - 1, -1, -1):
 		var item: Dictionary = entries[index]
 		var duration: float = item.get("duration", 0.0)
 		var life: float = item.get("life", 0.0)
@@ -63,8 +65,9 @@ static func draw_feedback(canvas: Node2D, run: RefCounted, offset: Vector2, redu
 		var kind: String = item.get("kind", "")
 		if kind in ["hit","hero_damage"]:
 			var label := damage_label(item, at, direction, age, alpha, reduced) if show_numbers else {}
-			if not label.is_empty():
+			if not label.is_empty() and visible_damage_labels < MAX_VISIBLE_DAMAGE_LABELS:
 				labels[label.size].append(label)
+				visible_damage_labels += 1
 			if not reduced:
 				append_hit_sparks(spark_points, spark_colors, at, direction, age, alpha, item.get("elemental", false))
 		elif not reduced:
