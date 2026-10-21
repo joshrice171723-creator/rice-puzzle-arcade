@@ -1,6 +1,7 @@
 extends RefCounted
 ## Hero-first Class screen. All progression and selection remain profile-owned.
 const Art = preload("res://haven_art.gd")
+const ClassCharacterShowcase = preload("res://class_character_showcase.gd")
 const Content = preload("res://haven_content.gd")
 const MenuSkin = preload("res://menu_skin.gd")
 const HALL = preload("res://assets/class-showcase/hall.png")
@@ -128,12 +129,18 @@ static func show_page(home: Control) -> void:
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hero.texture = hero_texture(id)
 	hero.set_meta("cover_class", id)
+	hero.set_meta("cover_art_source", "res://assets/class-showcase/scavenger.png" if id == "scavenger" else ("res://assets/class-showcase/arcanist.png" if id == "arcanist" else "res://assets/class-showcase/roster.png"))
 	hero.pivot_offset = Vector2(hero.size.x * 0.5, hero.size.y)
+	var reduced_effects: bool = bool(home.profile.data.settings.get("reduced_effects", false))
+	var character_view: ClassCharacterShowcase
+	if not reduced_effects:
+		character_view = ClassCharacterShowcase.new()
+		character_view.name = "ClassCharacterViewport"
+		character_view.configure(id)
+		page.add_child(character_view)
+		hero.texture = character_view.get_texture()
+	hero.set_meta("animated_cover", character_view != null)
 	page.add_child(hero)
-	# Keep the full cover intact while giving the hero a calm, readable life sign.
-	var idle := page.create_tween().set_loops()
-	idle.tween_property(hero, "position:y", 30.0, 1.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	idle.tween_property(hero, "position:y", 27.0, 1.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	var title := Art.picture(page, texture("ribbon"), Rect2(36,0,314,38))
 	title.stretch_mode = TextureRect.STRETCH_SCALE
 	caption(page,"Class",Rect2(66,0,254,35),25)
