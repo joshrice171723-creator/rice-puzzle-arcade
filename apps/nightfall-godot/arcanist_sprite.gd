@@ -5,6 +5,7 @@ const ATLAS: Texture2D = preload("res://assets/arcanist-gameplay-draft.png")
 const REACTION_ATLAS: Texture2D = preload("res://assets/arcanist-motion-reactions-draft.png")
 const CELL := 1254.0 / 4.0
 const ACTOR_SIZE := Vector2(80, 80)
+const REVIEW_SCALE := 3.0
 
 static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, reduced: bool, hurt: float, weapon_age: float, state: String) -> void:
 	var last_face := float(canvas.get_meta("arcanist_last_face", face))
@@ -80,13 +81,20 @@ static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: flo
 		column = int(floor(fposmod(clock * 2.0, 4.0)))
 
 	var source := Rect2(column * CELL, row * CELL, CELL, CELL)
+	var actor_size := ACTOR_SIZE
+	# Keep the large inspection view isolated to the disposable Arcanist review run.
+	var review_scale := float(canvas.get_meta("arcanist_review_scale", 0.0))
+	if review_scale == 0.0:
+		review_scale = REVIEW_SCALE if "--arcanist-review" in OS.get_cmdline_user_args() else 1.0
+		canvas.set_meta("arcanist_review_scale", review_scale)
+	actor_size *= review_scale
 	var transform := Transform2D(Vector2(sprite_face, 0), Vector2(0, 1), pos + offset + Vector2(0, 5.6))
 	var tint := Color.WHITE.lerp(Color(1.7, 1.35, 1.25), hurt if not reduced else 0.0)
 	if dodge > 0.0 and not reduced:
 		var trail := transform
-		trail.origin.x -= sprite_face * 14.0 * dodge
+		trail.origin.x -= sprite_face * actor_size.x * 0.175 * dodge
 		canvas.draw_set_transform_matrix(trail)
-		canvas.draw_texture_rect_region(texture, Rect2(-ACTOR_SIZE.x / 2, -ACTOR_SIZE.y, ACTOR_SIZE.x, ACTOR_SIZE.y), source, Color(0.62, 0.77, 1, dodge * 0.18))
+		canvas.draw_texture_rect_region(texture, Rect2(-actor_size.x / 2, -actor_size.y, actor_size.x, actor_size.y), source, Color(0.62, 0.77, 1, dodge * 0.18))
 	canvas.draw_set_transform_matrix(transform)
-	canvas.draw_texture_rect_region(texture, Rect2(-ACTOR_SIZE.x / 2, -ACTOR_SIZE.y, ACTOR_SIZE.x, ACTOR_SIZE.y), source, tint)
+	canvas.draw_texture_rect_region(texture, Rect2(-actor_size.x / 2, -actor_size.y, actor_size.x, actor_size.y), source, tint)
 	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)

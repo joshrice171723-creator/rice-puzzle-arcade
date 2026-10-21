@@ -92,6 +92,9 @@ func configure(next: int) -> void:
 		stats = arena.profile.stats()
 		stats.weapon = loadout.weapon
 	arena.run.configure(1 if campaign else (next % 5 + 1),stats)
+	if arcanist_only:
+		# Put the enlarged review sprite on a clear road tile instead of under the central house.
+		arena.run.player += Vector2(600, 0)
 	if contract:
 		# The first-clear prerequisite is granted only in this disposable QA profile.
 		arena.profile.data.missions["1"] = ["clear"]
@@ -183,7 +186,10 @@ func _process(delta: float) -> void:
 			run.choose_relic(0)
 		else:
 			run.leave_shrine()
-	arena.stick = contract_steer(run) if contract else (steer(run) if campaign or stage_elapsed > 3.0 else Vector2.ZERO)
+	if arcanist_only and capture_count == 0:
+		arena.stick = Vector2.ZERO
+	else:
+		arena.stick = contract_steer(run) if contract else (steer(run) if campaign or stage_elapsed > 3.0 else Vector2.ZERO)
 	var danger := false
 	for enemy: Dictionary in run.enemies:
 		if enemy.tell > 0 and enemy.tell < 0.20 and enemy.pos.distance_to(run.player) < (110 if enemy.boss else 65):
