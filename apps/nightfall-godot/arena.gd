@@ -33,6 +33,8 @@ var stick := Vector2.ZERO
 var stick_origin := Vector2(88, 650)
 var touch_id := -1
 var mouse_stick := false
+var touch_target := Vector2.ZERO
+var has_touch_target := false
 var moving := false
 var anim_time := 0.0
 var hero_stride := 0.0
@@ -529,9 +531,24 @@ func fit_modal() -> void:
 	modal.position.y = maxf(12.0, (760.0 - minimum.y) / 2.0)
 
 func clear_input() -> void:
+	clear_touch_target()
+	clear_touch_gesture()
+
+func clear_touch_target() -> void:
+	has_touch_target = false
+	touch_target = Vector2.ZERO
+
+func clear_touch_gesture() -> void:
 	touch_id = -1
 	mouse_stick = false
 	stick = Vector2.ZERO
+
+func set_touch_target(screen_position: Vector2) -> void:
+	# The arena camera is an isometric 2D draw offset, so screen-to-ground is
+	# screen position minus the current world offset. Run.move_body() still
+	# resolves world bounds and landmark collisions during travel.
+	touch_target = run.clamp_position(screen_position-world_offset)
+	has_touch_target = true
 
 func refresh_ad_label() -> void:
 	if is_instance_valid(ad_label):
@@ -762,15 +779,16 @@ func replay() -> void:
 	restart()
 
 func _input(event: InputEvent) -> void:
-	# Release the stick even when a drag ends over a GUI button.
+	# Release navigation ownership even when a drag ends over a GUI button.
+	# A tap target persists after release; clear_input() cancels it on pause/UI.
 	if event is InputEventScreenTouch and not event.pressed and event.index == touch_id:
-		clear_input()
+		clear_touch_gesture()
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		clear_input()
+		clear_touch_gesture()
 	elif event is InputEventScreenDrag and event.index == touch_id:
-		stick = ((event.position - stick_origin) / 50.0).limit_length()
+		set_touch_target(event.position)
 	elif event is InputEventMouseMotion and mouse_stick:
-		stick = ((event.position - stick_origin) / 50.0).limit_length()
+		set_touch_target(event.position)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if home.visible:
@@ -793,19 +811,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed and touch_id == -1 and not mouse_stick:
 			touch_id = event.index
-			stick_origin = event.position
+			set_touch_target(event.position)
 		elif not event.pressed and event.index == touch_id:
-			clear_input()
+			clear_touch_gesture()
 	elif event is InputEventScreenDrag and event.index == touch_id:
-		stick = ((event.position - stick_origin) / 50.0).limit_length()
+		set_touch_target(event.position)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and touch_id == -1:
 			mouse_stick = true
-			stick_origin = event.position
+			set_touch_target(event.position)
 		elif not event.pressed:
-			clear_input()
+			clear_touch_gesture()
 	elif event is InputEventMouseMotion and mouse_stick:
-		stick = ((event.position - stick_origin) / 50.0).limit_length()
+		set_touch_target(event.position)
 
 func _physics_process(delta: float) -> void:
 	if home.visible or not reward_flow.pending.is_empty():
@@ -813,8 +831,15 @@ func _physics_process(delta: float) -> void:
 	var direction := Vector2(
 		float(movement_key(KEY_D) or movement_key(KEY_RIGHT)) - float(movement_key(KEY_A) or movement_key(KEY_LEFT)),
 		float(movement_key(KEY_S) or movement_key(KEY_DOWN)) - float(movement_key(KEY_W) or movement_key(KEY_UP)))
-	if direction == Vector2.ZERO:
-		direction = stick
+	if direction != Vector2.ZERO:
+		# Keyboard is an intentional direct-control override for desktop testing.
+		clear_touch_target()
+	elif has_touch_target:
+		var remaining: float = run.player.distance_to(touch_target)
+		if remaining <= 14.0:
+			clear_touch_target()
+		else:
+			direction = run.player.direction_to(touch_target)
 	if automated:
 		direction = Vector2.from_angle(run.elapsed * 0.7)
 		if run.phase == "upgrade":

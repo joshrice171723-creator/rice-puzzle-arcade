@@ -35,7 +35,7 @@ func verify() -> void:
 		var released=event.duplicate()
 		released.pressed=false;Input.parse_input_event(released)
 		Input.flush_buffered_events()
-	check(arena.touch_id==-1 and not arena.mouse_stick,"Keyboard leaves the floating stick hidden")
+	check(arena.touch_id==-1 and not arena.has_touch_target,"Keyboard leaves touch navigation inactive")
 	for pair in [[KEY_UP,Vector2.UP],[KEY_LEFT,Vector2.LEFT],[KEY_DOWN,Vector2.DOWN],[KEY_RIGHT,Vector2.RIGHT]]:
 		arena.run.player=arena.run.World.CENTER
 		var event=InputEventKey.new()
@@ -48,17 +48,26 @@ func verify() -> void:
 		var stopped: Vector2=arena.run.player
 		arena._physics_process(0.1)
 		check(arena.run.player==stopped,"Released logical arrow stops movement")
-	for origin in [Vector2(95,280),Vector2(340,310),Vector2(180,500)]:
-		root.push_input(touch(origin,true),true)
-		check(arena.touch_id==0 and arena.stick_origin==origin,"Touch anchors the stick at any free part of the field")
-		var drag=InputEventScreenDrag.new()
-		drag.index=0;drag.position=origin+Vector2(90,-20)
-		root.push_input(drag,true)
-		check(arena.stick.length()<=1.001 and arena.stick.x>0.9,"Floating stick follows held drag and clamps speed")
-		root.push_input(touch(origin+Vector2(50,0),true,1),true)
-		check(arena.touch_id==0 and arena.stick_origin==origin,"Second finger cannot steal the active movement stick")
-		root.push_input(touch(origin,false,0),true)
-		check(arena.touch_id==-1 and arena.stick==Vector2.ZERO and not arena.mouse_stick,"Release removes the stick and stops movement")
+	arena.run.player=arena.run.World.CENTER
+	arena._physics_process(0.01)
+	var origin := Vector2(215,400)
+	var target := origin+Vector2(130,-45)
+	root.push_input(touch(target,true),true)
+	check(arena.touch_id==0 and arena.has_touch_target,"Touch claims one active navigation finger")
+	check(arena.touch_target.distance_to(arena.run.player+Vector2(130,-45))<0.1,"Tap maps screen position to the fixed isometric world")
+	var drag=InputEventScreenDrag.new()
+	drag.index=0;drag.position=origin+Vector2(-110,55)
+	root.push_input(drag,true)
+	check(arena.touch_target.distance_to(arena.run.player+Vector2(-110,55))<0.1,"Held drag updates the touch destination")
+	root.push_input(touch(origin+Vector2(50,0),true,1),true)
+	check(arena.touch_id==0,"Second finger cannot steal active touch navigation")
+	root.push_input(touch(target,false,0),true)
+	check(arena.touch_id==-1 and arena.has_touch_target,"Release hides touch ownership but retains tap-to-move destination")
+	var before_touch_move: Vector2=arena.run.player
+	arena._physics_process(0.1)
+	check(arena.run.player.distance_to(before_touch_move)>0.1,"Tap destination moves the hero after touch release")
+	arena.clear_input()
+	check(not arena.has_touch_target,"Explicit input clear cancels tap-to-move")
 	arena.run.dodge_wait=0
 	var button_at: Vector2=arena.dodge_button.get_global_rect().get_center()
 	root.push_input(touch(button_at,true),true)
