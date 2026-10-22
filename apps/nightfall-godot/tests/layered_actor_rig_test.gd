@@ -53,8 +53,26 @@ func _initialize() -> void:
 				var pose:=Hero.layered_pose(data,weapon,face,aim,1.2,0.8,0.04,0,weapon,0.04,Vector2.RIGHT)
 				var attachment:=Hero.weapon_attachment(id,weapon,face,aim,0,1.2,0.8,0.04,0,weapon,0.04,Vector2.RIGHT)
 				var grip: Vector2=attachment*Weapon.SPECS[weapon].grip
-				check(grip.distance_to(Vector2(pose.wrist_r.x*face,pose.wrist_r.y+5.6))<0.001,id+" actual bone wrist and weapon grip stay attached")
+				var body_offset := 5.6*Hero.actor_height(id)/80.0
+				check(grip.distance_to(Vector2(pose.wrist_r.x*face,pose.wrist_r.y+body_offset))<0.001,id+" actual bone wrist and weapon grip stay attached")
 				if weapon in ["pistol","scattergun","crossbow"]: check(pose.elbow_r.y>pose.wrist_r.y and pose.elbow_r.y>pose.shoulder_r.y,id+" supported firearm elbow folds below the wrist and shoulder")
+	var scavenger := Rig.definition("scavenger")
+	var height := Hero.actor_height("scavenger")
+	var still := Hero.layered_pose(scavenger,"pistol",1,Vector2.RIGHT,0,0,99,0,"",99,Vector2.RIGHT,0.2)
+	var breathing := Hero.layered_pose(scavenger,"pistol",1,Vector2.RIGHT,0,0,99,0,"",99,Vector2.RIGHT,2.0)
+	check(still.head.distance_to(breathing.head)>0.25 and still.head.distance_to(breathing.head)<2.0,"Scavenger idle breathing stays visible but restrained at arena scale")
+	check(still.ankle_l==breathing.ankle_l and still.ankle_r==breathing.ankle_r,"Idle breathing keeps both planted feet steady")
+	var turning := Hero.layered_pose(scavenger,"pistol",1,Vector2.RIGHT,0,0,99,0,"",99,Vector2.RIGHT,0.2,1.0)
+	check(still.shoulder_l.distance_to(turning.shoulder_l)>1.0,"Scavenger turn pulse rotates the upper silhouette")
+	var hit := Hero.layered_pose(scavenger,"pistol",1,Vector2.RIGHT,0,0,99,0,"",99,Vector2.RIGHT,0.2,0,1.0)
+	check(still.head.distance_to(hit.head)>1.0 and still.ankle_l==hit.ankle_l,"Scavenger hit reaction recoils without moving the planted foot")
+	var dodging := Hero.layered_pose(scavenger,"pistol",1,Vector2.RIGHT,0,0,99,1.0,"",99,Vector2.RIGHT,0.2)
+	check(still.head.distance_to(dodging.head)>1.0 and still.ankle_l==dodging.ankle_l,"Scavenger dodge tucks the upper body while the feet stay grounded")
+	var firing := Hero.layered_pose(scavenger,"pistol",1,Vector2.RIGHT,0,0,0,0,"pistol",0,Vector2.RIGHT,0.2)
+	check(still.wrist_r.distance_to(firing.wrist_r)>2.0,"Scavenger pistol kick is visible on the firing arm")
+	var breathing_mount:=Hero.weapon_attachment("scavenger","pistol",1,Vector2.RIGHT,2.0,0,0,99,0,"",99,Vector2.RIGHT,{},0,0)
+	var breathing_grip: Vector2=breathing_mount*Weapon.SPECS.pistol.grip
+	check(breathing_grip.distance_to(Vector2(breathing.wrist_r.x,breathing.wrist_r.y+5.6*height/80.0))<0.001,"Pistol remains attached through the breathing animation")
 	if Rig.enemy_atlas_ready:
 		var shared: Texture2D=Rig.definition("drifter").texture
 		for id in Rig.ENEMIES: check(Rig.definition(id).texture==shared,id+" shares one cached enemy atlas for sorted batching")

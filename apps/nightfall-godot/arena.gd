@@ -39,6 +39,10 @@ var hero_stride := 0.0
 var hero_move_blend := 0.0
 var hero_move_direction := Vector2.RIGHT
 var hero_last_position := Run.World.CENTER
+var hero_display_face := 1.0
+var hero_turn_started := -10.0
+var hero_turn_sign := 0.0
+var hero_animation_class := ""
 var field_was_visible := true
 var hud_font_size := 30
 var hud: Label
@@ -868,7 +872,7 @@ func _process(delta: float) -> void:
 	health_bar.size = Vector2(46, 6)
 	xp_bar.size = Vector2(398, 9)
 	boss_bar.size = Vector2(398, 6)
-	health_bar.position = run.player + world_offset - Vector2(23, 80)
+	health_bar.position = run.player + world_offset - Vector2(23, 92 if run.class_id == "scavenger" else 80)
 	health_bar.visible = in_field and not modal.visible and profile.data.settings.get("health_bars",true)
 	pack_button.visible = in_field and not run.practice and run.benchmark_count == 0
 	build_button.visible = pack_button.visible
@@ -1057,8 +1061,19 @@ func _draw() -> void:
 			var hero_started := Time.get_ticks_usec()
 			var pose := HeroCast.pose(run)
 			var face := -1.0 if (run.facing.x if pose.is_empty() else pose.direction.x) < 0 else 1.0
+			if hero_animation_class != run.class_id:
+				hero_animation_class = run.class_id
+				hero_display_face = face
+				hero_turn_sign = 0.0
+				hero_turn_started = anim_time
+			elif face != hero_display_face:
+				hero_turn_sign = 1.0 if face > hero_display_face else -1.0
+				hero_turn_started = anim_time
+				hero_display_face = face
+			var turn_age := anim_time-hero_turn_started
+			var turn := hero_turn_sign*(1.0-smoothstep(0.0,0.22,turn_age))
 			var weapon_pose := HeroCast.weapon_pose(run)
-			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")),run.weapon_id,weapon_pose.direction,weapon_pose.age,hero_move_direction,run.appearance,run.phase)
+			HeroCast.draw_motion(self,run.player,world_offset,face,anim_time,hero_stride,hero_move_blend,99.0 if pose.is_empty() else pose.age,minf(1,run.dodge_left/0.12),run.class_id=="engineer",reduced,run.class_id,clampf((run.hurt_wait-0.65)/0.15,0,1),pose.get("weapon",pose.get("spell","")),run.weapon_id,weapon_pose.direction,weapon_pose.age,hero_move_direction,run.appearance,run.phase,turn)
 			hero_usec += Time.get_ticks_usec()-hero_started
 		else:
 			var enemy_started := Time.get_ticks_usec()

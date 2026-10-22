@@ -10,11 +10,16 @@ const BODIES_REGIONS := {"scavenger":Rect2(20,110,415,720),"engineer":Rect2(460,
 const HANDS := {"scavenger":Vector2(0.92,0.55),"engineer":Vector2(0.90,0.55),"warden":Vector2(0.86,0.57),"arcanist":Vector2(0.88,0.59)}
 const COLS := 12
 const ROWS := 18
+const DEFAULT_HERO_HEIGHT := 80.0
+const SCAVENGER_HEIGHT := 84.0
 
 static var weights: Array[PackedFloat32Array] = []
 static var anchors := PackedVector2Array()
 static var topology := PackedInt32Array()
 static var uv_cache: Dictionary = {}
+
+static func actor_height(class_id: String) -> float:
+	return SCAVENGER_HEIGHT if class_id == "scavenger" else DEFAULT_HERO_HEIGHT
 
 static func vertex_weights(uv: Vector2) -> PackedFloat32Array:
 	return PackedFloat32Array([
@@ -99,11 +104,12 @@ static func hand_offset(weapon: String, aim: Vector2, age: float) -> Vector2:
 	# Lift the forearm into a supported firing position and absorb the impulse at the wrist.
 	return Vector2(-2.0,-6.0+direction.y*4.0) - direction*EquipmentArt.kick(weapon,age)
 
-static func weapon_attachment(class_id: String, weapon: String, face: float, aim: Vector2, clock: float, stride: float = 0.0, move_blend: float = 0.0, cast_age: float = 0.0, dodge: float = 0.0, action: String = "", weapon_age: float = 0.0, movement_direction: Vector2 = Vector2.RIGHT, appearance: Dictionary = {}) -> Transform2D:
+static func weapon_attachment(class_id: String, weapon: String, face: float, aim: Vector2, clock: float, stride: float = 0.0, move_blend: float = 0.0, cast_age: float = 0.0, dodge: float = 0.0, action: String = "", weapon_age: float = 0.0, movement_direction: Vector2 = Vector2.RIGHT, appearance: Dictionary = {}, turn: float = 0.0, hurt: float = 0.0) -> Transform2D:
 	var definition := LayeredRig.definition_for_appearance(class_id,appearance)
 	if not definition.is_empty():
-		var joints := layered_pose(definition,weapon,face,aim,stride,move_blend,cast_age,dodge,action,weapon_age,movement_direction)
-		var body := Transform2D(Vector2(face,0),Vector2(0,1),Vector2(0,5.6))
+		var joints := layered_pose(definition,weapon,face,aim,stride,move_blend,cast_age,dodge,action,weapon_age,movement_direction,clock,turn,hurt)
+		var scale_factor := actor_height(class_id)/DEFAULT_HERO_HEIGHT
+		var body := Transform2D(Vector2(face,0),Vector2(0,1),Vector2(0,5.6*scale_factor))
 		return body*EquipmentArt.mount(weapon,joints.wrist_r,Vector2(aim.x*face,aim.y),weapon_age,true)
 	var source: Rect2 = BODIES_REGIONS.get(class_id,BODIES_REGIONS.scavenger)
 	var size := Vector2(source.size.x/source.size.y*80,80)
@@ -119,39 +125,69 @@ static func muzzle_offset(class_id: String, weapon: String, face: float, aim: Ve
 	var spec: Dictionary = EquipmentArt.SPECS.get(weapon,EquipmentArt.SPECS.pistol)
 	return attachment*spec.tip
 
-static func layered_pose(definition: Dictionary, weapon: String, face: float, aim: Vector2, stride: float, move_blend: float, cast_age: float, dodge: float, action: String, weapon_age: float, movement_direction: Vector2) -> Dictionary:
+static func layered_pose(definition: Dictionary, weapon: String, face: float, aim: Vector2, stride: float, move_blend: float, cast_age: float, dodge: float, action: String, weapon_age: float, movement_direction: Vector2, clock: float = 0.0, turn: float = 0.0, hurt: float = 0.0) -> Dictionary:
 	stride*=36.0/28.0
+	var scavenger: bool = definition.get("id","") == "scavenger"
+	var height := actor_height(str(definition.get("id","")))
+	var scale_factor := height/DEFAULT_HERO_HEIGHT
 	var local_aim := Vector2(aim.x*face,aim.y).normalized()
-	var pelvis := Gait.torso(stride,move_blend,80)+Vector2(0,80*0.018*move_blend)
-	var grip := Vector2(27,-44)+pelvis+Vector2(0,local_aim.y*6)-local_aim*EquipmentArt.kick(weapon,weapon_age)
+	var pelvis := Gait.torso(stride,move_blend,height)+Vector2(0,height*0.018*move_blend)
+	var grip := Vector2(27,-44)*scale_factor+pelvis+Vector2(0,local_aim.y*6*scale_factor)-local_aim*EquipmentArt.kick(weapon,weapon_age)*(1.8 if scavenger and weapon=="pistol" else 1.0)
 	if weapon=="sabre" and weapon_age>=0 and weapon_age<0.30:
 		grip += Vector2(9,-5).rotated(lerpf(-1.0,1.0,smoothstep(0,0.18,weapon_age)))*(1-smoothstep(0.18,0.30,weapon_age))
-	var joints := LayeredRig.pose(definition,80,stride,move_blend,Vector2(movement_direction.x*face,movement_direction.y),{"grip":grip,"cycle_distance":28.0,"forward_knees":true,"foot_lift":2.8})
+	var joints := LayeredRig.pose(definition,height,stride,move_blend,Vector2(movement_direction.x*face,movement_direction.y),{"grip":grip,"cycle_distance":28.0,"forward_knees":true,"foot_lift":2.8*scale_factor})
 	if cast_age>=-0.18 and cast_age<0.30 and action not in ["pistol","scattergun","crossbow","sabre"]:
 		var gesture := smoothstep(-0.18,0,cast_age)*(1-smoothstep(0.04,0.30,cast_age))
 		var shoulder: Vector2 = joints.shoulder_l
-		var wrist: Vector2 = joints.wrist_l+Vector2(-7,-19)*gesture
-		var rest := LayeredRig.rest_joints(definition,80)
+		var wrist: Vector2 = joints.wrist_l+Vector2(-7,-19)*gesture*scale_factor
+		var rest := LayeredRig.rest_joints(definition,height)
 		joints.elbow_l=Gait.knee(shoulder,wrist,rest.shoulder_l.distance_to(rest.elbow_l),rest.elbow_l.distance_to(rest.wrist_l),-1)
 		joints.wrist_l=wrist
-		joints.hand_l=wrist+Vector2(0,4)
+		joints.hand_l=wrist+Vector2(0,4*scale_factor)
 	if dodge>0:
 		for key in joints:
 			if key.begins_with("ankle") or key.begins_with("foot"): continue
-			joints[key] += Vector2(dodge*5,dodge*2)
+			joints[key] += Vector2(dodge*5,dodge*2)*scale_factor
+	if scavenger:
+		# A quiet inhale lifts the scarf, shoulders and pistol arm together while the
+		# planted feet and belt stay still. This breath stays legible at arena scale.
+		var breath_weight := 1.0-smoothstep(0.12,0.75,move_blend)
+		var breath := sin(clock*TAU/3.25)*breath_weight
+		var chest_delta := Vector2(sin(clock*0.58)*0.16,-breath*0.55)
+		for key in ["neck","head","shoulder_l","elbow_l","wrist_l","hand_l","shoulder_r","elbow_r","wrist_r","hand_r"]:
+			joints[key] += chest_delta
+		joints.shoulder_l += Vector2(-breath*0.16,0)
+		joints.shoulder_r += Vector2(breath*0.16,0)
+		joints.cape_end += Vector2(-sin(stride*0.5)*0.7*move_blend+sin(clock*0.8)*0.22*breath_weight,0.3*breath)
+		# Mirror remains immediate, but the chest follows it with a short, subtle turn.
+		var pivot: Vector2=joints.pelvis
+		var twist := clampf(turn,-1.0,1.0)*0.085
+		for key in ["neck","head","cape_end","shoulder_l","elbow_l","wrist_l","hand_l","shoulder_r","elbow_r","wrist_r","hand_r","weapon_end"]:
+			joints[key]=pivot+(joints[key]-pivot).rotated(twist)
+		# Hits make the shoulders and head recoil without dislodging the grip or feet.
+		var hit := clampf(hurt,0.0,1.0)
+		var recoil := Vector2(-1.9,0.75)*hit
+		for key in ["neck","head","shoulder_l","elbow_l","wrist_l","hand_l","shoulder_r","elbow_r","wrist_r","hand_r","weapon_end"]:
+			joints[key] += recoil
+		joints.head += Vector2(-0.3,0.9)*hit
+		# Dodge tucks the shoulders and dips the head while the world motion stays in Run.
+		var duck := clampf(dodge,0.0,1.0)
+		for key in ["neck","head","shoulder_l","elbow_l","wrist_l","hand_l","shoulder_r","elbow_r","wrist_r","hand_r","weapon_end"]:
+			joints[key] += Vector2(-0.9,1.15)*duck
 	return joints
 
-static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, engineer: bool, reduced: bool, class_id: String = "scavenger", hurt: float = 0.0, action: String = "", weapon: String = "pistol", aim: Vector2 = Vector2.RIGHT, weapon_age: float = 99.0, movement_direction: Vector2 = Vector2.RIGHT, appearance: Dictionary = {}, state: String = "") -> void:
+static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: float, clock: float, stride: float, move_blend: float, cast_age: float, dodge: float, engineer: bool, reduced: bool, class_id: String = "scavenger", hurt: float = 0.0, action: String = "", weapon: String = "pistol", aim: Vector2 = Vector2.RIGHT, weapon_age: float = 99.0, movement_direction: Vector2 = Vector2.RIGHT, appearance: Dictionary = {}, state: String = "", turn: float = 0.0) -> void:
 	var definition := LayeredRig.definition_for_appearance(class_id,appearance)
 	if not definition.is_empty():
-		var joints := layered_pose(definition,weapon,face,aim,stride,move_blend,cast_age,dodge,action,weapon_age,movement_direction)
+		var joints := layered_pose(definition,weapon,face,aim,stride,move_blend,cast_age,dodge,action,weapon_age,movement_direction,clock,turn,hurt)
 		var layered := LayeredRig.build(definition,joints)
 		canvas.set_meta("layered_actor_id",class_id)
 		var layered_mesh := DynamicMesh.update(canvas,"hero_layered_pool",0,layered.vertices,layered.uv,layered.indices)
 		canvas.set_meta("hero_mesh",layered_mesh)
-		var transform := Transform2D(Vector2(face,0),Vector2(0,1),pos+offset+Vector2(0,5.6))
+		var scale_factor := actor_height(class_id)/DEFAULT_HERO_HEIGHT
+		var transform := Transform2D(Vector2(face,0),Vector2(0,1),pos+offset+Vector2(0,5.6*scale_factor))
 		var tint := Color.WHITE.lerp(Color(1.7,1.35,1.25),hurt if not reduced else 0.0)
-		var attachment := weapon_attachment(class_id,weapon,face,aim,clock,stride,move_blend,cast_age,dodge,action,weapon_age,movement_direction,appearance)
+		var attachment := weapon_attachment(class_id,weapon,face,aim,clock,stride,move_blend,cast_age,dodge,action,weapon_age,movement_direction,appearance,turn,hurt)
 		attachment.origin += pos+offset
 		EquipmentArt.draw(canvas,weapon,attachment,tint)
 		if dodge>0 and not reduced:
@@ -160,6 +196,8 @@ static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: flo
 			canvas.draw_mesh(layered_mesh,layered.texture,trail,Color(0.62,0.77,1,dodge*0.18))
 		canvas.draw_mesh(layered_mesh,layered.texture,transform,tint)
 		draw_accessories(canvas,joints,transform,appearance)
+		if class_id == "scavenger":
+			draw_scavenger_lantern(canvas,joints,transform,clock,stride,move_blend,dodge,reduced)
 		EquipmentArt.mechanism(canvas,weapon,attachment,weapon_age,tint)
 		if weapon in ["pistol","scattergun"] and weapon_age>=0 and weapon_age<0.24:
 			var spec: Dictionary=EquipmentArt.SPECS[weapon]
@@ -215,6 +253,29 @@ static func draw_accessories(canvas: Node2D, joints: Dictionary, transform: Tran
 		canvas.draw_colored_polygon(PackedVector2Array([pendant+Vector2(0,-1.6),pendant+Vector2(1.2,0),pendant+Vector2(0,1.6),pendant+Vector2(-1.2,0)]),Color("93c5eb"))
 	if accessories.get("ring",false):
 		canvas.draw_arc(joints.wrist_r+Vector2(0.8,0.7),0.85,0,TAU,12,gold,0.65,true)
+	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+static func draw_scavenger_lantern(canvas: Node2D, joints: Dictionary, transform: Transform2D, clock: float, stride: float, move_blend: float, dodge: float, reduced: bool) -> void:
+	# Small painted-metal lantern hangs from the Scavenger's belt joint; it is a
+	# separate prop so breathing, gait, turning, dodge and equipment never detach it.
+	var sway := sin(stride*0.5+clock*2.1)*0.12*move_blend+sin(clock*1.2)*0.025+clampf(dodge,0,1)*0.09
+	var anchor: Vector2=joints.pelvis+Vector2(13.0,9.0)
+	canvas.draw_set_transform_matrix(transform*Transform2D(sway,anchor))
+	var pulse := 0.78+0.22*sin(clock*5.0)
+	if not reduced:
+		canvas.draw_circle(Vector2(0,3.0),8.0,Color(1.0,0.48,0.12,0.045*pulse))
+		canvas.draw_circle(Vector2(0,3.0),5.0,Color(1.0,0.50,0.12,0.09*pulse))
+	canvas.draw_line(Vector2(0,-5),Vector2(0,-2),Color("33271f"),1.0,true)
+	canvas.draw_arc(Vector2(0,-2.0),2.5,PI,TAU,12,Color("d3a152"),0.9,true)
+	var shell:=PackedVector2Array([Vector2(-3.6,-1.8),Vector2(3.6,-1.8),Vector2(3.2,5.6),Vector2(1.8,8.0),Vector2(-1.8,8.0),Vector2(-3.2,5.6)])
+	canvas.draw_colored_polygon(shell,Color("171927"))
+	canvas.draw_polyline(PackedVector2Array([shell[0],shell[1],shell[2],shell[3],shell[4],shell[5],shell[0]]),Color("9b6a32"),0.9,true)
+	var glass:=PackedVector2Array([Vector2(-2.15,-0.7),Vector2(2.15,-0.7),Vector2(2.0,5.2),Vector2(-2.0,5.2)])
+	canvas.draw_colored_polygon(glass,Color(0.86,0.37,0.08,0.92))
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-0.8,0.3),Vector2(0.9,0.3),Vector2(0.55,3.8),Vector2(-0.55,3.8)]),Color(1.0,0.76,0.27,0.92*pulse))
+	canvas.draw_line(Vector2(-3.2,-1.5),Vector2(3.2,-1.5),Color("f4c16b"),1.0,true)
+	canvas.draw_line(Vector2(-3.0,5.7),Vector2(3.0,5.7),Color("d59a46"),1.0,true)
+	canvas.draw_arc(Vector2(0,2.0),1.3,0,TAU,10,Color("fff0ad"),0.65,true)
 	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 static func weapon_pose(run: RefCounted) -> Dictionary:
