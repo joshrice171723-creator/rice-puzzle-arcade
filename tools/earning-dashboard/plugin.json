@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "earning-dashboard",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Track work, attempts, owner steps, and verified earnings.",
   "author": { "name": "Joshua Rice" },
   "extensions": {
