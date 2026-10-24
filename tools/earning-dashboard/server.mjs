@@ -52,7 +52,7 @@ async function handle(request) {
       result(request, {
         protocolVersion: params.protocolVersion ?? "2025-06-18",
         capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
-        serverInfo: { name: "earning-dashboard", version: "0.1.2" }
+        serverInfo: { name: "earning-dashboard", version: "0.1.3" }
       });
       return;
     case "ping":
