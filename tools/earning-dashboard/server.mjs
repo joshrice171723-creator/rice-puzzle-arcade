@@ -12,7 +12,7 @@ const appMeta = {
 const appToolMeta = { "ui/resourceUri": appUri, ui: { resourceUri: appUri } };
 
 function validSeed(value) {
-  return value?.version === 1 && value.goal && ["work", "attempts", "stopped", "tasks"].every(key => Array.isArray(value[key]));
+  return value?.goal && (value.version === 1 && ["work", "attempts", "stopped", "tasks"].every(key => Array.isArray(value[key])) || value.version === 2 && ["work", "attempts", "stopped", "tasks", "taskHistory", "activity", "library"].every(key => Array.isArray(value[key])));
 }
 
 async function appHtml() {
@@ -52,7 +52,7 @@ async function handle(request) {
       result(request, {
         protocolVersion: params.protocolVersion ?? "2025-06-18",
         capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
-        serverInfo: { name: "earning-dashboard", version: "0.1.3" }
+        serverInfo: { name: "earning-dashboard", version: "0.1.5" }
       });
       return;
     case "ping":
