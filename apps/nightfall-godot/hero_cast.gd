@@ -21,6 +21,13 @@ static var uv_cache: Dictionary = {}
 static func actor_height(class_id: String) -> float:
 	return SCAVENGER_HEIGHT if class_id == "scavenger" else DEFAULT_HERO_HEIGHT
 
+static func body_texture(class_id: String) -> AtlasTexture:
+	var texture := AtlasTexture.new()
+	texture.atlas = BODIES
+	texture.region = BODIES_REGIONS.get(class_id, BODIES_REGIONS.scavenger)
+	texture.filter_clip = true
+	return texture
+
 static func vertex_weights(uv: Vector2) -> PackedFloat32Array:
 	return PackedFloat32Array([
 		smoothstep(0.64,0.72,uv.y),smoothstep(0.43,0.55,uv.x),smoothstep(0.78,0.82,uv.y),smoothstep(0.84,0.93,uv.y),

@@ -4,6 +4,7 @@ const BASE = preload("res://assets/haven-base.png")
 const ACTORS = preload("res://assets/actors.png")
 const ENGINEER = preload("res://assets/engineer.png")
 const CLASSES = preload("res://assets/class-previews.png")
+const HeroCast = preload("res://hero_cast.gd")
 const HEROES = preload("res://assets/menu-heroes.png")
 const ITEMS = preload("res://assets/menu-items.png")
 const BACKDROP = preload("res://assets/menu-backdrop.png")
@@ -45,6 +46,8 @@ static func icon(id: String) -> AtlasTexture:
 	return texture
 
 static func hero(id: String) -> Texture2D:
+	if id == "scavenger":
+		return HeroCast.body_texture(id)
 	if id == "arcanist":
 		return preload("res://assets/class-showcase/arcanist.png")
 	var regions := {"scavenger":Rect2(20,90,490,870), "engineer":Rect2(550,110,400,850), "warden":Rect2(1000,75,520,900)}

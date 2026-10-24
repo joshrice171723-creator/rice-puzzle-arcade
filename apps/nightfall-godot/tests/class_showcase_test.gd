@@ -1,4 +1,5 @@
 extends SceneTree
+const HeroCast = preload("res://hero_cast.gd")
 var checks := 0
 var failures := 0
 func check(ok: bool, message: String) -> void:
@@ -31,9 +32,13 @@ func run() -> void:
 		await process_frame
 		check(home.inspected_class == id,"Portrait selects the "+id+" preview")
 		hero=home.find_child("ClassCoverArt",true,false)
-		var expected_asset: String="assets/class-showcase/scavenger.png" if id=="scavenger" else ("assets/class-showcase/arcanist.png" if id=="arcanist" else "assets/class-showcase/roster.png")
 		character_view=home.find_child("ClassCharacterViewport",true,false)
-		check(hero is TextureRect and hero.texture is ViewportTexture and hero.get_meta("animated_cover",false) and hero.get_meta("cover_class","")==id and hero.get_meta("cover_art_source","").ends_with(expected_asset) and character_view.class_id==id and character_view.animation_player.is_playing(),"Class page animates the approved "+id+" cover art independently")
+		if id == "scavenger":
+			var body_atlas := hero.texture as AtlasTexture
+			check(body_atlas != null and body_atlas.atlas == HeroCast.BODIES and body_atlas.region == HeroCast.BODIES_REGIONS.scavenger and not hero.get_meta("animated_cover",true) and hero.get_meta("cover_art_source","").ends_with("assets/hero-cast/equipment-bodies.png") and character_view == null,"Scavenger class showcase uses approved gameplay art, not the rejected cover/model")
+		else:
+			var expected_asset: String="assets/class-showcase/arcanist.png" if id=="arcanist" else "assets/class-showcase/roster.png"
+			check(hero is TextureRect and hero.texture is ViewportTexture and hero.get_meta("animated_cover",false) and hero.get_meta("cover_class","")==id and hero.get_meta("cover_art_source","").ends_with(expected_asset) and character_view.class_id==id and character_view.animation_player.is_playing(),"Class page animates the approved "+id+" cover art independently")
 		check(home.body.get_global_rect().end.y <= home.navigation.position.y,"Showcase fits above navigation for "+id)
 		check(arena.profile.data == before,"Previewing "+id+" does not change the player's profile")
 	home.find_child("OpenClassSkills",true,false).pressed.emit()
@@ -61,9 +66,10 @@ func run() -> void:
 	home.find_child("TalentPreviewOpenMastery",true,false).pressed.emit()
 	check(home.page == "mastery","Talent preview retains the real permanent mastery talents")
 	arena.profile.data.settings.reduced_effects = true
+	home.inspected_class = "scavenger"
 	home.navigate("class")
 	hero = home.find_child("ClassCoverArt",true,false)
-	check(hero is TextureRect and not hero.texture is ViewportTexture and not hero.get_meta("animated_cover",true) and home.find_child("ClassCharacterViewport",true,false)==null and not hero.is_processing(),"Reduced effects uses a static class character cover")
+	check(hero is TextureRect and hero.texture is AtlasTexture and not hero.get_meta("animated_cover",true) and home.find_child("ClassCharacterViewport",true,false)==null and not hero.is_processing(),"Scavenger uses the static approved gameplay atlas without an animated portrait model")
 	arena.profile.data.settings.reduced_effects = before.settings.reduced_effects
 	check(arena.profile.data == before and arena.attempt_id == 0,"Class UI testing never spends, equips or starts a run")
 	arena.queue_free()

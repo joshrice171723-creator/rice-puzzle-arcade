@@ -3,7 +3,6 @@ extends SubViewport
 ## This is a menu showcase; gameplay actors continue to use their own rigs.
 
 const MODEL_PATHS := {
-	"scavenger": "res://assets/class-showcase/idle_models/scavenger.glb",
 	"warden": "res://assets/class-showcase/idle_models/warden.glb",
 	"arcanist": "res://assets/class-showcase/idle_models/arcanist.glb",
 	"engineer": "res://assets/class-showcase/idle_models/engineer.glb",
@@ -87,12 +86,11 @@ func build_character() -> void:
 
 
 func build_camera() -> void:
-	var scavenger := class_id == "scavenger"
-	var target_y := 2.29 if scavenger else 1.73
+	var target_y := 1.73
 	var camera := Camera3D.new()
 	camera.name = "ClassShowcaseCamera"
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 3.07 if scavenger else 3.52
+	camera.size = 3.52
 	camera.position = Vector3(0.0, target_y, 6.5)
 	add_child(camera)
 	camera.look_at(Vector3(0.0, target_y, 0.0), Vector3.UP)

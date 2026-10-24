@@ -4,6 +4,7 @@ const Appearance=preload("res://equipment_appearance.gd")
 const Rig=preload("res://layered_actor_rig.gd")
 const Actor=preload("res://gear_actor.gd")
 const Showcase=preload("res://class_showcase.gd")
+const HeroCast=preload("res://hero_cast.gd")
 const PATH="user://nightfall_equipped_actor_ui_fixture.json"
 var checks:=0
 var failures:=0
@@ -118,8 +119,9 @@ func verify() -> void:
 		home.navigate("class")
 		await settle()
 		var hero: TextureRect=home.find_child("ClassCoverArt",true,false)
-		check(hero.get_meta("cover_class","")=="scavenger" and hero.texture is Texture2D,"Class showcase uses the dedicated Scavenger cover art")
-		check(hero.find_child("ClassEquippedActor",true,false)==null and Showcase.hero_texture("scavenger").resource_path.ends_with("assets/class-showcase/scavenger.png"),"Class cover remains separate from the equipment and gameplay actor")
+		var class_body:=hero.texture as AtlasTexture
+		check(hero.get_meta("cover_class","")=="scavenger" and class_body != null and class_body.atlas==HeroCast.BODIES and class_body.region==HeroCast.BODIES_REGIONS.scavenger,"Class showcase reuses the approved Scavenger gameplay atlas")
+		check(hero.find_child("ClassEquippedActor",true,false)==null and Showcase.hero_texture("scavenger") is AtlasTexture,"Scavenger class art is not loaded from the rejected portrait asset")
 		await capture("class-"+family+"-430")
 	for width in [430,320]:
 		root.size=Vector2i(width,760 if width==430 else 568)

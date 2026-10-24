@@ -1,6 +1,7 @@
 extends RefCounted
 ## Hero-first Class screen. All progression and selection remain profile-owned.
 const Art = preload("res://haven_art.gd")
+const HeroCast = preload("res://hero_cast.gd")
 const ClassCharacterShowcase = preload("res://class_character_showcase.gd")
 const Content = preload("res://haven_content.gd")
 const MenuSkin = preload("res://menu_skin.gd")
@@ -9,12 +10,6 @@ const CONTROLS = preload("res://assets/class-showcase/controls.png")
 const ORDER := ["scavenger", "warden", "arcanist", "engineer"]
 const REGIONS := {"blue": Rect2i(40,219,559,142), "gold": Rect2i(657,219,560,142), "portrait": Rect2i(82,662,480,467), "ribbon": Rect2i(627,836,606,123)}
 static var textures: Dictionary = {}
-static var scavenger_cover: Texture2D
-
-static func scavenger_cover_texture() -> Texture2D:
-	if scavenger_cover == null:
-		scavenger_cover = load("res://assets/class-showcase/scavenger.png")
-	return scavenger_cover
 
 static func texture(kind: String) -> Texture2D:
 	if not textures.has(kind):
@@ -52,7 +47,7 @@ static func action(button: Button, gold: bool = false, font_size: int = 19) -> v
 
 static func hero_texture(id: String) -> Texture2D:
 	if id == "scavenger":
-		return scavenger_cover_texture()
+		return HeroCast.body_texture(id)
 	if id == "arcanist" and ResourceLoader.exists("res://assets/class-showcase/arcanist.png"):
 		return load("res://assets/class-showcase/arcanist.png")
 	if ResourceLoader.exists("res://assets/class-showcase/roster.png"):
@@ -66,11 +61,7 @@ static func hero_texture(id: String) -> Texture2D:
 
 static func portrait_texture(id: String) -> Texture2D:
 	if id == "scavenger":
-		var scavenger_portrait := AtlasTexture.new()
-		scavenger_portrait.atlas = scavenger_cover_texture()
-		scavenger_portrait.region = Rect2(72,18,346,316)
-		scavenger_portrait.filter_clip = true
-		return scavenger_portrait
+		return HeroCast.body_texture(id)
 	var source := hero_texture(id)
 	var atlas := AtlasTexture.new()
 	if source is AtlasTexture:
@@ -129,11 +120,11 @@ static func show_page(home: Control) -> void:
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hero.texture = hero_texture(id)
 	hero.set_meta("cover_class", id)
-	hero.set_meta("cover_art_source", "res://assets/class-showcase/scavenger.png" if id == "scavenger" else ("res://assets/class-showcase/arcanist.png" if id == "arcanist" else "res://assets/class-showcase/roster.png"))
+	hero.set_meta("cover_art_source", "res://assets/hero-cast/equipment-bodies.png" if id == "scavenger" else ("res://assets/class-showcase/arcanist.png" if id == "arcanist" else "res://assets/class-showcase/roster.png"))
 	hero.pivot_offset = Vector2(hero.size.x * 0.5, hero.size.y)
 	var reduced_effects: bool = bool(home.profile.data.settings.get("reduced_effects", false))
 	var character_view: ClassCharacterShowcase
-	if not reduced_effects:
+	if not reduced_effects and id != "scavenger":
 		character_view = ClassCharacterShowcase.new()
 		character_view.name = "ClassCharacterViewport"
 		character_view.configure(id)
