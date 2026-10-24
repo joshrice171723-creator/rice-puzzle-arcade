@@ -71,6 +71,7 @@ function validateUpdate(value, previous) {
     const settled = attempt.settlement?.status === "settled" && typeof attempt.settlement.reference === "string" && attempt.settlement.reference.trim();
     if (attempt.status === "credited") {
       if (!attempt.settlement || typeof attempt.settlement.reference !== "string" || attempt.settlement.reference.trim().length > 200) throw new TrackerInputError("Settlement reference must be at most 200 characters.");
+      if (attempt.currency !== "USD") throw new TrackerInputError("Credited amounts must be recorded as net USD value.");
       if (amount <= 0 || !settled) throw new TrackerInputError("Credited earnings need a positive amount and a settled payment reference.");
     } else if (amount !== 0) throw new TrackerInputError("Only settled credited attempts may carry an earning amount.");
   }
@@ -158,8 +159,8 @@ async function handle(request) {
       result(request, {
         tools: [
           tool("open_earning_dashboard", "Open earning dashboard", "Open the local dashboard for active work, attempts, owner steps, and settled earnings.", { type: "object", properties: {}, additionalProperties: false }),
-          tool("read_earning_tracker", "Read earning tracker", "Read the device-local tracker. Earnings count only when an attempt is credited with a positive amount and a settled payment reference.", { type: "object", properties: {}, additionalProperties: false }),
-          tool("update_earning_tracker", "Update earning tracker", "Save a version 2 tracker snapshot. Preserve existing records, never mark owner tasks complete, keep activity amounts at zero, and include a settled payment reference for every credited earning.", { type: "object", properties: { tracker: { type: "object", description: "The complete version 2 tracker snapshot." } }, required: ["tracker"], additionalProperties: false }, false)
+          tool("read_earning_tracker", "Read earning tracker", "Read the device-local tracker. Earnings count only when an attempt is credited in net USD with a positive amount and a settled payment reference.", { type: "object", properties: {}, additionalProperties: false }),
+          tool("update_earning_tracker", "Update earning tracker", "Save a version 2 tracker snapshot. Preserve existing records, never mark owner tasks complete, keep activity amounts at zero, and record credited amounts as net USD with settled payment references.", { type: "object", properties: { tracker: { type: "object", description: "The complete version 2 tracker snapshot." } }, required: ["tracker"], additionalProperties: false }, false)
         ]
       });
       return;
