@@ -202,6 +202,7 @@ static func draw_motion(canvas: Node2D, pos: Vector2, offset: Vector2, face: flo
 			trail.origin.x-=face*14*dodge
 			canvas.draw_mesh(layered_mesh,layered.texture,trail,Color(0.62,0.77,1,dodge*0.18))
 		canvas.draw_mesh(layered_mesh,layered.texture,transform,tint)
+		if class_id == "scavenger": draw_scavenger_goggles(canvas,joints,transform,appearance)
 		draw_accessories(canvas,joints,transform,appearance)
 		if class_id == "scavenger":
 			draw_scavenger_lantern(canvas,joints,transform,clock,stride,move_blend,dodge,reduced)
@@ -283,6 +284,35 @@ static func draw_scavenger_lantern(canvas: Node2D, joints: Dictionary, transform
 	canvas.draw_line(Vector2(-3.2,-1.5),Vector2(3.2,-1.5),Color("f4c16b"),1.0,true)
 	canvas.draw_line(Vector2(-3.0,5.7),Vector2(3.0,5.7),Color("d59a46"),1.0,true)
 	canvas.draw_arc(Vector2(0,2.0),1.3,0,TAU,10,Color("fff0ad"),0.65,true)
+	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+static func draw_scavenger_goggles(canvas: Node2D, joints: Dictionary, transform: Transform2D, appearance: Dictionary) -> void:
+	var helmet: String=appearance.get("slots",{}).get("helmet","none")
+	if helmet not in ["none","outrider"]: return
+	var neck: Vector2=joints.neck
+	var head: Vector2=joints.head
+	var anchor:=neck.lerp(head,0.72)
+	var head_angle: float=(head-neck).angle()+PI/2.0
+	canvas.draw_set_transform_matrix(transform*Transform2D(head_angle,anchor))
+	var shadow:=Color("21191a")
+	var bronze:=Color("805125")
+	var gold:=Color("efbc5a")
+	var amber:=Color("ed8a22")
+	# Paired lenses sit on the hairline and follow the head bone through turns and reactions.
+	canvas.draw_line(Vector2(-9.0,-0.1),Vector2(9.0,-0.1),Color("553823"),1.2,true)
+	for side in [-1.0,1.0]:
+		var center:=Vector2(side*4.1,0)
+		var lens_scale:=0.93 if side>0 else 1.0
+		var lens_transform:=Transform2D(Vector2(lens_scale,0),Vector2(0,0.82),center)
+		canvas.draw_set_transform_matrix(transform*Transform2D(head_angle,anchor)*lens_transform)
+		canvas.draw_circle(Vector2.ZERO,3.35,shadow)
+		canvas.draw_circle(Vector2.ZERO,2.92,bronze)
+		canvas.draw_circle(Vector2.ZERO,2.46,gold)
+		canvas.draw_circle(Vector2.ZERO,1.92,amber)
+		canvas.draw_circle(Vector2(-0.52,-0.58),0.55,Color("fff0ba"))
+		canvas.draw_arc(Vector2.ZERO,3.12,-PI*0.88,-PI*0.12,12,Color("ffe49a"),0.45,true)
+	canvas.draw_set_transform_matrix(transform*Transform2D(head_angle,anchor))
+	canvas.draw_line(Vector2(-1.1,0),Vector2(1.1,0),gold,1.0,true)
 	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 static func weapon_pose(run: RefCounted) -> Dictionary:
