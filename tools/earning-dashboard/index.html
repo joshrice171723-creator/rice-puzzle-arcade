@@ -42,6 +42,7 @@
   <dialog id="stop-dialog"><form class="dialog-body" id="stop-form"><h2>Stop this workstream?</h2><input type="hidden" name="id"><div class="field"><label for="stop-reason">Why are we stopping?</label><textarea id="stop-reason" name="reason" required maxlength="500" placeholder="Cost, eligibility, low odds, or a better use of time"></textarea></div><div class="dialog-actions"><button class="btn" type="button" data-close>Keep working</button><button class="btn primary" type="submit">Record and stop</button></div></form></dialog>
   <dialog id="task-dialog"><form class="dialog-body" id="task-form"><h2>Add a human task</h2><div class="field"><label for="task-title">Action for the owner</label><input id="task-title" name="title" required maxlength="120"></div><div class="field"><label for="task-why">Why does it need a human?</label><textarea id="task-why" name="why" required maxlength="300"></textarea></div><div class="field"><label for="task-next">Exact next step</label><input id="task-next" name="next" required maxlength="180"></div><div class="dialog-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Add to checklist</button></div></form></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <!--EARNING_DASHBOARD_SEED-->
   <script>
     (() => {
       const KEY = "earning-dashboard-v1";
@@ -94,7 +95,7 @@
       byId("import-trigger").addEventListener("click",()=>byId("import-file").click());
       byId("import-file").addEventListener("change",async(event)=>{const file=event.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!valid(parsed))throw new Error("That file is not an earning dashboard backup.");if(confirm("Replace the data saved in this browser with this backup?")){state=parsed;save();render();toast("Backup imported.");}}catch(error){toast(error.message||"Could not read that backup.");}event.target.value="";});
       document.querySelectorAll("dialog").forEach(dialog=>dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.close();}));
-      const start = async () => { try { const stored=localStorage.getItem(KEY); if(stored){const parsed=JSON.parse(stored);if(valid(parsed))state=parsed;}else{const response=await fetch("./seed.json",{cache:"no-store"});if(response.ok){const parsed=await response.json();if(valid(parsed))state=parsed;}save();} }catch{} render(); };
+      const start = async () => { try { const stored=localStorage.getItem(KEY); if(stored){const parsed=JSON.parse(stored);if(valid(parsed))state=parsed;}else{const embedded=window.__EARNING_DASHBOARD_SEED__;if(valid(embedded))state=embedded;else{const response=await fetch("./seed.json",{cache:"no-store"});if(response.ok){const parsed=await response.json();if(valid(parsed))state=parsed;}}save();} }catch{} render(); };
       start();
     })();
   </script>

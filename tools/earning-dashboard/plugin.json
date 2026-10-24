@@ -1,0 +1,27 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "earning-dashboard",
+  "version": "0.1.0",
+  "description": "Track work, attempts, owner steps, and verified earnings.",
+  "author": { "name": "Joshua Rice" },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Earning dashboard",
+        "shortDescription": "Earnings and action tracker",
+        "longDescription": "A private local tracker for active work, attempts, stopped efforts, human-owner tasks, and money actually credited toward a $200 goal.",
+        "developerName": "Joshua Rice",
+        "category": "Productivity",
+        "capabilities": ["Interactive", "Read", "Write"],
+        "defaultPrompt": [
+          "Open the earning dashboard",
+          "Show my active earning efforts",
+          "What owner-only tasks are waiting?"
+        ],
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg",
+        "brandColor": "#2558C9"
+      }
+    }
+  }
+}
