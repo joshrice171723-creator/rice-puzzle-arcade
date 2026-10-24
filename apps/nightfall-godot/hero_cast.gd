@@ -293,26 +293,33 @@ static func draw_scavenger_goggles(canvas: Node2D, joints: Dictionary, transform
 	var head: Vector2=joints.head
 	var anchor:=neck.lerp(head,0.72)
 	var head_angle: float=(head-neck).angle()+PI/2.0
-	canvas.draw_set_transform_matrix(transform*Transform2D(head_angle,anchor))
-	var shadow:=Color("21191a")
-	var bronze:=Color("805125")
-	var gold:=Color("efbc5a")
-	var amber:=Color("ed8a22")
-	# Paired lenses sit on the hairline and follow the head bone through turns and reactions.
-	canvas.draw_line(Vector2(-9.0,-0.1),Vector2(9.0,-0.1),Color("553823"),1.2,true)
+	var base_transform:=transform*Transform2D(head_angle,anchor)
+	# The harness joins the cups into one readable prop at the 84-unit arena scale.
+	var strap:=PackedVector2Array([
+		Vector2(-12.0,-2.5),Vector2(-9.0,-4.0),Vector2(-6.5,-4.1),Vector2(-3.8,-2.8),
+		Vector2(0,-2.0),Vector2(3.8,-2.8),Vector2(6.5,-4.1),Vector2(9.0,-4.0),
+		Vector2(12.0,-2.5),Vector2(11.0,-0.7),Vector2(7.3,-2.6),Vector2(4.0,-1.7),
+		Vector2(0,-1.0),Vector2(-4.0,-1.7),Vector2(-7.3,-2.6),Vector2(-11.0,-0.7)])
+	canvas.draw_set_transform_matrix(base_transform)
+	canvas.draw_colored_polygon(strap,Color("271d1d"))
+	canvas.draw_polyline(PackedVector2Array([Vector2(-11.2,-2.5),Vector2(-8.7,-3.55),Vector2(-6.4,-3.55),Vector2(-3.8,-2.4),Vector2(0,-1.65),Vector2(3.8,-2.4),Vector2(6.4,-3.55),Vector2(8.7,-3.55),Vector2(11.2,-2.5)]),Color("b47a40"),0.55,true)
 	for side in [-1.0,1.0]:
-		var center:=Vector2(side*4.1,0)
-		var lens_scale:=0.93 if side>0 else 1.0
-		var lens_transform:=Transform2D(Vector2(lens_scale,0),Vector2(0,0.82),center)
-		canvas.draw_set_transform_matrix(transform*Transform2D(head_angle,anchor)*lens_transform)
-		canvas.draw_circle(Vector2.ZERO,3.35,shadow)
-		canvas.draw_circle(Vector2.ZERO,2.92,bronze)
-		canvas.draw_circle(Vector2.ZERO,2.46,gold)
-		canvas.draw_circle(Vector2.ZERO,1.92,amber)
-		canvas.draw_circle(Vector2(-0.52,-0.58),0.55,Color("fff0ba"))
-		canvas.draw_arc(Vector2.ZERO,3.12,-PI*0.88,-PI*0.12,12,Color("ffe49a"),0.45,true)
-	canvas.draw_set_transform_matrix(transform*Transform2D(head_angle,anchor))
-	canvas.draw_line(Vector2(-1.1,0),Vector2(1.1,0),gold,1.0,true)
+		var center:=Vector2(side*4.55,0)
+		var lens_transform:=base_transform*Transform2D(Vector2(1,0),Vector2(0,0.82),center)
+		canvas.draw_set_transform_matrix(lens_transform)
+		canvas.draw_circle(Vector2.ZERO,4.95,Color("111522"))
+		canvas.draw_circle(Vector2.ZERO,4.55,Color("3d2721"))
+		canvas.draw_circle(Vector2.ZERO,4.05,Color("c48138"))
+		canvas.draw_circle(Vector2.ZERO,3.50,Color("f1c66e"))
+		canvas.draw_circle(Vector2.ZERO,3.05,Color("382324"))
+		canvas.draw_circle(Vector2.ZERO,2.55,Color("d86c20"))
+		canvas.draw_circle(Vector2.ZERO,2.18,Color("f79a31"))
+		canvas.draw_arc(Vector2.ZERO,4.18,PI*1.12,PI*1.87,16,Color("fff0a0"),0.55,true)
+		canvas.draw_circle(Vector2(-0.76,-1.0),0.62,Color("fff3c2"))
+		canvas.draw_circle(Vector2(-0.68,-1.08),0.28,Color("ffffff"))
+		canvas.draw_circle(Vector2(side*4.05,0),0.50,Color("f4cf7a"))
+	canvas.draw_set_transform_matrix(base_transform)
+	canvas.draw_line(Vector2(-0.8,0),Vector2(0.8,0),Color("f4c76a"),1.25,true)
 	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 static func weapon_pose(run: RefCounted) -> Dictionary:
