@@ -11,7 +11,7 @@ const appMeta = {
   ui: { csp: { connectDomains: [], resourceDomains: [] } },
   "openai/ui": { availableDisplayModes: ["fullscreen"] }
 };
-const appToolMeta = { "ui/resourceUri": appUri, ui: { resourceUri: appUri } };
+const appToolMeta = { "ui/resourceUri": appUri, ui: { resourceUri: appUri }, "openai/ui": { entrypoints: [{ type: "global" }] } };
 const trackerKeys = ["work", "attempts", "stopped", "tasks", "taskHistory", "activity", "library"];
 const trackerHome = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, "EarningDashboard") : path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share"), "EarningDashboard");
 const trackerFile = path.join(trackerHome, "tracker.json");
